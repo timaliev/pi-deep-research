@@ -2,6 +2,14 @@
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.
 
+## [0.4.0] — 2026-06-22
+
+### Added
+
+- **Concurrent search and scrape** — searches and scrapes run in parallel via `ConcurrencySemaphore`, limited by `profile.concurrency`
+- 3.7× speedup on breadth=4 (216ms → 58ms in tests)
+- 3 concurrency tests + 37 existing = 40 total
+
 ## [0.3.0] — 2026-06-22
 
 ### Added
