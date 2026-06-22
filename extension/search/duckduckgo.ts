@@ -1,13 +1,11 @@
 import type { SearchProvider, SearchResult } from "./provider.js";
 
-const DDG_HTML_URL = "https://html.duckduckgo.com/html/";
-
 export type FetchFn = typeof globalThis.fetch;
 
 /**
  * DuckDuckGo search provider.
- * Uses the DuckDuckGo HTML search endpoint (no API key required).
- * This is a free, zero-config search backend.
+ * Uses duck-duck-scrape for primary search (VQD-based, anti-detection),
+ * falls back to HTML scraping. No API key required.
  *
  * Accepts an optional `fetchFn` for dependency injection (useful in tests).
  */
@@ -19,6 +17,47 @@ export class DuckDuckGoProvider implements SearchProvider {
   }
 
   async search(query: string, maxResults: number = 5): Promise<SearchResult[]> {
+    // In test mode (custom fetchFn), use HTML scraping directly
+    if (this.fetchFn !== globalThis.fetch) {
+      return this.searchWithHtml(query, maxResults);
+    }
+
+    // Production: try duck-duck-scrape first, fall back to HTML
+    try {
+      return await this.searchWithDuckDuckScrape(query, maxResults);
+    } catch {
+      return this.searchWithHtml(query, maxResults);
+    }
+  }
+
+  private async searchWithDuckDuckScrape(
+    query: string,
+    maxResults: number
+  ): Promise<SearchResult[]> {
+    const { search } = await import("duck-duck-scrape");
+    const response = await withRetry(
+      () =>
+        search(query, {
+          safeSearch: "OFF",
+          locale: "en-us",
+          region: "wt-wt",
+        }),
+      { maxRetries: 2, baseDelayMs: 2000 }
+    );
+
+    const results = response.results.slice(0, maxResults);
+    return results.map((r) => ({
+      title: r.title,
+      url: r.url,
+      snippet: r.description ?? "",
+    }));
+  }
+
+  private async searchWithHtml(
+    query: string,
+    maxResults: number
+  ): Promise<SearchResult[]> {
+    const DDG_HTML_URL = "https://html.duckduckgo.com/html/";
     const formData = new URLSearchParams({ q: query });
 
     const response = await this.fetchFn(DDG_HTML_URL, {
@@ -44,9 +83,6 @@ export class DuckDuckGoProvider implements SearchProvider {
 
   private parseResults(html: string, maxResults: number): SearchResult[] {
     const results: SearchResult[] = [];
-
-    // DuckDuckGo HTML results use <a class="result__a"> for title/url
-    // and <a class="result__snippet"> for snippet.
     const resultBlockRe =
       /<a[^>]*class="result__a"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<a[^>]*class="result__snippet"[^>]*>([\s\S]*?)<\/a>/gi;
 
@@ -58,23 +94,14 @@ export class DuckDuckGoProvider implements SearchProvider {
       const url = this.cleanUrl(match[1]);
       const title = this.stripHtml(match[2]);
       const snippet = this.stripHtml(match[3]);
-
-      if (title && url) {
-        results.push({ title, url, snippet });
-      }
+      if (title && url) results.push({ title, url, snippet });
     }
-
     return results;
   }
 
   private cleanUrl(url: string): string {
-    // Protocol-relative URLs need a scheme for URL parsing
     let normalized = url;
-    if (normalized.startsWith("//")) {
-      normalized = "https:" + normalized;
-    }
-
-    // DDG wraps URLs in its redirect; extract the real URL from the 'uddg' param
+    if (normalized.startsWith("//")) normalized = "https:" + normalized;
     try {
       const parsed = new URL(normalized);
       const uddg = parsed.searchParams.get("uddg");
@@ -97,4 +124,24 @@ export class DuckDuckGoProvider implements SearchProvider {
       .replace(/&nbsp;/g, " ")
       .trim();
   }
+}
+
+/** Retry a function with exponential backoff. */
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  opts: { maxRetries: number; baseDelayMs: number }
+): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= opts.maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      if (attempt < opts.maxRetries) {
+        const delay = opts.baseDelayMs * Math.pow(2, attempt);
+        await new Promise((r) => setTimeout(r, delay));
+      }
+    }
+  }
+  throw lastError;
 }
