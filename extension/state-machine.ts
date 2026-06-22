@@ -218,6 +218,30 @@ export class ResearchStateMachine {
   }
 }
 
+/** Build a telemetry summary section to append to the final report. */
+export function buildTelemetrySection(snapshot: ResearchSnapshot): string {
+  const durationSec = Math.round((Date.now() - snapshot.startedAt) / 1000);
+  const durationStr =
+    durationSec < 60
+      ? `${durationSec}s`
+      : `${Math.floor(durationSec / 60)}m ${durationSec % 60}s`;
+
+  return [
+    `## Research Telemetry`,
+    ``,
+    `| Metric | Value |`,
+    `| --- | --- |`,
+    `| Run ID | \`${snapshot.runId}\` |`,
+    `| Search calls | ${snapshot.searchCalls} |`,
+    `| Scrape calls | ${snapshot.scrapeCalls} |`,
+    `| Sources visited | ${snapshot.allVisitedUrls.length} |`,
+    `| Depth reached | ${snapshot.currentDepth}/${snapshot.totalDepth} |`,
+    `| Duration | ${durationStr} |`,
+    `| Soft limit triggered | ${snapshot.softLimitTriggered ? "yes" : "no"} |`,
+    ``,
+  ].join("\n");
+}
+
 function generateRunId(): string {
   const now = new Date();
   const y = now.getFullYear();
