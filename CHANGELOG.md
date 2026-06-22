@@ -2,6 +2,16 @@
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.
 
+## [0.2.0] — 2026-06-22
+
+### Added
+
+- **TavilyProvider** — Tavily Search API integration (`TAVILY_API_KEY` env var)
+- **BraveProvider** — Brave Search API integration (`BRAVE_API_KEY` env var, 2,000 free queries/month)
+- **`createSearchProvider()` factory** — selects provider by `deepResearch.searchProvider` setting (`duckduckgo` | `tavily` | `brave`)
+- All tools (`web_search`, `plan_research`, `run_research`) now use the configured provider
+- 10 new tests (5 Tavily + 5 Brave), total 34 tests
+
 ## [0.1.0] — 2026-06-22
 
 ### Added
@@ -29,4 +39,4 @@ All notable changes to the Pi Deep Research Extension will be documented in this
 - Agent reasoning through `pi.sendUserMessage()` injects
 - Test suite with mock-based system boundary testing
 
-[0.1.0]: https://github.com/user/deep-research-codex/tree/v0.1.0
+[0.1.0]:
