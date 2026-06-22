@@ -2,6 +2,15 @@
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.
 
+## [0.5.0] — 2026-06-22
+
+### Changed
+
+- **DuckDuckGo provider** now uses `duck-duck-scrape` (VQD-based, anti-detection) as primary search method
+- HTML endpoint as automatic fallback when duck-duck-scrape is unavailable
+- Retry with exponential backoff (2s → 4s) on search failures
+- 2 new tests + 40 existing = 42 total
+
 ## [0.4.0] — 2026-06-22
 
 ### Added
