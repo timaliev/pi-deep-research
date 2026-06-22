@@ -38,10 +38,30 @@ export interface ResearchStateResult {
   error?: string;
 }
 
+/** Simple async semaphore to limit concurrency. */
+class ConcurrencySemaphore {
+  private running = 0;
+  private readonly queue: Array<() => void> = [];
+
+  constructor(private readonly limit: number) {}
+
+  async run<T>(fn: () => Promise<T>): Promise<T> {
+    while (this.running >= this.limit) {
+      await new Promise<void>((resolve) => this.queue.push(resolve));
+    }
+    this.running++;
+    try {
+      return await fn();
+    } finally {
+      this.running--;
+      this.queue.shift()?.();
+    }
+  }
+}
+
 /**
  * Research state machine — advances through research phases.
- * Pure-ish: takes current snapshot + plan, performs search/scrape,
- * returns next phase. Caller handles persistence and LLM interaction.
+ * Searches and scrapes run concurrently, limited by profile.concurrency.
  */
 export class ResearchStateMachine {
   constructor(
@@ -86,27 +106,50 @@ export class ResearchStateMachine {
         ? plan.researchQuestions
         : snapshot.allFindings.slice(-3).map((f) => f.text);
 
-    const allResults: Array<{ question: string; results: SearchResult[] }> = [];
-    const scraped: ScrapedPage[] = [];
+    const activeQuestions = questions.slice(0, this.profile.breadth);
+    const semaphore = new ConcurrencySemaphore(this.profile.concurrency);
     const newVisited = new Set(snapshot.allVisitedUrls);
 
-    for (const question of questions.slice(0, this.profile.breadth)) {
-      const results = await this.searchProvider.search(question, 3);
-      snapshot.searchCalls++;
-      allResults.push({ question, results });
+    // Concurrent searches
+    const searchResults = await Promise.all(
+      activeQuestions.map((question) =>
+        semaphore.run(async () => {
+          const results = await this.searchProvider.search(question, 3);
+          snapshot.searchCalls++;
+          return { question, results };
+        })
+      )
+    );
 
-      for (const result of results.slice(0, 2)) {
-        if (newVisited.has(result.url)) continue;
-        try {
-          const page = await this.scraper.scrape(result.url);
-          scraped.push(page);
-          newVisited.add(result.url);
-          snapshot.scrapeCalls++;
-        } catch {
-          // skip pages that fail to scrape
+    // Collect URLs for scraping
+    const urlsToScrape: string[] = [];
+    for (const { results } of searchResults) {
+      for (const r of results.slice(0, 2)) {
+        if (!newVisited.has(r.url)) {
+          urlsToScrape.push(r.url);
+          newVisited.add(r.url);
         }
       }
     }
+
+    // Concurrent scrapes
+    const scrapedResults = await Promise.all(
+      urlsToScrape.map((url) =>
+        semaphore.run(async () => {
+          try {
+            const page = await this.scraper.scrape(url);
+            snapshot.scrapeCalls++;
+            return page;
+          } catch {
+            return null;
+          }
+        })
+      )
+    );
+
+    const scraped: ScrapedPage[] = scrapedResults.filter(
+      (p): p is ScrapedPage => p !== null
+    );
 
     const nextDepth = snapshot.currentDepth + 1;
     const nextSnapshot: ResearchSnapshot = {
@@ -116,7 +159,7 @@ export class ResearchStateMachine {
       allVisitedUrls: [...newVisited],
     };
 
-    const inject = buildExtractionPrompt(allResults, scraped, nextDepth, snapshot.totalDepth);
+    const inject = buildExtractionPrompt(searchResults, scraped, nextDepth, snapshot.totalDepth);
     return { phase: "extracting", snapshot: nextSnapshot, inject };
   }
 
@@ -131,15 +174,11 @@ export class ResearchStateMachine {
   }
 
   private async doQuestioning(snapshot: ResearchSnapshot, plan: ResearchPlan): Promise<ResearchStateResult> {
-    // Agent has already answered the questioning prompt.
-    // Chain directly into searching.
     const searchSnapshot: ResearchSnapshot = { ...snapshot, phase: "searching" };
     return this.doSearching(searchSnapshot, plan);
   }
 
   private doDrafting(snapshot: ResearchSnapshot, _plan: ResearchPlan): ResearchStateResult {
-    // Drafting inject was already sent by doExtracting.
-    // Agent has written the draft; now save it.
     return { phase: "saving", snapshot: { ...snapshot, phase: "saving" } };
   }
 
