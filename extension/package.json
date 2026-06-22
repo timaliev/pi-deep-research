@@ -1,0 +1,15 @@
+{
+  "name": "deep-research-extension",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --import tsx --test tests/*.test.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "duck-duck-scrape": "^2.2.7"
+  }
+}
