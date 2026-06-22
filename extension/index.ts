@@ -5,7 +5,10 @@ import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 import { DuckDuckGoProvider } from "./search/duckduckgo.js";
+import { TavilyProvider } from "./search/tavily.js";
+import { BraveProvider } from "./search/brave.js";
 import { WebScraper } from "./scraper.js";
+import type { SearchProvider } from "./search/provider.js";
 import { PrefilterManager } from "./prefilter.js";
 import { ResearchStateMachine } from "./state-machine.js";
 import type { ResearchPlan, PrefilterArtifact, PrefilterResult } from "./prefilter.js";
@@ -30,6 +33,24 @@ const DEFAULT_SETTINGS: DeepResearchSettings = {
     deep: { breadth: 6, depth: 3, concurrency: 4 },
   },
 };
+
+function createSearchProvider(settings: DeepResearchSettings): SearchProvider {
+  const provider = settings.searchProvider ?? "duckduckgo";
+  switch (provider) {
+    case "tavily": {
+      const key = process.env.TAVILY_API_KEY;
+      if (!key) throw new Error("TAVILY_API_KEY not set. Configure it in your environment or switch to duckduckgo.");
+      return new TavilyProvider(key);
+    }
+    case "brave": {
+      const key = process.env.BRAVE_API_KEY;
+      if (!key) throw new Error("BRAVE_API_KEY not set. Configure it in your environment or switch to duckduckgo.");
+      return new BraveProvider(key);
+    }
+    default:
+      return new DuckDuckGoProvider();
+  }
+}
 
 function resolveSettings(settings: Record<string, unknown> = {}): DeepResearchSettings {
   const dr = (settings.deepResearch ?? {}) as Record<string, unknown>;
@@ -57,7 +78,8 @@ export default function (pi: ExtensionAPI) {
       max_results: Type.Optional(Type.Number({ description: "Max results (default 5)" })),
     }),
     async execute(_toolCallId, params) {
-      const provider = new DuckDuckGoProvider();
+      const settings = resolveSettings();
+      const provider = createSearchProvider(settings);
       const results = await provider.search(params.query, params.max_results ?? 5);
       return {
         content: [{ type: "text", text: JSON.stringify(results, null, 2) }],
@@ -131,7 +153,7 @@ export default function (pi: ExtensionAPI) {
       const artifactsDir = join(ctx.cwd ?? baseDir, "deep-research", "artifacts");
       mkdirSync(artifactsDir, { recursive: true });
 
-      const searchProvider = new DuckDuckGoProvider();
+      const searchProvider = createSearchProvider(settings);
       const scraper = new WebScraper();
       const manager = new PrefilterManager(searchProvider, scraper, artifactsDir);
 
@@ -243,7 +265,7 @@ export default function (pi: ExtensionAPI) {
       const artifactsDir = join(ctx.cwd ?? baseDir, "deep-research", "artifacts");
       mkdirSync(artifactsDir, { recursive: true });
 
-      const searchProvider = new DuckDuckGoProvider();
+      const searchProvider = createSearchProvider(settings);
       const scraper = new WebScraper();
 
       // Load or initialize state
