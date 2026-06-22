@@ -2,6 +2,14 @@
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.
 
+## [0.6.0] — 2026-06-22
+
+### Added
+
+- **Soft limits** — `maxSearchCalls` and `maxElapsedSeconds` in ResearchProfile
+- When triggered: reduces search breadth to 2, stops depth recursion, goes directly to drafting
+- 4 new tests + 42 existing = 46 total
+
 ## [0.5.0] — 2026-06-22
 
 ### Changed
