@@ -10,7 +10,7 @@ import { BraveProvider } from "./search/brave.js";
 import { WebScraper } from "./scraper.js";
 import type { SearchProvider } from "./search/provider.js";
 import { PrefilterManager } from "./prefilter.js";
-import { ResearchStateMachine } from "./state-machine.js";
+import { ResearchStateMachine, buildTelemetrySection } from "./state-machine.js";
 import type { ResearchPlan, PrefilterArtifact, PrefilterResult } from "./prefilter.js";
 import type { ResearchSnapshot } from "./state-machine.js";
 import type { ResearchProfile } from "./state-machine.js";
@@ -351,7 +351,9 @@ export default function (pi: ExtensionAPI) {
         const reportPath = join(reportsDir, filename);
 
         const { writeFileSync } = await import("node:fs");
-        writeFileSync(reportPath, typeof reportText === "string" ? reportText : JSON.stringify(reportText), "utf-8");
+        const telemetry = buildTelemetrySection(result.snapshot);
+        const fullReport = `${typeof reportText === "string" ? reportText : ""}\n\n${telemetry}\n`;
+        writeFileSync(reportPath, fullReport, "utf-8");
 
         return {
           content: [{ type: "text", text: `## Research Complete ✅\n\nReport saved to: ${reportPath}\n\nSearch calls: ${result.snapshot.searchCalls}\nScrape calls: ${result.snapshot.scrapeCalls}\nSources visited: ${result.snapshot.allVisitedUrls.length}` }],
