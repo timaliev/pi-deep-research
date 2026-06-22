@@ -2,6 +2,14 @@
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.
 
+## [0.7.0] — 2026-06-22
+
+### Added
+
+- **Telemetry section** appended to every saved report — search calls, scrape calls, sources visited, depth, duration, soft limit status
+- `buildTelemetrySection()` generates a markdown table from ResearchSnapshot
+- 4 new tests + 46 existing = 50 total
+
 ## [0.6.0] — 2026-06-22
 
 ### Added
