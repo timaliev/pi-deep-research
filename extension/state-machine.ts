@@ -7,6 +7,10 @@ export interface ResearchProfile {
   breadth: number;
   depth: number;
   concurrency: number;
+  /** Maximum search API calls before soft limit triggers (0 = unlimited). */
+  maxSearchCalls?: number;
+  /** Maximum wall-clock seconds before soft limit triggers (0 = unlimited). */
+  maxElapsedSeconds?: number;
 }
 
 export interface Finding {
@@ -28,6 +32,8 @@ export interface ResearchSnapshot {
   searchCalls: number;
   scrapeCalls: number;
   startedAt: number;
+  /** Soft limit has been triggered. When true, depth recursion stops and search intensity reduces. */
+  softLimitTriggered: boolean;
 }
 
 export interface ResearchStateResult {
@@ -62,6 +68,7 @@ class ConcurrencySemaphore {
 /**
  * Research state machine — advances through research phases.
  * Searches and scrapes run concurrently, limited by profile.concurrency.
+ * Soft limits (maxSearchCalls, maxElapsedSeconds) reduce intensity and stop depth recursion.
  */
 export class ResearchStateMachine {
   constructor(
@@ -83,6 +90,7 @@ export class ResearchStateMachine {
       searchCalls: 0,
       scrapeCalls: 0,
       startedAt: Date.now(),
+      softLimitTriggered: false,
     };
   }
 
@@ -97,6 +105,19 @@ export class ResearchStateMachine {
     }
   }
 
+  private checkSoftLimits(snapshot: ResearchSnapshot): void {
+    const elapsed = (Date.now() - snapshot.startedAt) / 1000;
+    const maxCalls = this.profile.maxSearchCalls ?? 0;
+    const maxSec = this.profile.maxElapsedSeconds ?? 0;
+    if (
+      !snapshot.softLimitTriggered &&
+      ((maxCalls > 0 && snapshot.searchCalls >= maxCalls) ||
+       (maxSec > 0 && elapsed >= maxSec))
+    ) {
+      snapshot.softLimitTriggered = true;
+    }
+  }
+
   private async doSearching(
     snapshot: ResearchSnapshot,
     plan: ResearchPlan
@@ -106,7 +127,13 @@ export class ResearchStateMachine {
         ? plan.researchQuestions
         : snapshot.allFindings.slice(-3).map((f) => f.text);
 
-    const activeQuestions = questions.slice(0, this.profile.breadth);
+    // When soft-limited: fewer queries, fewer results per query
+    const maxResultsPerQuery = snapshot.softLimitTriggered ? 2 : 3;
+    const breadth = snapshot.softLimitTriggered
+      ? Math.min(2, this.profile.breadth)
+      : this.profile.breadth;
+
+    const activeQuestions = questions.slice(0, breadth);
     const semaphore = new ConcurrencySemaphore(this.profile.concurrency);
     const newVisited = new Set(snapshot.allVisitedUrls);
 
@@ -114,7 +141,7 @@ export class ResearchStateMachine {
     const searchResults = await Promise.all(
       activeQuestions.map((question) =>
         semaphore.run(async () => {
-          const results = await this.searchProvider.search(question, 3);
+          const results = await this.searchProvider.search(question, maxResultsPerQuery);
           snapshot.searchCalls++;
           return { question, results };
         })
@@ -159,12 +186,16 @@ export class ResearchStateMachine {
       allVisitedUrls: [...newVisited],
     };
 
+    // Check soft limits after this round's searches
+    this.checkSoftLimits(nextSnapshot);
+
     const inject = buildExtractionPrompt(searchResults, scraped, nextDepth, snapshot.totalDepth);
     return { phase: "extracting", snapshot: nextSnapshot, inject };
   }
 
   private doExtracting(snapshot: ResearchSnapshot, plan: ResearchPlan): ResearchStateResult {
-    const shouldDeepen = snapshot.currentDepth < snapshot.totalDepth;
+    // Soft limit: stop deepening, go straight to drafting
+    const shouldDeepen = !snapshot.softLimitTriggered && snapshot.currentDepth < snapshot.totalDepth;
     if (shouldDeepen) {
       const inject = buildQuestioningPrompt(plan, snapshot.currentDepth, snapshot.totalDepth);
       return { phase: "questioning", snapshot: { ...snapshot, phase: "questioning" }, inject };
