@@ -35,7 +35,9 @@ The agent will plan, show you the estimated cost, and ask for confirmation befor
 - **State-machine orchestration** — the extension manages research flow across agent turns via prompt injections, keeping the Pi LLM as the sole reasoning engine.
 - **Prefilter planning** — an initial search phase produces a structured Research Plan (JSON) before any paid API calls.
 - **Retry & fallback** — DuckDuckGo searches use `duck-duck-scrape` (VQD-based, anti-detection) with fallback to HTML scraping and exponential backoff retry.
-- **40 tests** — unit tests for every component plus full pipeline integration tests.
+- **Soft limits** — configurable `maxSearchCalls` and `maxElapsedSeconds` cap resource usage per run, reducing search intensity and skipping deeper recursion when triggered.
+- **Telemetry in reports** — every saved report includes a markdown table with search calls, scrape calls, sources visited, depth reached, duration, and soft limit status.
+- **50 tests** — unit tests for every component plus full pipeline integration tests.
 
 ## Prerequisites
 
@@ -157,7 +159,7 @@ pi-deep-research/
 │       └── brave.ts       # Brave Search API
 ├── skill/
 │   └── SKILL.md           # Pi skill instructions (3-phase protocol)
-├── tests/                 # 40 tests (unit + integration)
+├── tests/                 # 50 tests (unit + integration)
 ├── docs/
 │   ├── adr/               # Architecture Decision Records
 │   └── diagrams/          # Excalidraw diagrams
@@ -187,15 +189,17 @@ cd extension
 npm test
 ```
 
-40 tests covering:
+50 tests covering:
 - Search providers (DuckDuckGo, Tavily, Brave) — 12 tests
 - Scraper — 7 tests
 - Prefilter manager — 7 tests
 - State machine — 5 tests
 - Concurrency — 3 tests
 - DDG retry — 1 test
+- Soft limits — 4 tests
+- Telemetry — 4 tests
 - Integration (full pipeline) — 3 tests
-- Plus 2 legacy tests
+- Plus 4 legacy tests
 
 ## Changelog
 
@@ -203,6 +207,8 @@ See [CHANGELOG.md](./CHANGELOG.md) for version history. Maintained with [git-cli
 
 | Version | Highlights |
 |---|---|
+| v0.7.0 | Telemetry section in every report |
+| v0.6.0 | Soft limits — maxSearchCalls, maxElapsedSeconds |
 | v0.5.0 | `duck-duck-scrape` integration with retry & HTML fallback |
 | v0.4.0 | Concurrent search & scrape (3.7× speedup) |
 | v0.3.0 | Full pipeline integration tests |
