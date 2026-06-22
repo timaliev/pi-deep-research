@@ -2,6 +2,14 @@
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.
 
+## [0.3.0] — 2026-06-22
+
+### Added
+
+- **Integration test** — full pipeline test: plan phase (start → agent → finalize → artifact) + run phase (state machine complete cycle) + end-to-end sequence
+- 3 integration tests covering all phases of the research pipeline
+- Total: 37 tests (34 unit + 3 integration)
+
 ## [0.2.0] — 2026-06-22
 
 ### Added
