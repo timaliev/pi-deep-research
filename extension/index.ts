@@ -285,6 +285,8 @@ Use "compare" mode to see results from each engine separately without deduplicat
         const artifact: PrefilterArtifact = JSON.parse(raw);
         snapshot = ResearchStateMachine.init(artifact.plan, settings.profiles as any);
 
+        const scraper = new WebScraper();
+
         // Compute output directories from plan artifact path (stable across sessions)
         const deepResearchBase = join(dirname(params.plan_artifact_path), "..");
         const artifactsDir = join(deepResearchBase, "artifacts");
