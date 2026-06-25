@@ -38,7 +38,7 @@ function resolveSettings(settings: Record<string, unknown> = {}): DeepResearchSe
 export default function (pi: ExtensionAPI) {
   // Contribute the skill file
   pi.on("resources_discover", () => ({
-    skillPaths: [join(baseDir, "..", "..", "skill", "SKILL.md")],
+    skillPaths: [join(baseDir, "..", "skill", "SKILL.md")],
   }));
 
   // === TOOL: web_search ===
@@ -380,11 +380,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
 
       // If done, save report
       if (result.phase === "done") {
-        // Read the last assistant message as the report
-        const lastAssistant = [...entries].reverse().find(
-          (e) => e.message?.role === "assistant"
-        );
-        const reportText = lastAssistant?.message?.content ?? "";
+        const reportText = result.snapshot.draftReport ?? "";
 
         const date = new Date().toISOString().slice(0, 10);
         const slug = plan.topic.toLowerCase().replace(/[^\w]+/g, "-").replace(/^-|-$/g, "").substring(0, 80);
@@ -393,7 +389,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
 
         const { writeFileSync } = await import("node:fs");
         const telemetry = buildTelemetrySection(result.snapshot);
-        const fullReport = `${typeof reportText === "string" ? reportText : ""}\n\n${telemetry}\n`;
+        const fullReport = `${reportText}\n\n${telemetry}\n`;
         writeFileSync(reportPath, fullReport, "utf-8");
 
         runLogger?.event("report_saved", {

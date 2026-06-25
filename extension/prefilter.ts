@@ -4,6 +4,7 @@ import type { searchWeb as SearchWebFn } from "./search/web-search.js";
 import type { WebSearchResult } from "./search/web-search.js";
 import type { SearchEngine } from "./search/web-search.js";
 import type { Scraper, ScrapedPage } from "./scraper.js";
+import { resolveProfile, DEFAULT_PRESETS } from "./state-machine.js";
 
 export interface ResearchPlanProfile {
   name: "default" | "fast" | "deep" | "custom";
@@ -213,7 +214,10 @@ export class PrefilterManager {
   }
 
   private buildParamsPrompt(topic: string): string {
-    return `## Research Parameters\n\nTopic: ${topic}\n\nChoose search engines and profile. Reply with JSON:\n\`\`\`json\n{"engines":["duckduckgo"],"profile":{"name":"default"}}\n\`\`\`\n\nEngines: duckduckgo, brave (needs BRAVE_API_KEY), searxng. Profiles: default (4/2/4), fast (2/1/2), deep (6/3/4), custom (specify breadth/depth/concurrency).`;
+    const presets = Object.entries(DEFAULT_PRESETS)
+      .map(([name, p]) => `  ${name}: breadth=${p.breadth}, depth=${p.depth}, concurrency=${p.concurrency}`)
+      .join("\n");
+    return `## Research Parameters\n\nTopic: ${topic}\n\nChoose search engines and profile. Reply with JSON:\n\`\`\`json\n{"engines":["duckduckgo"],"profile":{"name":"default"}}\n\`\`\`\n\nEngines: duckduckgo, brave (needs BRAVE_API_KEY), searxng.\n\nAvailable profiles:\n${presets}\n  custom: specify breadth, depth, concurrency\n\nYou may change the profile later during plan creation.`;
   }
 
   private buildApiKeyWarning(missing: string[]): string {
@@ -224,9 +228,8 @@ export class PrefilterManager {
     topic: string, engines: SearchEngine[], profile: ResearchPlanProfile,
     searchResults: WebSearchResult[], scrapedContent: ScrapedPage[],
   ): string {
-    let p = `## Research Planning\n\nTopic: ${topic}\nEngines: [${engines.join(", ")}]\nProfile: ${profile.name}`;
-    if (profile.name === "custom") p += ` (breadth=${profile.breadth}, depth=${profile.depth})`;
-    p += `\n\n### Preliminary Search\n\n`;
+    const resolved = resolveProfile(profile);
+    let p = `## Research Planning\n\nTopic: ${topic}\nEngines: [${engines.join(", ")}]\nProfile: ${profile.name} (breadth=${resolved.breadth}, depth=${resolved.depth}, concurrency=${resolved.concurrency})\n\nYou may change the profile in the plan JSON — use any named preset (default/fast/deep) or custom with breadth/depth/concurrency. Pick the profile that best fits this research.\n\n### Preliminary Search\n\n`;
     for (const r of searchResults) p += `- [${r.title}](${r.url}): ${r.snippet}\n`;
     if (scrapedContent.length > 0) {
       p += `\n### Scraped Content\n\n`;

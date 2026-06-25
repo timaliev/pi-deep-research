@@ -138,7 +138,7 @@ export class ResearchStateMachine {
       case "searching":  return this.doSearching(snapshot, plan);
       case "extracting": return this.doExtracting(snapshot, plan);
       case "questioning": return this.doQuestioning(snapshot, plan, agentResponse);
-      case "drafting":   return this.doDrafting(snapshot, plan);
+      case "drafting":   return this.doDrafting(snapshot, plan, agentResponse);
       case "saving":     return this.doSaving(snapshot);
       case "done":       return { phase: "done", snapshot };
     }
@@ -308,15 +308,46 @@ export class ResearchStateMachine {
     return questions;
   }
 
-  private doDrafting(snapshot: ResearchSnapshot, _plan: ResearchPlan): ResearchStateResult {
+  private doDrafting(snapshot: ResearchSnapshot, plan: ResearchPlan, agentResponse?: unknown): ResearchStateResult {
+    const reportText = extractTextContent(agentResponse);
+    if (!reportText || reportText.length < 40) {
+      // Agent didn't produce a proper report — re-inject drafting prompt
+      const inject = buildDraftingPrompt(plan, snapshot.allFindings);
+      this.logger?.event("drafting_retry", { reason: "empty_response", length: reportText?.length ?? 0 });
+      return {
+        phase: "drafting",
+        snapshot: { ...snapshot, phase: "drafting" },
+        inject: `⚠️ Empty or too-short response.\n\n${inject}`,
+      };
+    }
     this.logger?.event("phase_changed", { from: "drafting", to: "saving" });
-    return { phase: "saving", snapshot: { ...snapshot, phase: "saving" } };
+    return {
+      phase: "saving",
+      snapshot: { ...snapshot, phase: "saving", draftReport: reportText },
+    };
   }
 
   private doSaving(snapshot: ResearchSnapshot): ResearchStateResult {
+    if (!snapshot.draftReport || snapshot.draftReport.length < 40) {
+      this.logger?.event("saving_blocked", { reason: "empty_draft" });
+      return { phase: "saving", snapshot };
+    }
     this.logger?.event("phase_changed", { from: "saving", to: "done" });
     return { phase: "done", snapshot: { ...snapshot, phase: "done" } };
   }
+}
+
+/** Extract plain text from agent response (handles string and content blocks array). */
+function extractTextContent(agentResponse?: unknown): string {
+  if (!agentResponse) return "";
+  if (typeof agentResponse === "string") return agentResponse;
+  if (Array.isArray(agentResponse)) {
+    return (agentResponse as any[])
+      .filter((b: any) => b.type === "text" && b.text)
+      .map((b: any) => b.text)
+      .join("\n");
+  }
+  return "";
 }
 
 /** Build a telemetry summary section to append to the final report. */

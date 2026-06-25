@@ -228,7 +228,7 @@ function parseDdgHtml(body: string, maxResults: number): WebSearchResult[] {
   return results;
 }
 
-/** Search DuckDuckGo with retry + exponential backoff */
+/** Search DuckDuckGo with retry + exponential backoff + pre-request stagger */
 async function searchDuckDuckGo(
   query: string,
   maxResults: number,
@@ -236,6 +236,11 @@ async function searchDuckDuckGo(
   baseDelay: number = DEFAULT_BASE_DELAY_MS,
   maxDelay: number = DEFAULT_MAX_DELAY_MS,
 ): Promise<WebSearchResult[]> {
+  // Stagger concurrent DDG requests: random pre-delay BEFORE touching engineLastCall
+  const preStaggerMs = Math.random() * 2000;
+  engineLastCall["duckduckgo"] = Date.now() + preStaggerMs;
+  await sleep(preStaggerMs);
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     if (attempt > 0) {
       const delay = calcDelay(attempt - 1, baseDelay, maxDelay);
@@ -361,7 +366,7 @@ function deduplicateByUrl(results: WebSearchResult[]): WebSearchResult[] {
 // --- Per-engine rate limiter ---
 const engineLastCall: Record<string, number> = {};
 const ENGINE_MIN_DELAY: Record<string, number> = {
-  duckduckgo: 1500,
+  duckduckgo: 2500,
   searxng: 2000,
   brave: 500,
 };
