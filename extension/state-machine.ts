@@ -282,9 +282,12 @@ export class ResearchStateMachine {
     return { phase: "drafting", snapshot: { ...snapshot, phase: "drafting" }, inject };
   }
 
-  private async doQuestioning(snapshot: ResearchSnapshot, plan: ResearchPlan, agentResponse?: string): Promise<ResearchStateResult> {
+  private async doQuestioning(snapshot: ResearchSnapshot, plan: ResearchPlan, agentResponse?: unknown): Promise<ResearchStateResult> {
     if (agentResponse) {
-      const questions = this.extractQuestions(agentResponse);
+      const text = typeof agentResponse === "string"
+        ? agentResponse
+        : (Array.isArray(agentResponse) ? (agentResponse as any[]).map((b: any) => b.text ?? "").join("\n") : "");
+      const questions = this.extractQuestions(text);
       snapshot.pendingQuestions = questions.length > 0 ? questions : plan.researchQuestions;
     } else {
       snapshot.pendingQuestions = plan.researchQuestions;

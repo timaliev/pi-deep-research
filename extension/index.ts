@@ -210,7 +210,12 @@ Use "compare" mode to see results from each engine separately without deduplicat
 
       // Step 3: plan_json provided → finalize
       if (params.plan_json) {
-        const result = await manager.finalize(params.topic, params.plan_json);
+        // Extract topic from plan if not passed explicitly
+        let topic = params.topic as string;
+        if (!topic) {
+          try { topic = JSON.parse(params.plan_json).topic || "unknown"; } catch { topic = "unknown"; }
+        }
+        const result = await manager.finalize(topic, params.plan_json);
         return {
           content: [{ type: "text", text: result.phase === "plan_ready"
             ? `## Research Plan Ready ✅\n\nPlan saved to: ${result.planArtifactPath}\n\n**Topic:** ${result.plan?.topic}\n**Engines:** ${result.plan?.engines.join(", ")}\n**Profile:** ${result.plan?.profile.name}\n**Questions:** ${result.plan?.researchQuestions.length}\n\nNext: show user and ask for confirmation before calling run_research.`
