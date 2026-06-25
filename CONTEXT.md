@@ -9,11 +9,11 @@ An autonomous multi-step research workflow: plan research questions → search �
 _Avoid_: web search, web report (these are individual steps, not the whole workflow)
 
 **Prefilter**:
-The initial planning phase that analyzes a raw user query, performs 2–3 preliminary web searches, and produces a structured Research Plan (JSON). Does not produce the final report. Corresponds to `plan_research` tool.
+The initial planning phase with three steps: (1) agent proposes search engines and research profile, (2) preliminary web search runs with chosen engines, (3) agent produces a full Research Plan (JSON). Does not produce the final report. Corresponds to `plan_research` tool. If API keys are missing for chosen engines, loops back to step 1 with a warning.
 _Avoid_: planning, plan generation, query pre-processing
 
 **Research Plan**:
-A JSON artifact produced by `plan_research` containing: topic, goal, research questions (array), scope (include/exclude), estimated cost breakdown, and the normalized web query. Stored as `prefilter.json` in `./deep-research/artifacts/`. Serves as the canonical input for `run_research`.
+A JSON artifact produced by `plan_research` containing: topic, goal, research questions (array), engines (array of search engine names), profile (named preset or custom with breadth/depth/concurrency), scope (include/exclude), and estimated cost breakdown. Stored as `prefilter.json` in `./deep-research/artifacts/`. Serves as the canonical input for `run_research`. All runtime parameters (engines, depth, breadth) are locked in the plan — no overrides at run time.
 _Avoid_: plan document, research brief, query template
 
 **Research Run**:
@@ -37,12 +37,12 @@ One level of the recursive research depth. Each iteration: search N queries (bre
 _Avoid_: level, recursion step, pass
 
 **Research Profile**:
-A named set of parameters controlling the research budget and thoroughness: `breadth` (queries per level), `depth` (recursion levels), `concurrency` (parallel searches). Examples: `default` (4/2/4), `fast` (2/1/2), `deep` (6/3/4). Configured in `~/.pi/settings.json` under `deepResearch.profiles`.
+A named preset or custom configuration controlling research budget: `breadth` (queries per level), `depth` (recursion levels), `concurrency` (parallel searches). Presets: `default` (4/2/4), `fast` (2/1/2), `deep` (6/3/4). Custom profiles specify exact numbers. Negotiated during prefilter and stored in the Research Plan. Hardcoded presets may be overridden in `~/.pi/settings.json` under `deepResearch.profiles`.
 _Avoid_: config preset, run configuration, research mode
 
-**Search Provider**:
-A pluggable backend that executes web search queries. The extension supports multiple implementations (DuckDuckGo, Tavily, Brave Search) selected via `searchProvider` in settings. DuckDuckGo is the default — free, no API key required, zero-config.
-_Avoid_: retriever, search engine, search backend
+**Search Engine**:
+A web search backend used by all research tools. The extension uses a unified `searchWeb()` function supporting duckduckgo (free, zero-config, with retry/backoff), brave (needs `BRAVE_API_KEY` env var), and searxng (public instances). Selected during prefilter and stored in the Research Plan. DuckDuckGo is the default and always available; other engines require environment variables.
+_Avoid_: retriever, search backend, search provider
 
 **Confirmation Gate**:
 The boundary between free operations (prefilter/planning) and paid operations (full research). The agent must present the Research Plan and estimated cost to the user and receive explicit approval before calling `run_research`. Enforced by skill instructions, not programmatically.
@@ -55,3 +55,7 @@ _Avoid_: hard limit, quota, budget cap
 **Telemetry**:
 Structured usage data recorded during a Research Run: search API call count, scrape call count, phase durations, and (when available) LLM token usage. Saved as `*-telemetry.json` in `./deep-research/logs/` and appended as a summary table to the final report.
 _Avoid_: analytics, metrics, usage report
+
+**Research Log**:
+A JSONL trace file recording every discrete event during a Research Run and its Prefilter phase: phase transitions, search calls, scrape calls, errors, injection prompts sent, soft limit triggers, deepening decisions, and artifact saves. Saved as `<runId>.log` in `./deep-research/logs/`. Complements Telemetry (aggregate) with a step-by-step audit trail. One log per Prefilter run (<runId>-prefilter.log), one per Research Run (<runId>.log).
+_Avoid_: debug log, trace, audit log

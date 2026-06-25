@@ -2,6 +2,51 @@
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.
 
+## [0.8.0] — 2026-06-25
+
+### Added
+
+- **Unified multi-engine web search** — `searchWeb()` function with DuckDuckGo (retry/backoff), Brave API, SearXNG public instances. All tools use the same search function. Result deduplication and per-engine rate limiting.
+- **Plan-driven parameters** — engines and research profile negotiated during three-step prefilter: agent proposes engines + profile → preliminary search → full plan
+- **API key negotiation** — prefilter warns when brave selected without `BRAVE_API_KEY` set
+- **Research log** — JSONL trace file (`<runId>.log`) with events: phase transitions, search/scrape calls, errors, injects, soft limits, decisions
+- **Agent-driven deepening** — follow-up questions from agent responses used for subsequent search iterations (numbered questions parsed by state machine)
+- **Profile resolution** — `resolveProfile()` with hardcoded presets (default/fast/deep/custom), overridable via settings
+- **`ResearchPlanProfile` type** — plan stores profile name + optional custom breadth/depth/concurrency
+- **`extractQuestions()`** — parses numbered questions from agent response text or content blocks
+- 26 new tests: plan-driven params (7), deepening questions (4), logger (4), session state (2), report saving (2), agent response robustness (3), extension load (1), scraper (7 already existed)
+- Total: 52 tests
+
+### Changed
+
+- **`plan_research`** now three-step: `{topic}` → `{topic, params_json}` → `{topic/-, plan_json}`
+- **`topic` optional** on third plan_research call — extracted from plan_json when missing
+- **`estimate_research_cost`** reads profile from plan, not runtime parameter
+- **`run_research`** no longer accepts `profile` parameter — locked in plan
+- **Search engine selection** moved from `settings.json` to Research Plan — planned, not configured
+- **Report auto-saved** by `run_research` (done phase) — `save_report` tool still available for explicit saves
+- **Output directory** derived from plan artifact path — consistent across sessions even if `ctx.cwd` changes
+
+### Removed
+
+- **Pluggable SearchProvider interface** — replaced by unified `searchWeb()` function
+- **Tavily provider** — removed (can be re-added as engine in `searchWeb`)
+- **`searchProvider` setting** — replaced by `engines` array in Research Plan
+- **`profile` parameter** on `run_research` and `estimate_research_cost`
+
+### Fixed
+
+- Plan research questions lost after depth 0 — agent questions now drive deepening
+- Report saved to wrong directory (`~/.config/pi/agent/` vs project) — `ctx.cwd` used consistently
+- Logs scattered across directories — `deepResearchBase` persisted in session state
+- `ctx is not defined` — `save_report` missing ctx parameter
+- `text.split is not a function` — agentResponse now handles array content blocks
+- `Cannot access scraper before initialization` — missing declaration in first-call block
+- Duplicate `const entries` declaration causing parse error
+- Session state read from `.content` instead of `.data`
+- Assistant messages not found — filter uses `message.role` not `entry.type`
+- `plan_research` schema rejected `plan_json`-only calls — topic made optional
+
 ## [0.7.0] — 2026-06-22
 
 ### Added

@@ -1,62 +1,35 @@
 import { Type } from "typebox";
+import { StringEnum } from "@earendil-works/pi-ai";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-import { DuckDuckGoProvider } from "./search/duckduckgo.js";
-import { TavilyProvider } from "./search/tavily.js";
-import { BraveProvider } from "./search/brave.js";
+import { searchWeb, multiEngineWebSearch } from "./search/web-search.js";
+import type { SearchEngine } from "./search/web-search.js";
 import { WebScraper } from "./scraper.js";
-import type { SearchProvider } from "./search/provider.js";
+import { JsonlLogger } from "./logger.js";
 import { PrefilterManager } from "./prefilter.js";
-import { ResearchStateMachine, buildTelemetrySection } from "./state-machine.js";
-import type { ResearchPlan, PrefilterArtifact, PrefilterResult } from "./prefilter.js";
+import { ResearchStateMachine, buildTelemetrySection, DEFAULT_PRESETS } from "./state-machine.js";
+import type { ResearchPlan, PrefilterArtifact, ResearchPlanProfile } from "./prefilter.js";
 import type { ResearchSnapshot } from "./state-machine.js";
-import type { ResearchProfile } from "./state-machine.js";
 
 const baseDir = dirname(fileURLToPath(import.meta.url));
 
 interface DeepResearchSettings {
-  searchProvider?: "duckduckgo" | "tavily" | "brave";
-  profiles?: Record<string, ResearchProfile>;
+  profiles?: Record<string, unknown>;
   artifactsDir?: string;
   reportsDir?: string;
 }
 
-const DEFAULT_PROFILE: ResearchProfile = { breadth: 4, depth: 2, concurrency: 4 };
 const DEFAULT_SETTINGS: DeepResearchSettings = {
-  searchProvider: "duckduckgo",
-  profiles: {
-    default: DEFAULT_PROFILE,
-    fast: { breadth: 2, depth: 1, concurrency: 2 },
-    deep: { breadth: 6, depth: 3, concurrency: 4 },
-  },
+  profiles: DEFAULT_PRESETS as unknown as Record<string, unknown>,
 };
-
-function createSearchProvider(settings: DeepResearchSettings): SearchProvider {
-  const provider = settings.searchProvider ?? "duckduckgo";
-  switch (provider) {
-    case "tavily": {
-      const key = process.env.TAVILY_API_KEY;
-      if (!key) throw new Error("TAVILY_API_KEY not set. Configure it in your environment or switch to duckduckgo.");
-      return new TavilyProvider(key);
-    }
-    case "brave": {
-      const key = process.env.BRAVE_API_KEY;
-      if (!key) throw new Error("BRAVE_API_KEY not set. Configure it in your environment or switch to duckduckgo.");
-      return new BraveProvider(key);
-    }
-    default:
-      return new DuckDuckGoProvider();
-  }
-}
 
 function resolveSettings(settings: Record<string, unknown> = {}): DeepResearchSettings {
   const dr = (settings.deepResearch ?? {}) as Record<string, unknown>;
   return {
-    searchProvider: (dr.searchProvider as string) ?? DEFAULT_SETTINGS.searchProvider,
-    profiles: (dr.profiles as Record<string, ResearchProfile>) ?? DEFAULT_SETTINGS.profiles,
+    profiles: (dr.profiles as Record<string, unknown>) ?? DEFAULT_SETTINGS.profiles,
     artifactsDir: (dr.artifactsDir as string) ?? join(baseDir, "..", "..", "deep-research", "artifacts"),
     reportsDir: (dr.reportsDir as string) ?? join(baseDir, "..", "..", "deep-research", "reports"),
   };
@@ -72,18 +45,57 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "web_search",
     label: "Web Search",
-    description: "Search the web using DuckDuckGo. Returns results with title, URL, and snippet. Use for finding sources during deep research.",
+    description: `Search the web using multiple search engines with delays to emulate user behavior.
+Returns results with title, URL, and snippet.
+Use for finding sources during research or when you need up-to-date information.
+
+Engines: duckduckgo (default, no key), brave (needs BRAVE_API_KEY env), searxng (public instances).
+DuckDuckGo uses honest bot UA with exponential backoff on rate limits (based on ddg-search).
+Use "compare" mode to see results from each engine separately without deduplication.`,
+    promptSnippet: "Search the web using DuckDuckGo, Brave, or SearXNG with honest bot User-Agent and exponential backoff retry.",
+    promptGuidelines: [
+      "Use web_search for finding sources, current information, or web research. Multiple engines can be used with compare mode to cross-check results.",
+      "web_search uses exponential backoff with jitter to handle rate limits. Specify engines to use: duckduckgo, brave, searxng.",
+    ],
     parameters: Type.Object({
       query: Type.String({ description: "Search query" }),
-      max_results: Type.Optional(Type.Number({ description: "Max results (default 5)" })),
+      max_results: Type.Optional(Type.Number({ description: "Max results per engine (default 5)" })),
+      engines: Type.Optional(
+        Type.Array(
+          StringEnum(["duckduckgo", "brave", "searxng"] as const),
+          { description: "Search engines to query (default: ['duckduckgo'])" },
+        ),
+      ),
+      compare: Type.Optional(
+        Type.Boolean({ description: "If true, show results per engine without deduplication (default: false)" }),
+      ),
     }),
-    async execute(_toolCallId, params) {
-      const settings = resolveSettings();
-      const provider = createSearchProvider(settings);
-      const results = await provider.search(params.query, params.max_results ?? 5);
+
+    async execute(_toolCallId, params, signal, onUpdate) {
+      const query = params.query as string;
+      const maxResults = (params.max_results as number) ?? 5;
+      const engines = (params.engines as SearchEngine[]) ?? ["duckduckgo"];
+      const compareMode = (params.compare as boolean) ?? false;
+
+      if (!query || query.trim().length === 0) {
+        return {
+          content: [{ type: "text", text: "Error: query is required and must not be empty." }],
+          details: {},
+        };
+      }
+
+      const output = await multiEngineWebSearch({
+        query,
+        maxResults,
+        engines,
+        compare: compareMode,
+        signal,
+        onUpdate,
+      });
+
       return {
-        content: [{ type: "text", text: JSON.stringify(results, null, 2) }],
-        details: { results },
+        content: [{ type: "text", text: output.markdown }],
+        details: output.details,
       };
     },
   });
@@ -115,8 +127,8 @@ export default function (pi: ExtensionAPI) {
       topic: Type.String({ description: "Research topic (used in filename)" }),
       markdown: Type.String({ description: "Report content in markdown" }),
     }),
-    async execute(_toolCallId, params) {
-      const reportsDir = join(baseDir, "..", "..", "deep-research", "reports");
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const reportsDir = join(ctx.cwd ?? baseDir, "deep-research", "reports");
       mkdirSync(reportsDir, { recursive: true });
 
       const date = new Date().toISOString().slice(0, 10);
@@ -143,59 +155,82 @@ export default function (pi: ExtensionAPI) {
     name: "plan_research",
     label: "Plan Research",
     description:
-      "Start the research planning phase. Call once with topic to get preliminary search results and a prompt. Call again with the same topic and your JSON research plan to save it. Two-step: (1) plan_research({topic}), then (2) plan_research({topic, plan_json}).",
+      "Three-step research planning. (1) Call with topic — agent proposes engines+profile. (2) Call with topic and params_json — preliminary search runs. (3) Call with topic and plan_json — save plan artifact.",
     parameters: Type.Object({
-      topic: Type.String({ description: "Research topic" }),
-      plan_json: Type.Optional(Type.String({ description: "JSON research plan (on second call)" })),
+      topic: Type.Optional(Type.String({ description: "Research topic (optional if plan_json provided, extracted from plan)" })),
+      params_json: Type.Optional(Type.String({ description: "JSON with engines and profile (second call)" })),
+      plan_json: Type.Optional(Type.String({ description: "JSON research plan (third call)" })),
     }),
     async execute(_toolCallId, params, _signal, onUpdate, ctx) {
       const settings = resolveSettings({});
       const artifactsDir = join(ctx.cwd ?? baseDir, "deep-research", "artifacts");
       mkdirSync(artifactsDir, { recursive: true });
 
-      const searchProvider = createSearchProvider(settings);
       const scraper = new WebScraper();
-      const manager = new PrefilterManager(searchProvider, scraper, artifactsDir);
+      const prefilterRunId = new Date().toISOString().replace(/[:.]/g, "-").substring(0, 19);
+      const logsDir = join(artifactsDir, "..", "logs");
+      const logger = new JsonlLogger(prefilterRunId, join(logsDir, `${prefilterRunId}-prefilter.log`));
 
-      if (!params.plan_json) {
-        // First call: preliminary search
-        const result = await manager.start(params.topic);
+      const manager = new PrefilterManager(searchWeb, scraper, artifactsDir, logger);
 
-        // Inject the plan prompt into the conversation
-        if (result.inject) {
-          pi.sendUserMessage(result.inject, { deliverAs: "steer" });
+      // Step 1: topic only → negotiate params
+      if (!params.params_json && !params.plan_json) {
+        if (!params.topic) {
+          return { content: [{ type: "text", text: "Error: topic is required for the first call." }], details: { error: "missing_topic" } };
         }
-
+        const result = await manager.start(params.topic);
+        if (result.inject) pi.sendUserMessage(result.inject, { deliverAs: "steer" });
         return {
-          content: [
-            {
-              type: "text",
-              text: `## Research Planning — Phase: ${result.phase}\n\nPreliminary search complete. ${result.searchResults?.length ?? 0} results found, ${result.scrapedContent?.length ?? 0} pages scraped. I've sent you a prompt to create the research plan.\n\n**Next:** Respond with a JSON research plan, then call plan_research again with your plan in the plan_json parameter.`,
-            },
-          ],
+          content: [{ type: "text", text: `## Research Planning — Phase: ${result.phase}\n\nI've sent you a prompt to choose engines and profile. Respond with JSON, then call plan_research again with params_json.` }],
           details: { phase: result.phase, run_id: result.runId },
         };
       }
 
-      // Second call: finalize the plan
-      const result = await manager.finalize(params.topic, params.plan_json);
-      return {
-        content: [
-          {
-            type: "text",
-            text:
-              result.phase === "plan_ready"
-                ? `## Research Plan Ready ✅\n\nPlan saved to: ${result.planArtifactPath}\n\n**Topic:** ${result.plan?.topic}\n**Goal:** ${result.plan?.goal}\n**Questions:** ${result.plan?.researchQuestions.length}\n**Estimated cost:** ${result.plan?.estimatedCost?.description}\n\nNext: show this to the user and ask for confirmation before calling run_research.`
-                : `## Plan Error ❌\n\n${result.error}\n\nPlease fix the JSON and try again.`,
-          },
-        ],
-        details: {
-          phase: result.phase,
-          plan_artifact_path: result.planArtifactPath,
-          plan: result.plan,
-          error: result.error,
-        },
-      };
+      // Step 2: params_json provided → preliminary search
+      if (params.params_json && !params.plan_json) {
+        if (!params.topic) {
+          return { content: [{ type: "text", text: "Error: topic is required when providing params_json." }], details: { error: "missing_topic" } };
+        }
+        let engines: SearchEngine[];
+        let profile: ResearchPlanProfile;
+        try {
+          const parsed = JSON.parse(params.params_json);
+          engines = parsed.engines ?? ["duckduckgo"];
+          profile = parsed.profile ?? { name: "default" };
+        } catch {
+          return { content: [{ type: "text", text: "Error: params_json must be valid JSON." }], details: { error: "invalid_params_json" } };
+        }
+        const result = await manager.withParams(params.topic, engines, profile);
+        if (result.inject) pi.sendUserMessage(result.inject, { deliverAs: "steer" });
+        if (result.phase === "awaiting_params") {
+          return {
+            content: [{ type: "text", text: `## API Key Required\n\nSet missing env vars and retry.` }],
+            details: { phase: result.phase, run_id: result.runId },
+          };
+        }
+        return {
+          content: [{ type: "text", text: `## Research Planning — Phase: ${result.phase}\n\nPreliminary search complete. ${result.searchResults?.length ?? 0} results. I've sent a prompt to create the plan.` }],
+          details: { phase: result.phase, run_id: result.runId },
+        };
+      }
+
+      // Step 3: plan_json provided → finalize
+      if (params.plan_json) {
+        // Extract topic from plan if not passed explicitly
+        let topic = params.topic as string;
+        if (!topic) {
+          try { topic = JSON.parse(params.plan_json).topic || "unknown"; } catch { topic = "unknown"; }
+        }
+        const result = await manager.finalize(topic, params.plan_json);
+        return {
+          content: [{ type: "text", text: result.phase === "plan_ready"
+            ? `## Research Plan Ready ✅\n\nPlan saved to: ${result.planArtifactPath}\n\n**Topic:** ${result.plan?.topic}\n**Engines:** ${result.plan?.engines.join(", ")}\n**Profile:** ${result.plan?.profile.name}\n**Questions:** ${result.plan?.researchQuestions.length}\n\nNext: show user and ask for confirmation before calling run_research.`
+            : `## Plan Error ❌\n\n${result.error}` }],
+          details: { phase: result.phase, plan_artifact_path: result.planArtifactPath, plan: result.plan, error: result.error },
+        };
+      }
+
+      return { content: [{ type: "text", text: "Error: unexpected state." }], details: { error: "unexpected_state" } };
     },
   });
 
@@ -206,43 +241,28 @@ export default function (pi: ExtensionAPI) {
     description: "Estimate the cost of running a deep research (in API calls). Reads a plan artifact and calculates search/scrape calls based on the profile.",
     parameters: Type.Object({
       plan_artifact_path: Type.String({ description: "Path to the prefilter.json artifact" }),
-      profile: Type.Optional(Type.String({ description: "Profile name: default, fast, or deep" })),
     }),
     async execute(_toolCallId, params) {
       if (!existsSync(params.plan_artifact_path)) {
-        return {
-          content: [{ type: "text", text: `Error: artifact not found at ${params.plan_artifact_path}` }],
-          details: { error: "artifact_not_found" },
-        };
+        return { content: [{ type: "text", text: `Error: artifact not found at ${params.plan_artifact_path}` }], details: { error: "artifact_not_found" } };
       }
-
       const raw = readFileSync(params.plan_artifact_path, "utf-8");
       const artifact: PrefilterArtifact = JSON.parse(raw);
-      const settings = resolveSettings();
-      const profile = settings.profiles?.[params.profile ?? "default"] ?? DEFAULT_PROFILE;
-
+      const { resolveProfile } = await import("./state-machine.js");
+      const profile = resolveProfile(artifact.plan.profile);
       const estSearches = profile.breadth * profile.depth * artifact.plan.researchQuestions.length;
       const estScrapes = estSearches * 2;
-
       return {
-        content: [
-          {
-            type: "text",
-            text: [
-              `## Research Cost Estimate`,
-              ``,
-              `**Profile:** ${params.profile ?? "default"} (breadth=${profile.breadth}, depth=${profile.depth})`,
-              `**Research questions:** ${artifact.plan.researchQuestions.length}`,
-              `**Estimated searches:** ~${estSearches}`,
-              `**Estimated scrapes:** ~${estScrapes}`,
-              ``,
-              `**Search provider:** ${settings.searchProvider ?? "duckduckgo"}`,
-              `DuckDuckGo: free (no API key needed)`,
-              `Tavily: ~$0.01 per search (requires API key)`,
-            ].join("\n"),
-          },
-        ],
-        details: { estimated_searches: estSearches, estimated_scrapes: estScrapes, profile },
+        content: [{ type: "text", text: [
+          `## Research Cost Estimate`,
+          ``,
+          `**Profile:** ${artifact.plan.profile.name} (breadth=${profile.breadth}, depth=${profile.depth})`,
+          `**Engines:** ${artifact.plan.engines.join(", ")}`,
+          `**Questions:** ${artifact.plan.researchQuestions.length}`,
+          `**Estimated searches:** ~${estSearches}`,
+          `**Estimated scrapes:** ~${estScrapes}`,
+        ].join("\n") }],
+        details: { estimated_searches: estSearches, estimated_scrapes: estScrapes },
       };
     },
   });
@@ -258,15 +278,9 @@ export default function (pi: ExtensionAPI) {
       "Execute the deep research state machine. Call repeatedly until phase='done'. Each call advances the research by one or more phases. On the first call, pass plan_artifact_path. On subsequent calls, pass nothing — the tool manages its own state.",
     parameters: Type.Object({
       plan_artifact_path: Type.Optional(Type.String({ description: "Path to prefilter.json (first call only)" })),
-      profile: Type.Optional(Type.String({ description: "Profile name: default, fast, or deep" })),
     }),
     async execute(_toolCallId, params, _signal, onUpdate, ctx) {
       const settings = resolveSettings();
-      const artifactsDir = join(ctx.cwd ?? baseDir, "deep-research", "artifacts");
-      mkdirSync(artifactsDir, { recursive: true });
-
-      const searchProvider = createSearchProvider(settings);
-      const scraper = new WebScraper();
 
       // Load or initialize state
       let snapshot: ResearchSnapshot;
@@ -280,15 +294,32 @@ export default function (pi: ExtensionAPI) {
         }
         const raw = readFileSync(params.plan_artifact_path, "utf-8");
         const artifact: PrefilterArtifact = JSON.parse(raw);
-        const profile = settings.profiles?.[params.profile ?? "default"] ?? DEFAULT_PROFILE;
-        const machine = new ResearchStateMachine(searchProvider, scraper, profile);
-        snapshot = ResearchStateMachine.init(artifact.plan, profile);
+        snapshot = ResearchStateMachine.init(artifact.plan, settings.profiles as any);
+
+        const scraper = new WebScraper();
+
+        // Compute output directories from plan artifact path (stable across sessions)
+        const deepResearchBase = join(dirname(params.plan_artifact_path), "..");
+        const artifactsDir = join(deepResearchBase, "artifacts");
+        mkdirSync(artifactsDir, { recursive: true });
+        const logsDir = join(deepResearchBase, "logs");
+        const reportsDir = join(deepResearchBase, "reports");
+        mkdirSync(reportsDir, { recursive: true });
+
+        const runLogger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
+        runLogger.event("run_started", { topic: artifact.plan.topic, profile: artifact.plan.profile, engines: artifact.plan.engines });
+        const machine = new ResearchStateMachine(searchWeb, scraper, settings.profiles as any, runLogger);
 
         // Advance to first phase (searching → extracting)
         const result = await machine.next(snapshot, artifact.plan);
 
-        // Persist state
-        pi.appendEntry(STATE_KEY, { ...result.snapshot, plan: artifact.plan, profile, planArtifactPath: params.plan_artifact_path });
+        // Persist state with base directory for consistent output location
+        pi.appendEntry(STATE_KEY, {
+          ...result.snapshot,
+          plan: artifact.plan,
+          planArtifactPath: params.plan_artifact_path,
+          deepResearchBase,
+        });
 
         // Inject prompt if any
         if (result.inject) {
@@ -303,6 +334,10 @@ export default function (pi: ExtensionAPI) {
 
       // Subsequent calls: load state from session
       const entries = ctx.sessionManager.getEntries();
+      const lastAssistant = [...entries].reverse().find(
+        (e: any) => e.message?.role === "assistant"
+      );
+      const agentResponse = lastAssistant?.message?.content as string | undefined;
       const lastStateEntry = [...entries].reverse().find((e) => e.customType === STATE_KEY);
       if (!lastStateEntry) {
         return {
@@ -311,11 +346,16 @@ export default function (pi: ExtensionAPI) {
         };
       }
 
-      const stateData = lastStateEntry.content as Record<string, unknown>;
+      const stateData = lastStateEntry.data as Record<string, unknown>;
       snapshot = stateData as unknown as ResearchSnapshot;
       const plan = stateData.plan as ResearchPlan;
-      const profile = (stateData.profile ?? DEFAULT_PROFILE) as ResearchProfile;
       const planArtifactPath = stateData.planArtifactPath as string;
+      let deepResearchBase = (stateData.deepResearchBase as string) || planArtifactPath ? join(dirname(planArtifactPath), "..") : join(ctx.cwd ?? baseDir, "deep-research");
+      // Ensure it's an absolute path
+      if (!deepResearchBase.startsWith("/")) deepResearchBase = join(ctx.cwd ?? baseDir, deepResearchBase);
+      const logsDir = join(deepResearchBase, "logs");
+      const reportsDir = join(deepResearchBase, "reports");
+      mkdirSync(reportsDir, { recursive: true });
 
       if (!plan || !snapshot) {
         return {
@@ -324,11 +364,14 @@ export default function (pi: ExtensionAPI) {
         };
       }
 
-      const machine = new ResearchStateMachine(searchProvider, scraper, profile);
-      const result = await machine.next(snapshot, plan);
+      // Re-create logger for subsequent calls (same file, appends)
+      const scraper = new WebScraper();
+      const runLogger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
+      const machine = new ResearchStateMachine(searchWeb, scraper, settings.profiles as any, runLogger);
+      const result = await machine.next(snapshot, plan, agentResponse);
 
       // Persist updated state
-      pi.appendEntry(STATE_KEY, { ...result.snapshot, plan, profile, planArtifactPath });
+      pi.appendEntry(STATE_KEY, { ...result.snapshot, plan, planArtifactPath, deepResearchBase });
 
       // Inject prompt if any
       if (result.inject) {
@@ -339,12 +382,10 @@ export default function (pi: ExtensionAPI) {
       if (result.phase === "done") {
         // Read the last assistant message as the report
         const lastAssistant = [...entries].reverse().find(
-          (e) => e.type === "assistant" || e.role === "assistant"
+          (e) => e.message?.role === "assistant"
         );
-        const reportText = lastAssistant?.content ?? "";
+        const reportText = lastAssistant?.message?.content ?? "";
 
-        const reportsDir = join(ctx.cwd ?? baseDir, "deep-research", "reports");
-        mkdirSync(reportsDir, { recursive: true });
         const date = new Date().toISOString().slice(0, 10);
         const slug = plan.topic.toLowerCase().replace(/[^\w]+/g, "-").replace(/^-|-$/g, "").substring(0, 80);
         const filename = `${date}-${slug}.md`;
@@ -354,6 +395,13 @@ export default function (pi: ExtensionAPI) {
         const telemetry = buildTelemetrySection(result.snapshot);
         const fullReport = `${typeof reportText === "string" ? reportText : ""}\n\n${telemetry}\n`;
         writeFileSync(reportPath, fullReport, "utf-8");
+
+        runLogger?.event("report_saved", {
+          path: reportPath,
+          searchCalls: result.snapshot.searchCalls,
+          scrapeCalls: result.snapshot.scrapeCalls,
+          sourcesVisited: result.snapshot.allVisitedUrls.length,
+        });
 
         return {
           content: [{ type: "text", text: `## Research Complete ✅\n\nReport saved to: ${reportPath}\n\nSearch calls: ${result.snapshot.searchCalls}\nScrape calls: ${result.snapshot.scrapeCalls}\nSources visited: ${result.snapshot.allVisitedUrls.length}` }],
