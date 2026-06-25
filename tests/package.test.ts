@@ -18,6 +18,12 @@ describe("Package installation", () => {
       pkg.pi.extensions.some((e: string) => e.includes("index.ts")),
       "must point to an index.ts file"
     );
+    assert.ok(Array.isArray(pkg.pi.skills), "pi.skills must be an array");
+    assert.ok(pkg.pi.skills.length > 0, "must have at least one skill entry");
+    assert.ok(
+      pkg.pi.skills.some((s: string) => s.includes("skill")),
+      "must point to the skill directory"
+    );
   });
 
   it("extension package.json has no stale duck-duck-scrape dependency", () => {
