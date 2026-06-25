@@ -127,7 +127,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
       topic: Type.String({ description: "Research topic (used in filename)" }),
       markdown: Type.String({ description: "Report content in markdown" }),
     }),
-    async execute(_toolCallId, params) {
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const reportsDir = join(ctx.cwd ?? baseDir, "deep-research", "reports");
       mkdirSync(reportsDir, { recursive: true });
 
