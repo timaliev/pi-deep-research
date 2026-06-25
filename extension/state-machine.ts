@@ -1,4 +1,4 @@
-import type { ResearchPlan } from "./prefilter.js";
+import type { ResearchPlan, ResearchPlanProfile } from "./prefilter.js";
 import { generateRunId } from "./ids.js";
 import type { Logger } from "./logger.js";
 import type { searchWeb as SearchWebFn } from "./search/web-search.js";
@@ -15,6 +15,32 @@ export interface ResearchProfile {
   maxSearchCalls?: number;
   /** Maximum wall-clock seconds before soft limit triggers (0 = unlimited). */
   maxElapsedSeconds?: number;
+}
+
+/** Hardcoded presets, overridable via settings. */
+export const DEFAULT_PRESETS: Record<string, ResearchProfile> = {
+  default: { breadth: 4, depth: 2, concurrency: 4 },
+  fast:    { breadth: 2, depth: 1, concurrency: 2 },
+  deep:    { breadth: 6, depth: 3, concurrency: 4 },
+};
+
+/** Resolve a ResearchPlanProfile into a concrete ResearchProfile. */
+export function resolveProfile(
+  planProfile: ResearchPlanProfile,
+  presets?: Record<string, ResearchProfile>,
+): ResearchProfile {
+  const p = presets ?? DEFAULT_PRESETS;
+  if (planProfile.name !== "custom") {
+    return p[planProfile.name] ?? p.default;
+  }
+  const preset = p.custom;
+  return {
+    breadth: planProfile.breadth ?? preset?.breadth ?? 4,
+    depth: planProfile.depth ?? preset?.depth ?? 2,
+    concurrency: planProfile.concurrency ?? preset?.concurrency ?? 4,
+    maxSearchCalls: preset?.maxSearchCalls,
+    maxElapsedSeconds: preset?.maxElapsedSeconds,
+  };
 }
 
 export interface Finding {
@@ -36,8 +62,9 @@ export interface ResearchSnapshot {
   searchCalls: number;
   scrapeCalls: number;
   startedAt: number;
-  /** Soft limit has been triggered. When true, depth recursion stops and search intensity reduces. */
   softLimitTriggered: boolean;
+  /** Concrete profile resolved from plan (set on first next() call). */
+  profile?: ResearchProfile;
 }
 
 export interface ResearchStateResult {
@@ -78,12 +105,12 @@ export class ResearchStateMachine {
   constructor(
     private readonly searchFn: typeof SearchWebFn,
     private readonly scraper: Scraper,
-    private readonly profile: ResearchProfile,
-    private readonly searchEngines: SearchEngine[] = ["duckduckgo"],
+    private readonly profilePresets?: Record<string, ResearchProfile>,
     private readonly logger?: Logger,
   ) {}
 
-  static init(plan: ResearchPlan, profile: ResearchProfile): ResearchSnapshot {
+  static init(plan: ResearchPlan, presets?: Record<string, ResearchProfile>): ResearchSnapshot {
+    const profile = resolveProfile(plan.profile, presets);
     return {
       phase: "searching",
       runId: generateRunId(),
@@ -97,10 +124,15 @@ export class ResearchStateMachine {
       scrapeCalls: 0,
       startedAt: Date.now(),
       softLimitTriggered: false,
+      profile,
     };
   }
 
   async next(snapshot: ResearchSnapshot, plan: ResearchPlan): Promise<ResearchStateResult> {
+    if (!snapshot.profile) {
+      snapshot.profile = resolveProfile(plan.profile, this.profilePresets);
+      snapshot.totalDepth = snapshot.profile.depth;
+    }
     switch (snapshot.phase) {
       case "searching":  return this.doSearching(snapshot, plan);
       case "extracting": return this.doExtracting(snapshot, plan);
@@ -112,9 +144,10 @@ export class ResearchStateMachine {
   }
 
   private checkSoftLimits(snapshot: ResearchSnapshot): void {
+    const prof = snapshot.profile!;
     const elapsed = (Date.now() - snapshot.startedAt) / 1000;
-    const maxCalls = this.profile.maxSearchCalls ?? 0;
-    const maxSec = this.profile.maxElapsedSeconds ?? 0;
+    const maxCalls = prof.maxSearchCalls ?? 0;
+    const maxSec = prof.maxElapsedSeconds ?? 0;
     if (
       !snapshot.softLimitTriggered &&
       ((maxCalls > 0 && snapshot.searchCalls >= maxCalls) ||
@@ -134,6 +167,7 @@ export class ResearchStateMachine {
     snapshot: ResearchSnapshot,
     plan: ResearchPlan
   ): Promise<ResearchStateResult> {
+    const prof = snapshot.profile!;
     const questions =
       snapshot.allFindings.length === 0
         ? plan.researchQuestions
@@ -142,19 +176,20 @@ export class ResearchStateMachine {
     // When soft-limited: fewer queries, fewer results per query
     const maxResultsPerQuery = snapshot.softLimitTriggered ? 2 : 3;
     const breadth = snapshot.softLimitTriggered
-      ? Math.min(2, this.profile.breadth)
-      : this.profile.breadth;
+      ? Math.min(2, prof.breadth)
+      : prof.breadth;
 
     const activeQuestions = questions.slice(0, breadth);
-    const semaphore = new ConcurrencySemaphore(this.profile.concurrency);
+    const semaphore = new ConcurrencySemaphore(prof.concurrency);
     const newVisited = new Set(snapshot.allVisitedUrls);
+    const engines = plan.engines;
 
     // Concurrent searches
     const searchResults = await Promise.all(
       activeQuestions.map((question) =>
         semaphore.run(async () => {
           const startMs = Date.now();
-          const results = await this.searchFn(question, maxResultsPerQuery, this.searchEngines, { logger: this.logger });
+          const results = await this.searchFn(question, maxResultsPerQuery, engines, { logger: this.logger });
           this.logger?.event("search_executed", {
             query: question,
             resultCount: results.length,
