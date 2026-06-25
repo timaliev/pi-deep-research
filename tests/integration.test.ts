@@ -132,8 +132,10 @@ describe("Integration: full research pipeline", () => {
     r = await machine.next(r.snapshot, plan, "");
     assert.equal(r.phase, "drafting", "must stay in drafting when response is empty");
     assert.ok(r.inject, "must re-inject drafting prompt");
-    assert.ok(r.inject!.includes("Write the final report") || r.inject!.includes("draft") || r.inject!.includes("report"),
+    assert.ok(r.inject!.includes("Write the final report") || r.inject!.includes("Write the report"),
       "re-injection must ask for report");
+    assert.ok(r.inject!.includes("Do NOT call") || r.inject!.includes("not call"),
+      "re-injection must say not to call tools");
   });
 
   it("end-to-end: plan → run → done", async () => {
