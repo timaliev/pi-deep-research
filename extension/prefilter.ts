@@ -1,3 +1,4 @@
+import { generateRunId } from "./ids.js";
 import type { searchWeb as SearchWebFn } from "./search/web-search.js";
 import type { WebSearchResult } from "./search/web-search.js";
 import type { SearchEngine } from "./search/web-search.js";
@@ -71,7 +72,7 @@ export class PrefilterManager {
    * Returns results + an inject prompt asking the agent to produce a JSON plan.
    */
   async start(topic: string): Promise<PrefilterResult> {
-    const runId = this.generateRunId();
+    const runId = generateRunId();
 
     // Preliminary search
     const searchQuery = this.buildSearchQuery(topic);
@@ -107,7 +108,7 @@ export class PrefilterManager {
     topic: string,
     planJson: string
   ): Promise<PrefilterResult> {
-    const runId = this.generateRunId();
+    const runId = generateRunId();
 
     // Parse JSON
     let plan: ResearchPlan;
@@ -258,16 +259,5 @@ Rules:
     }
 
     return null; // valid
-  }
-
-  private generateRunId(): string {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, "0");
-    const d = String(now.getDate()).padStart(2, "0");
-    const h = String(now.getHours()).padStart(2, "0");
-    const mi = String(now.getMinutes()).padStart(2, "0");
-    const s = String(now.getSeconds()).padStart(2, "0");
-    return `${y}${m}${d}-${h}${mi}${s}`;
   }
 }
