@@ -157,7 +157,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
     description:
       "Three-step research planning. (1) Call with topic — agent proposes engines+profile. (2) Call with topic and params_json — preliminary search runs. (3) Call with topic and plan_json — save plan artifact.",
     parameters: Type.Object({
-      topic: Type.String({ description: "Research topic" }),
+      topic: Type.Optional(Type.String({ description: "Research topic (optional if plan_json provided, extracted from plan)" })),
       params_json: Type.Optional(Type.String({ description: "JSON with engines and profile (second call)" })),
       plan_json: Type.Optional(Type.String({ description: "JSON research plan (third call)" })),
     }),
@@ -175,6 +175,9 @@ Use "compare" mode to see results from each engine separately without deduplicat
 
       // Step 1: topic only → negotiate params
       if (!params.params_json && !params.plan_json) {
+        if (!params.topic) {
+          return { content: [{ type: "text", text: "Error: topic is required for the first call." }], details: { error: "missing_topic" } };
+        }
         const result = await manager.start(params.topic);
         if (result.inject) pi.sendUserMessage(result.inject, { deliverAs: "steer" });
         return {
@@ -185,6 +188,9 @@ Use "compare" mode to see results from each engine separately without deduplicat
 
       // Step 2: params_json provided → preliminary search
       if (params.params_json && !params.plan_json) {
+        if (!params.topic) {
+          return { content: [{ type: "text", text: "Error: topic is required when providing params_json." }], details: { error: "missing_topic" } };
+        }
         let engines: SearchEngine[];
         let profile: ResearchPlanProfile;
         try {
