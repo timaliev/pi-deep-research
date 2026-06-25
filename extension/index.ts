@@ -335,7 +335,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
         };
       }
 
-      const stateData = lastStateEntry.content as Record<string, unknown>;
+      const stateData = lastStateEntry.data as Record<string, unknown>;
       snapshot = stateData as unknown as ResearchSnapshot;
       const plan = stateData.plan as ResearchPlan;
       const planArtifactPath = stateData.planArtifactPath as string;
