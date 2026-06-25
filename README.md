@@ -2,6 +2,37 @@
 
 A Pi extension and skill that provides autonomous deep web research — planning research questions, searching the web, scraping sources, extracting findings, and synthesizing a structured markdown report — all using the user's current Pi LLM model.
 
+## Installation
+
+### Via pi packages (recommended)
+
+```bash
+pi install git:github.com/timaliev/pi-deep-research
+```
+
+This clones the repo to `~/.pi/agent/git/` and links the extension into `~/.pi/agent/extensions/deep-research/`.
+
+To pin a specific version:
+
+```bash
+pi install git:github.com/timaliev/pi-deep-research@v0.8.0
+```
+
+### Manual
+
+```bash
+git clone https://github.com/timaliev/pi-deep-research.git
+ln -s $(pwd)/pi-deep-research/extension ~/.pi/agent/extensions/deep-research
+cp pi-deep-research/skill/SKILL.md ~/.pi/agent/skills/deep-research/SKILL.md
+```
+
+### Update
+
+```bash
+pi update --extensions  # update all extension packages
+pi install git:github.com/timaliev/pi-deep-research@v0.8.0  # pin new version
+```
+
 ## Architecture
 
 ```
