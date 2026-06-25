@@ -403,6 +403,81 @@ export interface WebSearchOutput {
   };
 }
 
+interface SearchCallbacks {
+  signal?: AbortSignal;
+  onUpdate?: (update: {
+    content: Array<{ type: string; text: string }>;
+    details: Record<string, unknown>;
+  }) => void;
+}
+
+/**
+ * Raw multi-engine web search. Returns deduped results, no markdown.
+ * Used by the research pipeline (plan_research, run_research) and
+ * by multiEngineWebSearch (which adds formatting).
+ */
+export async function searchWeb(
+  query: string,
+  maxResults: number = 5,
+  engines: SearchEngine[] = ["duckduckgo"],
+  callbacks?: SearchCallbacks,
+): Promise<WebSearchResult[]> {
+  if (!query || query.trim().length === 0) {
+    throw new Error("Error: query is required and must not be empty.");
+  }
+
+  callbacks?.onUpdate?.({
+    content: [
+      { type: "text", text: `Searching "${query}" via [${engines.join(", ")}]...` },
+    ],
+    details: { phase: "searching", engine: engines[0] },
+  });
+
+  const engineFns: Record<string, (q: string, n: number) => Promise<WebSearchResult[]>> = {
+    duckduckgo: (q, n) => searchDuckDuckGo(q, n),
+    brave: searchBrave,
+    searxng: searchSearXNG,
+  };
+
+  const allResults: WebSearchResult[] = [];
+
+  for (const engine of engines) {
+    if (callbacks?.signal?.aborted) break;
+
+    const fn = engineFns[engine];
+    if (!fn) continue;
+
+    await waitIfNeeded(engine);
+
+    try {
+      callbacks?.onUpdate?.({
+        content: [{ type: "text", text: `Querying ${engine}...` }],
+        details: { phase: "searching", engine },
+      });
+
+      const results = await fn(query, maxResults);
+      engineLastCall[engine] = Date.now();
+      allResults.push(...results);
+
+      callbacks?.onUpdate?.({
+        content: [{ type: "text", text: `${engine}: ${results.length} results` }],
+        details: { phase: "done", engine, count: results.length },
+      });
+    } catch (err: any) {
+      callbacks?.onUpdate?.({
+        content: [{ type: "text", text: `${engine}: failed — ${err.message}` }],
+        details: { phase: "error", engine, error: err.message },
+      });
+    }
+  }
+
+  return deduplicateByUrl(allResults);
+}
+
+/**
+ * Multi-engine web search with markdown formatting.
+ * Used by the web_search tool for user-facing output.
+ */
 export async function multiEngineWebSearch(
   opts: WebSearchOptions,
 ): Promise<WebSearchOutput> {
@@ -415,20 +490,8 @@ export async function multiEngineWebSearch(
     throw new Error("Error: query is required and must not be empty.");
   }
 
-  opts.onUpdate?.({
-    content: [
-      {
-        type: "text",
-        text: `Searching "${query}" via [${engines.join(", ")}]...`,
-      },
-    ],
-    details: { phase: "searching", engine: engines[0] },
-  });
-
-  const engineFns: Record<
-    string,
-    (q: string, n: number) => Promise<WebSearchResult[]>
-  > = {
+  // Collect per-engine results separately for compare mode
+  const engineFns: Record<string, (q: string, n: number) => Promise<WebSearchResult[]>> = {
     duckduckgo: (q, n) => searchDuckDuckGo(q, n),
     brave: searchBrave,
     searxng: searchSearXNG,
@@ -458,23 +521,13 @@ export async function multiEngineWebSearch(
       allResults.push(...results);
 
       opts.onUpdate?.({
-        content: [
-          {
-            type: "text",
-            text: `${engine}: ${results.length} results`,
-          },
-        ],
+        content: [{ type: "text", text: `${engine}: ${results.length} results` }],
         details: { phase: "done", engine, count: results.length },
       });
     } catch (err: any) {
       errors.push(`${engine}: ${err.message}`);
       opts.onUpdate?.({
-        content: [
-          {
-            type: "text",
-            text: `${engine}: failed — ${err.message}`,
-          },
-        ],
+        content: [{ type: "text", text: `${engine}: failed — ${err.message}` }],
         details: { phase: "error", engine, error: err.message },
       });
     }

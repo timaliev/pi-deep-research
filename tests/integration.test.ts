@@ -7,16 +7,16 @@ import { PrefilterManager } from "../extension/prefilter.js";
 import { ResearchStateMachine } from "../extension/state-machine.js";
 import type { ResearchPlan } from "../extension/prefilter.js";
 import type { ResearchProfile } from "../extension/state-machine.js";
-import type { SearchProvider, SearchResult } from "../extension/search/provider.js";
+import type { WebSearchResult } from "../extension/search/web-search.js";
 import type { Scraper, ScrapedPage } from "../extension/scraper.js";
 
 const TEST_DIR = join(import.meta.dirname ?? ".", "../test-integration");
 
 const MOCK_PROFILE: ResearchProfile = { breadth: 2, depth: 2, concurrency: 1 };
 
-const DEFAULT_RESULTS: SearchResult[] = [
-  { title: "XState Docs", url: "https://xstate.js.org", snippet: "State machines for JS/TS." },
-  { title: "Robot FSM", url: "https://thisrobot.life", snippet: "Lightweight FSM library." },
+const DEFAULT_RESULTS: WebSearchResult[] = [
+  { title: "XState Docs", url: "https://xstate.js.org", snippet: "State machines for JS/TS.", engine: "duckduckgo" },
+  { title: "Robot FSM", url: "https://thisrobot.life", snippet: "Lightweight FSM library.", engine: "duckduckgo" },
 ];
 
 const DEFAULT_SCRAPED: Record<string, ScrapedPage> = {
@@ -32,12 +32,8 @@ const DEFAULT_SCRAPED: Record<string, ScrapedPage> = {
   },
 };
 
-function mockSearchProvider(): SearchProvider {
-  return {
-    async search(_query: string, _max?: number) {
-      return DEFAULT_RESULTS;
-    },
-  };
+function mockSearchFn() {
+  return async (_query: string, _max?: number) => DEFAULT_RESULTS;
 }
 
 function mockScraper(): Scraper {
@@ -45,7 +41,6 @@ function mockScraper(): Scraper {
     async scrape(url: string) {
       const page = DEFAULT_SCRAPED[url];
       if (!page) {
-        // Return a generic page for any URL not in the map
         return { url, title: url.replace("https://", "").split("/")[0], content: "Mock content for " + url };
       }
       return page;
@@ -85,20 +80,17 @@ describe("Integration: full research pipeline", () => {
 
   it("plan phase: start → agent generates plan → finalize → artifact saved", async () => {
     const artifactsDir = join(TEST_DIR, "artifacts");
-    const manager = new PrefilterManager(mockSearchProvider(), mockScraper(), artifactsDir);
+    const manager = new PrefilterManager(mockSearchFn(), mockScraper(), artifactsDir);
 
-    // Step 1: start
     const startResult = await manager.start("state machine libraries in TypeScript");
     assert.equal(startResult.phase, "awaiting_plan");
     assert.ok(startResult.inject, "should have inject prompt");
     assert.ok(startResult.searchResults!.length > 0, "should have search results");
     assert.ok(startResult.scrapedContent!.length > 0, "should have scraped content");
 
-    // Step 2: agent produces plan (simulated)
     assert.ok(startResult.inject!.includes("XState"), "inject should mention XState from search");
     assert.ok(startResult.inject!.includes("JSON"), "inject should request JSON");
 
-    // Step 3: finalize with valid JSON
     const finalizeResult = await manager.finalize(
       "state machine libraries in TypeScript",
       VALID_PLAN_JSON
@@ -107,7 +99,6 @@ describe("Integration: full research pipeline", () => {
     assert.ok(finalizeResult.planArtifactPath, "should have artifact path");
     assert.ok(existsSync(finalizeResult.planArtifactPath!), "artifact file must exist");
 
-    // Verify artifact content
     const artifactRaw = readFileSync(finalizeResult.planArtifactPath!, "utf-8");
     const artifact = JSON.parse(artifactRaw);
     assert.equal(artifact.version, 1);
@@ -120,23 +111,20 @@ describe("Integration: full research pipeline", () => {
     const reportsDir = join(TEST_DIR, "reports");
     mkdirSync(reportsDir, { recursive: true });
 
-    // First, create a plan artifact
-    const manager = new PrefilterManager(mockSearchProvider(), mockScraper(), artifactsDir);
+    const manager = new PrefilterManager(mockSearchFn(), mockScraper(), artifactsDir);
     await manager.start("state machines");
     const planResult = await manager.finalize("state machines", VALID_PLAN_JSON);
     assert.equal(planResult.phase, "plan_ready");
 
     const plan: ResearchPlan = planResult.plan!;
 
-    // Now run the state machine
-    const machine = new ResearchStateMachine(mockSearchProvider(), mockScraper(), MOCK_PROFILE);
+    const machine = new ResearchStateMachine(mockSearchFn(), mockScraper(), MOCK_PROFILE);
     let snapshot = ResearchStateMachine.init(plan, MOCK_PROFILE);
 
     assert.equal(snapshot.phase, "searching");
     assert.equal(snapshot.currentDepth, 0);
     assert.equal(snapshot.totalDepth, 2);
 
-    // Call 1: searching → extracting (depth 0→1)
     let r = await machine.next(snapshot, plan);
     assert.equal(r.phase, "extracting");
     assert.ok(r.inject, "extraction inject expected");
@@ -144,13 +132,11 @@ describe("Integration: full research pipeline", () => {
     assert.ok(r.snapshot.searchCalls >= 1, "search calls should be > 0");
     snapshot = r.snapshot;
 
-    // Call 2: extracting → questioning (depth 1 < 2)
     r = await machine.next(snapshot, plan);
     assert.equal(r.phase, "questioning");
     assert.ok(r.inject!.includes("Deepening"), "should ask follow-up questions");
     snapshot = r.snapshot;
 
-    // Call 3: questioning → searching → extracting (depth 1→2, chained)
     r = await machine.next(snapshot, plan);
     assert.equal(r.phase, "extracting");
     assert.ok(r.inject!.includes("Extraction"), "extraction inject for depth 2");
@@ -158,18 +144,15 @@ describe("Integration: full research pipeline", () => {
     assert.ok(r.snapshot.searchCalls > snapshot.searchCalls, "search calls accumulated");
     snapshot = r.snapshot;
 
-    // Call 4: extracting → drafting (depth = total)
     r = await machine.next(snapshot, plan);
     assert.equal(r.phase, "drafting");
     assert.ok(r.inject!.includes("Final Report"), "drafting inject");
     snapshot = r.snapshot;
 
-    // Call 5: drafting → saving
     r = await machine.next(snapshot, plan);
     assert.equal(r.phase, "saving");
     snapshot = r.snapshot;
 
-    // Call 6: saving → done
     r = await machine.next(snapshot, plan);
     assert.equal(r.phase, "done");
     assert.ok(r.snapshot.searchCalls >= 2, "total search calls across all iterations");
@@ -181,8 +164,7 @@ describe("Integration: full research pipeline", () => {
     const reportsDir = join(TEST_DIR, "reports");
     mkdirSync(reportsDir, { recursive: true });
 
-    // ── PLAN ──
-    const manager = new PrefilterManager(mockSearchProvider(), mockScraper(), artifactsDir);
+    const manager = new PrefilterManager(mockSearchFn(), mockScraper(), artifactsDir);
 
     const startResult = await manager.start("state machines in typescript");
     assert.equal(startResult.phase, "awaiting_plan");
@@ -192,8 +174,7 @@ describe("Integration: full research pipeline", () => {
     assert.equal(planResult.phase, "plan_ready");
     const plan: ResearchPlan = planResult.plan!;
 
-    // ── RUN ──
-    const machine = new ResearchStateMachine(mockSearchProvider(), mockScraper(), MOCK_PROFILE);
+    const machine = new ResearchStateMachine(mockSearchFn(), mockScraper(), MOCK_PROFILE);
     let snapshot = ResearchStateMachine.init(plan, MOCK_PROFILE);
 
     const phases: string[] = [];

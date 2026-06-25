@@ -1,5 +1,7 @@
 import type { ResearchPlan } from "./prefilter.js";
-import type { SearchProvider, SearchResult } from "./search/provider.js";
+import type { searchWeb as SearchWebFn } from "./search/web-search.js";
+import type { WebSearchResult } from "./search/web-search.js";
+import type { SearchEngine } from "./search/web-search.js";
 import type { Scraper, ScrapedPage } from "./scraper.js";
 
 /** Parameters controlling research depth and breadth. */
@@ -72,9 +74,10 @@ class ConcurrencySemaphore {
  */
 export class ResearchStateMachine {
   constructor(
-    private readonly searchProvider: SearchProvider,
+    private readonly searchFn: typeof SearchWebFn,
     private readonly scraper: Scraper,
-    private readonly profile: ResearchProfile
+    private readonly profile: ResearchProfile,
+    private readonly searchEngines: SearchEngine[] = ["duckduckgo"],
   ) {}
 
   static init(plan: ResearchPlan, profile: ResearchProfile): ResearchSnapshot {
@@ -141,7 +144,7 @@ export class ResearchStateMachine {
     const searchResults = await Promise.all(
       activeQuestions.map((question) =>
         semaphore.run(async () => {
-          const results = await this.searchProvider.search(question, maxResultsPerQuery);
+          const results = await this.searchFn(question, maxResultsPerQuery, this.searchEngines);
           snapshot.searchCalls++;
           return { question, results };
         })
@@ -254,7 +257,7 @@ function generateRunId(): string {
 }
 
 function buildExtractionPrompt(
-  allResults: Array<{ question: string; results: SearchResult[] }>,
+  allResults: Array<{ question: string; results: WebSearchResult[] }>,
   scraped: ScrapedPage[],
   depth: number,
   totalDepth: number

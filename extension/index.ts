@@ -5,23 +5,19 @@ import { fileURLToPath } from "node:url";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-import { DuckDuckGoProvider } from "./search/duckduckgo.js";
-import { TavilyProvider } from "./search/tavily.js";
-import { BraveProvider } from "./search/brave.js";
-import { multiEngineWebSearch } from "./search/web-search.js";
+import { searchWeb, multiEngineWebSearch } from "./search/web-search.js";
 import type { SearchEngine } from "./search/web-search.js";
 import { WebScraper } from "./scraper.js";
-import type { SearchProvider } from "./search/provider.js";
 import { PrefilterManager } from "./prefilter.js";
 import { ResearchStateMachine, buildTelemetrySection } from "./state-machine.js";
-import type { ResearchPlan, PrefilterArtifact, PrefilterResult } from "./prefilter.js";
+import type { ResearchPlan, PrefilterArtifact } from "./prefilter.js";
 import type { ResearchSnapshot } from "./state-machine.js";
 import type { ResearchProfile } from "./state-machine.js";
 
 const baseDir = dirname(fileURLToPath(import.meta.url));
 
 interface DeepResearchSettings {
-  searchProvider?: "duckduckgo" | "tavily" | "brave";
+  engines?: SearchEngine[];
   profiles?: Record<string, ResearchProfile>;
   artifactsDir?: string;
   reportsDir?: string;
@@ -29,7 +25,7 @@ interface DeepResearchSettings {
 
 const DEFAULT_PROFILE: ResearchProfile = { breadth: 4, depth: 2, concurrency: 4 };
 const DEFAULT_SETTINGS: DeepResearchSettings = {
-  searchProvider: "duckduckgo",
+  engines: ["duckduckgo"],
   profiles: {
     default: DEFAULT_PROFILE,
     fast: { breadth: 2, depth: 1, concurrency: 2 },
@@ -37,32 +33,19 @@ const DEFAULT_SETTINGS: DeepResearchSettings = {
   },
 };
 
-function createSearchProvider(settings: DeepResearchSettings): SearchProvider {
-  const provider = settings.searchProvider ?? "duckduckgo";
-  switch (provider) {
-    case "tavily": {
-      const key = process.env.TAVILY_API_KEY;
-      if (!key) throw new Error("TAVILY_API_KEY not set. Configure it in your environment or switch to duckduckgo.");
-      return new TavilyProvider(key);
-    }
-    case "brave": {
-      const key = process.env.BRAVE_API_KEY;
-      if (!key) throw new Error("BRAVE_API_KEY not set. Configure it in your environment or switch to duckduckgo.");
-      return new BraveProvider(key);
-    }
-    default:
-      return new DuckDuckGoProvider();
-  }
-}
-
 function resolveSettings(settings: Record<string, unknown> = {}): DeepResearchSettings {
   const dr = (settings.deepResearch ?? {}) as Record<string, unknown>;
+  const engines = dr.engines as SearchEngine[] | undefined;
   return {
-    searchProvider: (dr.searchProvider as string) ?? DEFAULT_SETTINGS.searchProvider,
+    engines: engines ?? DEFAULT_SETTINGS.engines,
     profiles: (dr.profiles as Record<string, ResearchProfile>) ?? DEFAULT_SETTINGS.profiles,
     artifactsDir: (dr.artifactsDir as string) ?? join(baseDir, "..", "..", "deep-research", "artifacts"),
     reportsDir: (dr.reportsDir as string) ?? join(baseDir, "..", "..", "deep-research", "reports"),
   };
+}
+
+function getEngines(settings: DeepResearchSettings): SearchEngine[] {
+  return settings.engines ?? ["duckduckgo"];
 }
 
 export default function (pi: ExtensionAPI) {
@@ -195,9 +178,9 @@ Use "compare" mode to see results from each engine separately without deduplicat
       const artifactsDir = join(ctx.cwd ?? baseDir, "deep-research", "artifacts");
       mkdirSync(artifactsDir, { recursive: true });
 
-      const searchProvider = createSearchProvider(settings);
+      const engines = getEngines(settings);
       const scraper = new WebScraper();
-      const manager = new PrefilterManager(searchProvider, scraper, artifactsDir);
+      const manager = new PrefilterManager(searchWeb, scraper, artifactsDir, engines);
 
       if (!params.plan_json) {
         // First call: preliminary search
@@ -278,9 +261,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
               `**Estimated searches:** ~${estSearches}`,
               `**Estimated scrapes:** ~${estScrapes}`,
               ``,
-              `**Search provider:** ${settings.searchProvider ?? "duckduckgo"}`,
-              `DuckDuckGo: free (no API key needed)`,
-              `Tavily: ~$0.01 per search (requires API key)`,
+              `**Search engines:** ${(settings.engines ?? ["duckduckgo"]).join(", ")}`,
             ].join("\n"),
           },
         ],
@@ -323,7 +304,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
         const raw = readFileSync(params.plan_artifact_path, "utf-8");
         const artifact: PrefilterArtifact = JSON.parse(raw);
         const profile = settings.profiles?.[params.profile ?? "default"] ?? DEFAULT_PROFILE;
-        const machine = new ResearchStateMachine(searchProvider, scraper, profile);
+        const machine = new ResearchStateMachine(searchWeb, scraper, profile, engines);
         snapshot = ResearchStateMachine.init(artifact.plan, profile);
 
         // Advance to first phase (searching → extracting)
@@ -366,7 +347,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
         };
       }
 
-      const machine = new ResearchStateMachine(searchProvider, scraper, profile);
+      const machine = new ResearchStateMachine(searchWeb, scraper, profile, engines);
       const result = await machine.next(snapshot, plan);
 
       // Persist updated state

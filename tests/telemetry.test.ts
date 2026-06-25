@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { ResearchStateMachine, buildTelemetrySection } from "../extension/state-machine.js";
 import type { ResearchProfile } from "../extension/state-machine.js";
 import type { ResearchPlan } from "../extension/prefilter.js";
-import type { SearchProvider, SearchResult } from "../extension/search/provider.js";
+import type { WebSearchResult } from "../extension/search/web-search.js";
 import type { Scraper, ScrapedPage } from "../extension/scraper.js";
 
 const MOCK_PLAN: ResearchPlan = {
@@ -14,12 +14,8 @@ const MOCK_PLAN: ResearchPlan = {
   estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" },
 };
 
-function mockSearchProvider(): SearchProvider {
-  return {
-    async search() {
-      return [{ title: "R", url: "https://a.com", snippet: "s" }];
-    },
-  };
+function mockSearchFn() {
+  return async () => [{ title: "R", url: "https://a.com", snippet: "s", engine: "duckduckgo" }];
 }
 
 function mockScraper(): Scraper {

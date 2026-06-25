@@ -1,4 +1,6 @@
-import type { SearchProvider, SearchResult } from "./search/provider.js";
+import type { searchWeb as SearchWebFn } from "./search/web-search.js";
+import type { WebSearchResult } from "./search/web-search.js";
+import type { SearchEngine } from "./search/web-search.js";
 import type { Scraper, ScrapedPage } from "./scraper.js";
 
 export interface ResearchPlan {
@@ -33,7 +35,7 @@ export interface PrefilterResult {
   phase: "awaiting_plan" | "plan_ready" | "error";
   runId: string;
   planArtifactPath?: string;
-  searchResults?: SearchResult[];
+  searchResults?: WebSearchResult[];
   scrapedContent?: ScrapedPage[];
   plan?: ResearchPlan;
   inject?: string; // prompt to send to agent
@@ -47,16 +49,19 @@ export interface PrefilterResult {
  * 3. Validation and persistence of the plan artifact
  */
 export class PrefilterManager {
-  private readonly searchProvider: SearchProvider;
+  private readonly searchFn: typeof SearchWebFn;
+  private readonly searchEngines: SearchEngine[];
   private readonly scraper: Scraper;
   private readonly artifactsDir: string;
 
   constructor(
-    searchProvider: SearchProvider,
+    searchFn: typeof SearchWebFn,
     scraper: Scraper,
-    artifactsDir: string
+    artifactsDir: string,
+    searchEngines: SearchEngine[] = ["duckduckgo"],
   ) {
-    this.searchProvider = searchProvider;
+    this.searchFn = searchFn;
+    this.searchEngines = searchEngines;
     this.scraper = scraper;
     this.artifactsDir = artifactsDir;
   }
@@ -70,7 +75,7 @@ export class PrefilterManager {
 
     // Preliminary search
     const searchQuery = this.buildSearchQuery(topic);
-    const searchResults = await this.searchProvider.search(searchQuery, 3);
+    const searchResults = await this.searchFn(searchQuery, 3, this.searchEngines);
 
     // Scrape top results (up to 2)
     const scrapedContent: ScrapedPage[] = [];
@@ -160,7 +165,7 @@ export class PrefilterManager {
 
   private buildInjectPrompt(
     topic: string,
-    searchResults: SearchResult[],
+    searchResults: WebSearchResult[],
     scrapedContent: ScrapedPage[]
   ): string {
     let prompt = `## Research Planning

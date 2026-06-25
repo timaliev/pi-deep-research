@@ -3,17 +3,13 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { PrefilterManager } from "../extension/prefilter.js";
-import type { SearchProvider, SearchResult } from "../extension/search/provider.js";
+import type { WebSearchResult } from "../extension/search/web-search.js";
 import type { Scraper, ScrapedPage } from "../extension/scraper.js";
 
 const TEST_ARTIFACTS = join(import.meta.dirname ?? ".", "../test-artifacts");
 
-function mockSearchProvider(results: SearchResult[]): SearchProvider {
-  return {
-    async search(_query: string, _max?: number) {
-      return results;
-    },
-  };
+function mockSearchFn(results: WebSearchResult[]) {
+  return async (_query: string, _max?: number) => results;
 }
 
 function mockScraper(pages: Map<string, ScrapedPage>): Scraper {
@@ -26,16 +22,18 @@ function mockScraper(pages: Map<string, ScrapedPage>): Scraper {
   };
 }
 
-const MOCK_RESULTS: SearchResult[] = [
+const MOCK_RESULTS: WebSearchResult[] = [
   {
     title: "XState - JavaScript State Machines",
     url: "https://xstate.js.org/docs/",
     snippet: "XState is a state management library for JavaScript and TypeScript.",
+    engine: "duckduckgo",
   },
   {
     title: "State Pattern in TypeScript - Refactoring.Guru",
     url: "https://refactoring.guru/design-patterns/state/typescript",
     snippet: "State is a behavioral design pattern.",
+    engine: "duckduckgo",
   },
 ];
 
@@ -70,7 +68,7 @@ describe("PrefilterManager", () => {
   describe("start", () => {
     it("returns search results and inject prompt for first call", async () => {
       const manager = new PrefilterManager(
-        mockSearchProvider(MOCK_RESULTS),
+        mockSearchFn(MOCK_RESULTS),
         mockScraper(mockScrapedPages()),
         TEST_ARTIFACTS
       );
@@ -94,7 +92,7 @@ describe("PrefilterManager", () => {
 
     it("includes scraped content in the inject prompt", async () => {
       const manager = new PrefilterManager(
-        mockSearchProvider(MOCK_RESULTS),
+        mockSearchFn(MOCK_RESULTS),
         mockScraper(mockScrapedPages()),
         TEST_ARTIFACTS
       );
@@ -113,7 +111,7 @@ describe("PrefilterManager", () => {
 
     it("requires JSON output instruction in inject", async () => {
       const manager = new PrefilterManager(
-        mockSearchProvider(MOCK_RESULTS),
+        mockSearchFn(MOCK_RESULTS),
         mockScraper(mockScrapedPages()),
         TEST_ARTIFACTS
       );
@@ -129,15 +127,13 @@ describe("PrefilterManager", () => {
   describe("finalize", () => {
     it("saves valid JSON plan as artifact", async () => {
       const manager = new PrefilterManager(
-        mockSearchProvider(MOCK_RESULTS),
+        mockSearchFn(MOCK_RESULTS),
         mockScraper(mockScrapedPages()),
         TEST_ARTIFACTS
       );
 
-      // First call: start
       const startResult = await manager.start("state machines");
 
-      // Second call: finalize with agent's plan
       const planJson = JSON.stringify({
         topic: "State machine patterns in TypeScript",
         goal: "Compare state machine libraries and patterns for TypeScript applications",
@@ -166,7 +162,6 @@ describe("PrefilterManager", () => {
       );
       assert.ok(existsSync(result.planArtifactPath!), "artifact file must exist");
 
-      // Verify artifact content
       const artifactJson = readFileSync(result.planArtifactPath!, "utf-8");
       const artifact = JSON.parse(artifactJson);
       assert.equal(artifact.version, 1);
@@ -176,7 +171,7 @@ describe("PrefilterManager", () => {
 
     it("rejects invalid JSON", async () => {
       const manager = new PrefilterManager(
-        mockSearchProvider(MOCK_RESULTS),
+        mockSearchFn(MOCK_RESULTS),
         mockScraper(mockScrapedPages()),
         TEST_ARTIFACTS
       );
@@ -191,14 +186,13 @@ describe("PrefilterManager", () => {
 
     it("rejects JSON missing required fields", async () => {
       const manager = new PrefilterManager(
-        mockSearchProvider(MOCK_RESULTS),
+        mockSearchFn(MOCK_RESULTS),
         mockScraper(mockScrapedPages()),
         TEST_ARTIFACTS
       );
 
       await manager.start("state machines");
 
-      // Missing 'goal' field
       const incompleteJson = JSON.stringify({
         topic: "test",
         researchQuestions: [],
@@ -213,7 +207,7 @@ describe("PrefilterManager", () => {
 
     it("rejects plan with empty research questions", async () => {
       const manager = new PrefilterManager(
-        mockSearchProvider(MOCK_RESULTS),
+        mockSearchFn(MOCK_RESULTS),
         mockScraper(mockScrapedPages()),
         TEST_ARTIFACTS
       );

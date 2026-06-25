@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { ResearchStateMachine } from "../extension/state-machine.js";
 import type { ResearchProfile } from "../extension/state-machine.js";
 import type { ResearchPlan } from "../extension/prefilter.js";
-import type { SearchProvider, SearchResult } from "../extension/search/provider.js";
+import type { WebSearchResult } from "../extension/search/web-search.js";
 import type { Scraper, ScrapedPage } from "../extension/scraper.js";
 
 const MOCK_PLAN: ResearchPlan = {
@@ -19,12 +19,10 @@ const MOCK_PLAN: ResearchPlan = {
 
 const MOCK_PROFILE: ResearchProfile = { breadth: 2, depth: 2, concurrency: 1 };
 
-function mockSearchResults(): SearchResult[] {
-  return [
-    { title: "XState Docs", url: "https://xstate.js.org", snippet: "XState is a state machine library for JS/TS." },
-    { title: "Robot FSM", url: "https://thisrobot.life", snippet: "Robot is a lightweight finite state machine library." },
-  ];
-}
+const MOCK_RESULTS: WebSearchResult[] = [
+  { title: "XState Docs", url: "https://xstate.js.org", snippet: "XState is a state machine library for JS/TS.", engine: "duckduckgo" },
+  { title: "Robot FSM", url: "https://thisrobot.life", snippet: "Robot is a lightweight finite state machine library.", engine: "duckduckgo" },
+];
 
 function mockScrapedPages(): Map<string, ScrapedPage> {
   const map = new Map<string, ScrapedPage>();
@@ -41,8 +39,8 @@ function mockScrapedPages(): Map<string, ScrapedPage> {
   return map;
 }
 
-function mockSearchProvider(): SearchProvider {
-  return { async search(_q, _m) { return mockSearchResults(); } };
+function mockSearchFn(results: WebSearchResult[] = MOCK_RESULTS) {
+  return async (_q: string, _m?: number) => results;
 }
 
 function mockScraper(): Scraper {
@@ -58,7 +56,7 @@ function mockScraper(): Scraper {
 
 describe("ResearchStateMachine", () => {
   it("completes full cycle for depth=2: s→e→q→(s+e)→d→saving→done", async () => {
-    const machine = new ResearchStateMachine(mockSearchProvider(), mockScraper(), MOCK_PROFILE);
+    const machine = new ResearchStateMachine(mockSearchFn(), mockScraper(), MOCK_PROFILE);
     let s = ResearchStateMachine.init(MOCK_PLAN, MOCK_PROFILE);
 
     // Call 1: searching → extracting (depth 0→1, inject: extraction)
@@ -108,7 +106,7 @@ describe("ResearchStateMachine", () => {
   });
 
   it("accumulates search and scrape counts across depth iterations", async () => {
-    const machine = new ResearchStateMachine(mockSearchProvider(), mockScraper(), MOCK_PROFILE);
+    const machine = new ResearchStateMachine(mockSearchFn(), mockScraper(), MOCK_PROFILE);
     let s = ResearchStateMachine.init(MOCK_PLAN, MOCK_PROFILE);
 
     // Searching phase (breadth=2)
@@ -123,7 +121,7 @@ describe("ResearchStateMachine", () => {
   });
 
   it("generates inject prompts at each phase that needs agent reasoning", async () => {
-    const machine = new ResearchStateMachine(mockSearchProvider(), mockScraper(), MOCK_PROFILE);
+    const machine = new ResearchStateMachine(mockSearchFn(), mockScraper(), MOCK_PROFILE);
     const s = ResearchStateMachine.init(MOCK_PLAN, MOCK_PROFILE);
 
     let r = await machine.next(s, MOCK_PLAN);
@@ -140,7 +138,7 @@ describe("ResearchStateMachine", () => {
   });
 
   it("stays in done phase on repeated calls", async () => {
-    const machine = new ResearchStateMachine(mockSearchProvider(), mockScraper(), { ...MOCK_PROFILE, depth: 1 });
+    const machine = new ResearchStateMachine(mockSearchFn(), mockScraper(), { ...MOCK_PROFILE, depth: 1 });
     let s = ResearchStateMachine.init(MOCK_PLAN, { ...MOCK_PROFILE, depth: 1 });
 
     s = (await machine.next(s, MOCK_PLAN)).snapshot; // searching → extracting
@@ -154,7 +152,7 @@ describe("ResearchStateMachine", () => {
   });
 
   it("skips questioning when depth reaches total depth", async () => {
-    const machine = new ResearchStateMachine(mockSearchProvider(), mockScraper(), { breadth: 2, depth: 1, concurrency: 1 });
+    const machine = new ResearchStateMachine(mockSearchFn(), mockScraper(), { breadth: 2, depth: 1, concurrency: 1 });
     let s = ResearchStateMachine.init(MOCK_PLAN, { breadth: 2, depth: 1, concurrency: 1 });
 
     s = (await machine.next(s, MOCK_PLAN)).snapshot; // searching → extracting (depth=1)
