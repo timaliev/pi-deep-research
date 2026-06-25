@@ -34,6 +34,69 @@ pi update --extensions  # update all extension packages
 pi install git:github.com/timaliev/pi-deep-research@v0.8.0  # pin new version
 ```
 
+### Uninstall
+
+**Via pi packages:**
+
+```bash
+pi remove git:github.com/timaliev/pi-deep-research
+```
+
+Removes the package from settings and cleans up the cloned repository.
+
+**Manual:**
+
+```bash
+rm ~/.pi/agent/extensions/deep-research     # remove symlink
+rm -rf ~/.pi/agent/git/github.com/timaliev/pi-deep-research  # delete clone
+```
+
+## Configuration
+
+Add a `deepResearch` key to `~/.pi/agent/settings.json`:
+
+```json
+{
+  "deepResearch": {
+    "profiles": {
+      "default": { "breadth": 4, "depth": 2, "concurrency": 4 },
+      "fast":    { "breadth": 2, "depth": 1, "concurrency": 2 },
+      "deep":    { "breadth": 6, "depth": 3, "concurrency": 4 }
+    },
+    "artifactsDir": "./deep-research/artifacts",
+    "reportsDir": "./deep-research/reports"
+  }
+}
+```
+
+### `profiles`
+
+Named research profiles. Each profile controls:
+
+| Field | Type | Description |
+|---|---|---|
+| `breadth` | number | Search queries per question per depth level |
+| `depth` | number | Recursive follow-up question iterations |
+| `concurrency` | number | Parallel search/scrape calls |
+| `maxSearchCalls` | number (optional) | Soft cap on total search API calls (0 = unlimited) |
+| `maxElapsedSeconds` | number (optional) | Soft cap on wall-clock runtime (0 = unlimited) |
+
+**Built-in presets** (shown above as defaults): `default`, `fast`, `deep`. Add custom presets:
+
+```json
+"profiles": {
+  "exhaustive": { "breadth": 10, "depth": 5, "concurrency": 6, "maxSearchCalls": 100 }
+}
+```
+
+During `plan_research`, the agent can reference any named preset or use `"custom"` with inline `breadth`/`depth`/`concurrency`.
+
+### `artifactsDir` / `reportsDir`
+
+Override default output paths. Defaults resolve to `<cwd>/deep-research/artifacts` and `<cwd>/deep-research/reports`. Use relative paths (resolved against `cwd`) or absolute paths.
+
+Logs (`<runId>.log` JSONL trace) always write to `<deep-research-base>/logs/` — derived from `artifactsDir/../logs`. No separate `logsDir` setting.
+
 ## Architecture
 
 ```
