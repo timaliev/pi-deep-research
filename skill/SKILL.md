@@ -52,9 +52,9 @@ No setup required. DuckDuckGo is the default search engine (free, no API key). F
    ```
    For custom profiles, include `breadth`, `depth`, `concurrency`: `{"name": "custom", "breadth": 5, "depth": 2}`.
 
-3. Call `plan_research` again with your plan:
+3. Call `plan_research` again with your plan. `topic` is optional when `plan_json` is provided (extracted from the plan):
    ```
-   plan_research({ topic: "<topic>", plan_json: "<your JSON>" })
+   plan_research({ plan_json: "<your JSON>" })
    ```
 4. **Guardrail:** If the result has `phase: "error"`, fix the JSON and retry.
 
@@ -77,16 +77,16 @@ No setup required. DuckDuckGo is the default search engine (free, no API key). F
    ```
    run_research({ plan_artifact_path: "<path to prefilter.json>" })
    ```
-2. **Guardrail:** After EVERY `run_research` response, call `run_research` again immediately with NO parameters. The tool manages its own state machine.
+2. **Guardrail:** After EVERY `run_research` response, call `run_research` again immediately with NO parameters.
 3. Between calls, process the injected prompt:
-   - Extract findings from search results
-   - Generate follow-up questions
-   - Write draft report
-4. Stop when `phase` is `"done"`.
+   - **Extraction:** Extract key findings from search results (cite sources)
+   - **Questioning:** Generate **numbered** follow-up questions (e.g. `1. What is...?`) — the state machine parses these to drive the next search iteration. Unnumbered responses fall back to the original plan questions.
+   - **Drafting:** Write the final report from accumulated findings
+4. Stop when `phase` is `"done"`. The tool saves the report automatically to `./deep-research/reports/`.
 
 ### Phase 5: Deliver
 
-1. Report the saved report path to the user.
+1. The report is auto-saved by `run_research` to `./deep-research/reports/`. Report the path to the user.
 2. Offer to show the report content.
 
 ## Output
