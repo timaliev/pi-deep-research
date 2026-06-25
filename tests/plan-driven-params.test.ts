@@ -58,6 +58,25 @@ describe("PrefilterManager — plan-driven params", () => {
     assert.ok(result.inject!.includes("Research Planning"), "inject must ask for plan");
   });
 
+  it("withParams() inject shows resolved profile params and that profile can be changed", async () => {
+    const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+
+    // Test with named profile
+    const r1 = await manager.withParams("test", ["duckduckgo"], { name: "deep" });
+    assert.ok(r1.inject!.includes("Profile"), "must mention Profile");
+    assert.ok(r1.inject!.includes("deep"), "must include profile name");
+    assert.ok(r1.inject!.includes("breadth"), "must show breadth");
+    assert.ok(r1.inject!.includes("depth"), "must show depth");
+    assert.ok(r1.inject!.includes("concurrency"), "must show concurrency");
+    assert.ok(r1.inject!.includes("change") || r1.inject!.includes("override") || r1.inject!.includes("adjust"),
+      "must indicate profile can be changed");
+
+    // Test with custom profile
+    const r2 = await manager.withParams("test", ["duckduckgo"], { name: "custom", breadth: 8, depth: 3 });
+    assert.ok(r2.inject!.includes("custom"), "must include custom profile name");
+    assert.ok(r2.inject!.includes("breadth"), "custom profile must show breadth");
+  });
+
   it("withParams() returns awaiting_params when brave selected but no API key", async () => {
     // Ensure BRAVE_API_KEY is unset for this test
     const oldKey = process.env.BRAVE_API_KEY;

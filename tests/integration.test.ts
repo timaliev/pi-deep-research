@@ -99,13 +99,41 @@ describe("Integration: full research pipeline", () => {
     assert.equal(r.phase, "drafting");
     snapshot = r.snapshot;
 
-    r = await machine.next(snapshot, plan);
+    // Agent responds with report text (can be content blocks array in real pi)
+    r = await machine.next(snapshot, plan, "# F1 Technical Regulations\n\nThe 2026 regulations...");
     assert.equal(r.phase, "saving");
+    assert.ok(r.snapshot.draftReport.length > 50, "draftReport must be populated");
+    assert.ok(r.snapshot.draftReport.includes("2026"), "draftReport must contain report text");
     snapshot = r.snapshot;
 
     r = await machine.next(snapshot, plan);
     assert.equal(r.phase, "done");
     assert.ok(r.snapshot.searchCalls >= 2);
+  });
+
+  it("drafting phase re-injects prompt when agent response is empty", async () => {
+    const plan: ResearchPlan = {
+      topic: "test", goal: "test", researchQuestions: ["q"],
+      engines: ["duckduckgo"], profile: { name: "default" },
+      scope: { include: "", exclude: "" },
+      estimatedCost: { searchCalls: 1, scrapeCalls: 1, description: "" },
+    };
+    const snapshot = ResearchStateMachine.init(plan);
+    const machine = new ResearchStateMachine(mockSearchFn([]), mockScraper({}));
+
+    // Advance to drafting
+    let r = await machine.next(snapshot, plan);
+    r = await machine.next(r.snapshot, plan);
+    r = await machine.next(r.snapshot, plan);
+    r = await machine.next(r.snapshot, plan);
+    assert.equal(r.phase, "drafting");
+
+    // Empty agent response (like when agent calls tools instead of writing report)
+    r = await machine.next(r.snapshot, plan, "");
+    assert.equal(r.phase, "drafting", "must stay in drafting when response is empty");
+    assert.ok(r.inject, "must re-inject drafting prompt");
+    assert.ok(r.inject!.includes("Write the final report") || r.inject!.includes("draft") || r.inject!.includes("report"),
+      "re-injection must ask for report");
   });
 
   it("end-to-end: plan → run → done", async () => {
@@ -126,7 +154,11 @@ describe("Integration: full research pipeline", () => {
 
     let totalInjectCount = 0;
     for (let i = 0; i < 10; i++) {
-      const r = await machine.next(snapshot, plan);
+      // Provide mock report text when drafting phase expects it
+      const agentResponse = snapshot.phase === "drafting"
+        ? "# Test Report\n\nThis is a comprehensive research report about state machines. It covers all key findings and analysis."
+        : undefined;
+      const r = await machine.next(snapshot, plan, agentResponse);
       snapshot = r.snapshot;
       if (r.inject) totalInjectCount++;
       if (r.phase === "done") break;

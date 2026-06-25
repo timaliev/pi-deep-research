@@ -26,7 +26,7 @@ describe("ResearchStateMachine soft limits", () => {
     s = (await machine.next(s, plan)).snapshot;
     assert.equal(s.softLimitTriggered, true);
     s = (await machine.next(s, plan)).snapshot; assert.equal(s.phase, "drafting");
-    s = (await machine.next(s, plan)).snapshot; assert.equal(s.phase, "saving");
+    s = (await machine.next(s, plan, "# Research Report\n\nThis is a comprehensive research report with detailed analysis.")).snapshot; assert.equal(s.phase, "saving");
     s = (await machine.next(s, plan)).snapshot; assert.equal(s.phase, "done");
   });
 

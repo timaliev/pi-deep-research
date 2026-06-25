@@ -46,7 +46,7 @@ describe("ResearchStateMachine", () => {
 
     r = await machine.next(s, MOCK_PLAN); assert.equal(r.phase, "drafting"); s = r.snapshot;
 
-    r = await machine.next(s, MOCK_PLAN); assert.equal(r.phase, "saving"); s = r.snapshot;
+    r = await machine.next(s, MOCK_PLAN, "# Research Report\n\nThis is a comprehensive research report with detailed findings."); assert.equal(r.phase, "saving"); s = r.snapshot;
 
     r = await machine.next(s, MOCK_PLAN); assert.equal(r.phase, "done");
 
@@ -81,7 +81,7 @@ describe("ResearchStateMachine", () => {
     let s = ResearchStateMachine.init(depth1Plan);
     s = (await machine.next(s, depth1Plan)).snapshot;
     s = (await machine.next(s, depth1Plan)).snapshot;
-    s = (await machine.next(s, depth1Plan)).snapshot;
+    s = (await machine.next(s, depth1Plan, "# Research Report\n\nThis is a comprehensive detailed research report with all findings.")).snapshot;
     s = (await machine.next(s, depth1Plan)).snapshot;
     assert.equal(s.phase, "done");
     const r = await machine.next(s, depth1Plan);

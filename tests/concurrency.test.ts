@@ -42,7 +42,7 @@ describe("ResearchStateMachine concurrency", () => {
     let s = ResearchStateMachine.init(plan);
     s = (await machine.next(s, plan)).snapshot; assert.equal(s.phase, "extracting");
     s = (await machine.next(s, plan)).snapshot; assert.equal(s.phase, "drafting");
-    s = (await machine.next(s, plan)).snapshot; assert.equal(s.phase, "saving");
+    s = (await machine.next(s, plan, "# Research Report\n\nThis is a comprehensive research report with detailed analysis and findings from multiple sources.")).snapshot; assert.equal(s.phase, "saving");
     s = (await machine.next(s, plan)).snapshot; assert.equal(s.phase, "done");
   });
 });
