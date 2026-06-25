@@ -63,8 +63,9 @@ export interface ResearchSnapshot {
   scrapeCalls: number;
   startedAt: number;
   softLimitTriggered: boolean;
-  /** Concrete profile resolved from plan (set on first next() call). */
   profile?: ResearchProfile;
+  /** Follow-up questions from agent's last response (populated by questioning phase). */
+  pendingQuestions?: string[];
 }
 
 export interface ResearchStateResult {
@@ -128,7 +129,7 @@ export class ResearchStateMachine {
     };
   }
 
-  async next(snapshot: ResearchSnapshot, plan: ResearchPlan): Promise<ResearchStateResult> {
+  async next(snapshot: ResearchSnapshot, plan: ResearchPlan, agentResponse?: string): Promise<ResearchStateResult> {
     if (!snapshot.profile) {
       snapshot.profile = resolveProfile(plan.profile, this.profilePresets);
       snapshot.totalDepth = snapshot.profile.depth;
@@ -136,7 +137,7 @@ export class ResearchStateMachine {
     switch (snapshot.phase) {
       case "searching":  return this.doSearching(snapshot, plan);
       case "extracting": return this.doExtracting(snapshot, plan);
-      case "questioning": return this.doQuestioning(snapshot, plan);
+      case "questioning": return this.doQuestioning(snapshot, plan, agentResponse);
       case "drafting":   return this.doDrafting(snapshot, plan);
       case "saving":     return this.doSaving(snapshot);
       case "done":       return { phase: "done", snapshot };
@@ -168,10 +169,13 @@ export class ResearchStateMachine {
     plan: ResearchPlan
   ): Promise<ResearchStateResult> {
     const prof = snapshot.profile!;
+    // Use plan research questions for iteration 0, agent's follow-up questions for later iterations
     const questions =
-      snapshot.allFindings.length === 0
-        ? plan.researchQuestions
-        : snapshot.allFindings.slice(-3).map((f) => f.text);
+      snapshot.pendingQuestions && snapshot.pendingQuestions.length > 0
+        ? snapshot.pendingQuestions
+        : plan.researchQuestions;
+    // Clear so they aren't reused
+    snapshot.pendingQuestions = undefined;
 
     // When soft-limited: fewer queries, fewer results per query
     const maxResultsPerQuery = snapshot.softLimitTriggered ? 2 : 3;
@@ -278,9 +282,27 @@ export class ResearchStateMachine {
     return { phase: "drafting", snapshot: { ...snapshot, phase: "drafting" }, inject };
   }
 
-  private async doQuestioning(snapshot: ResearchSnapshot, plan: ResearchPlan): Promise<ResearchStateResult> {
+  private async doQuestioning(snapshot: ResearchSnapshot, plan: ResearchPlan, agentResponse?: string): Promise<ResearchStateResult> {
+    if (agentResponse) {
+      const questions = this.extractQuestions(agentResponse);
+      snapshot.pendingQuestions = questions.length > 0 ? questions : plan.researchQuestions;
+    } else {
+      snapshot.pendingQuestions = plan.researchQuestions;
+    }
     const searchSnapshot: ResearchSnapshot = { ...snapshot, phase: "searching" };
     return this.doSearching(searchSnapshot, plan);
+  }
+
+  private extractQuestions(text: string): string[] {
+    const lines = text.split("\n");
+    const questions: string[] = [];
+    for (const line of lines) {
+      const match = line.match(/^\s*\d+[.)]\s+(.+)/);
+      if (match && match[1].trim().length > 10) {
+        questions.push(match[1].trim());
+      }
+    }
+    return questions;
   }
 
   private doDrafting(snapshot: ResearchSnapshot, _plan: ResearchPlan): ResearchStateResult {

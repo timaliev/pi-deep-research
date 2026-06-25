@@ -6,7 +6,7 @@ import { PrefilterManager } from "../extension/prefilter.js";
 import type { WebSearchResult } from "../extension/search/web-search.js";
 import type { Scraper, ScrapedPage } from "../extension/scraper.js";
 
-const TEST_ARTIFACTS = join(import.meta.dirname ?? ".", "../test-artifacts");
+const TEST_ARTIFACTS = join(import.meta.dirname ?? ".", "..", "test-artifacts-params");
 
 function mockSearchFn(results: WebSearchResult[]) {
   return async (_query: string, _max?: number) => results;

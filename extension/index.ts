@@ -270,12 +270,13 @@ Use "compare" mode to see results from each engine separately without deduplicat
     }),
     async execute(_toolCallId, params, _signal, onUpdate, ctx) {
       const settings = resolveSettings();
-      const artifactsDir = join(ctx.cwd ?? baseDir, "deep-research", "artifacts");
-      mkdirSync(artifactsDir, { recursive: true });
 
-      const scraper = new WebScraper();
-      const logsDir = join(artifactsDir, "..", "logs");
-      let runLogger: JsonlLogger | undefined;
+      // Read the last assistant message for agent response (used in questioning phase)
+      const entries = ctx.sessionManager.getEntries();
+      const lastAssistant = [...entries].reverse().find(
+        (e: any) => e.type === "assistant" || e.role === "assistant"
+      );
+      const agentResponse = lastAssistant?.content as string | undefined;
 
       // Load or initialize state
       let snapshot: ResearchSnapshot;
@@ -291,15 +292,28 @@ Use "compare" mode to see results from each engine separately without deduplicat
         const artifact: PrefilterArtifact = JSON.parse(raw);
         snapshot = ResearchStateMachine.init(artifact.plan, settings.profiles as any);
 
-        runLogger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
+        // Compute output directories from plan artifact path (stable across sessions)
+        const deepResearchBase = join(dirname(params.plan_artifact_path), "..");
+        const artifactsDir = join(deepResearchBase, "artifacts");
+        mkdirSync(artifactsDir, { recursive: true });
+        const logsDir = join(deepResearchBase, "logs");
+        const reportsDir = join(deepResearchBase, "reports");
+        mkdirSync(reportsDir, { recursive: true });
+
+        const runLogger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
         runLogger.event("run_started", { topic: artifact.plan.topic, profile: artifact.plan.profile, engines: artifact.plan.engines });
         const machine = new ResearchStateMachine(searchWeb, scraper, settings.profiles as any, runLogger);
 
         // Advance to first phase (searching → extracting)
         const result = await machine.next(snapshot, artifact.plan);
 
-        // Persist state
-        pi.appendEntry(STATE_KEY, { ...result.snapshot, plan: artifact.plan, planArtifactPath: params.plan_artifact_path });
+        // Persist state with base directory for consistent output location
+        pi.appendEntry(STATE_KEY, {
+          ...result.snapshot,
+          plan: artifact.plan,
+          planArtifactPath: params.plan_artifact_path,
+          deepResearchBase,
+        });
 
         // Inject prompt if any
         if (result.inject) {
@@ -326,6 +340,12 @@ Use "compare" mode to see results from each engine separately without deduplicat
       snapshot = stateData as unknown as ResearchSnapshot;
       const plan = stateData.plan as ResearchPlan;
       const planArtifactPath = stateData.planArtifactPath as string;
+      let deepResearchBase = (stateData.deepResearchBase as string) || planArtifactPath ? join(dirname(planArtifactPath), "..") : join(ctx.cwd ?? baseDir, "deep-research");
+      // Ensure it's an absolute path
+      if (!deepResearchBase.startsWith("/")) deepResearchBase = join(ctx.cwd ?? baseDir, deepResearchBase);
+      const logsDir = join(deepResearchBase, "logs");
+      const reportsDir = join(deepResearchBase, "reports");
+      mkdirSync(reportsDir, { recursive: true });
 
       if (!plan || !snapshot) {
         return {
@@ -335,12 +355,13 @@ Use "compare" mode to see results from each engine separately without deduplicat
       }
 
       // Re-create logger for subsequent calls (same file, appends)
-      runLogger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
+      const scraper = new WebScraper();
+      const runLogger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
       const machine = new ResearchStateMachine(searchWeb, scraper, settings.profiles as any, runLogger);
-      const result = await machine.next(snapshot, plan);
+      const result = await machine.next(snapshot, plan, agentResponse);
 
       // Persist updated state
-      pi.appendEntry(STATE_KEY, { ...result.snapshot, plan, planArtifactPath });
+      pi.appendEntry(STATE_KEY, { ...result.snapshot, plan, planArtifactPath, deepResearchBase });
 
       // Inject prompt if any
       if (result.inject) {
@@ -355,8 +376,6 @@ Use "compare" mode to see results from each engine separately without deduplicat
         );
         const reportText = lastAssistant?.content ?? "";
 
-        const reportsDir = join(ctx.cwd ?? baseDir, "deep-research", "reports");
-        mkdirSync(reportsDir, { recursive: true });
         const date = new Date().toISOString().slice(0, 10);
         const slug = plan.topic.toLowerCase().replace(/[^\w]+/g, "-").replace(/^-|-$/g, "").substring(0, 80);
         const filename = `${date}-${slug}.md`;
