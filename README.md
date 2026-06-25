@@ -22,9 +22,10 @@ pi install git:github.com/timaliev/pi-deep-research@v0.8.0
 
 ```bash
 git clone https://github.com/timaliev/pi-deep-research.git
-ln -s $(pwd)/pi-deep-research/extension ~/.pi/agent/extensions/deep-research
-cp pi-deep-research/skill/SKILL.md ~/.pi/agent/skills/deep-research/SKILL.md
+ln -s $(pwd)/pi-deep-research ~/.pi/agent/extensions/deep-research
 ```
+
+Pi discovers the extension and skill via `package.json`'s `pi.extensions` and `pi.skills` fields.
 
 ### Update
 
