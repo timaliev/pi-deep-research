@@ -2,7 +2,16 @@
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.
 
-## [0.9.0] — 2026-06-26
+## [0.10.0] — 2026-06-26
+
+### 🚀 Features
+
+- *(search)* Add tavily and yandex search engines
+
+### 🧪 Testing
+
+- *(search)* Add tavily and yandex search integration tests
+## [0.9.0] - 2026-06-25
 
 ### 🚀 Features
 
@@ -26,6 +35,7 @@ All notable changes to the Pi Deep Research Extension will be documented in this
 ### ⚙️ Miscellaneous Tasks
 
 - *(release)* Merge v0.8.0 to master
+- *(release)* Bump version to 0.9.0
 ## [0.8.0] - 2026-06-25
 
 ### 🚀 Features
