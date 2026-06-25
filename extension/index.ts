@@ -128,7 +128,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
       markdown: Type.String({ description: "Report content in markdown" }),
     }),
     async execute(_toolCallId, params) {
-      const reportsDir = join(baseDir, "..", "..", "deep-research", "reports");
+      const reportsDir = join(ctx.cwd ?? baseDir, "deep-research", "reports");
       mkdirSync(reportsDir, { recursive: true });
 
       const date = new Date().toISOString().slice(0, 10);
@@ -324,9 +324,9 @@ Use "compare" mode to see results from each engine separately without deduplicat
       // Subsequent calls: load state from session
       const entries = ctx.sessionManager.getEntries();
       const lastAssistant = [...entries].reverse().find(
-        (e: any) => e.type === "assistant" || e.role === "assistant"
+        (e: any) => e.message?.role === "assistant"
       );
-      const agentResponse = lastAssistant?.content as string | undefined;
+      const agentResponse = lastAssistant?.message?.content as string | undefined;
       const lastStateEntry = [...entries].reverse().find((e) => e.customType === STATE_KEY);
       if (!lastStateEntry) {
         return {
@@ -371,9 +371,9 @@ Use "compare" mode to see results from each engine separately without deduplicat
       if (result.phase === "done") {
         // Read the last assistant message as the report
         const lastAssistant = [...entries].reverse().find(
-          (e) => e.type === "assistant" || e.role === "assistant"
+          (e) => e.message?.role === "assistant"
         );
-        const reportText = lastAssistant?.content ?? "";
+        const reportText = lastAssistant?.message?.content ?? "";
 
         const date = new Date().toISOString().slice(0, 10);
         const slug = plan.topic.toLowerCase().replace(/[^\w]+/g, "-").replace(/^-|-$/g, "").substring(0, 80);
