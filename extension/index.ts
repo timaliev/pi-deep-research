@@ -49,20 +49,20 @@ export default function (pi: ExtensionAPI) {
 Returns results with title, URL, and snippet.
 Use for finding sources during research or when you need up-to-date information.
 
-Engines: duckduckgo (default, no key), brave (needs BRAVE_API_KEY env), searxng (public instances).
+Engines: duckduckgo (default, no key), brave (needs BRAVE_API_KEY env), tavily (needs TAVILY_API_KEY env), yandex (needs YANDEX_OAUTH_TOKEN env), searxng (public instances).
 DuckDuckGo uses honest bot UA with exponential backoff on rate limits (based on ddg-search).
 Use "compare" mode to see results from each engine separately without deduplication.`,
-    promptSnippet: "Search the web using DuckDuckGo, Brave, or SearXNG with honest bot User-Agent and exponential backoff retry.",
+    promptSnippet: "Search the web using DuckDuckGo, Brave, Tavily, Yandex, or SearXNG with honest bot User-Agent and exponential backoff retry.",
     promptGuidelines: [
       "Use web_search for finding sources, current information, or web research. Multiple engines can be used with compare mode to cross-check results.",
-      "web_search uses exponential backoff with jitter to handle rate limits. Specify engines to use: duckduckgo, brave, searxng.",
+      "web_search uses exponential backoff with jitter to handle rate limits. Specify engines to use: duckduckgo, brave, tavily, yandex, searxng.",
     ],
     parameters: Type.Object({
       query: Type.String({ description: "Search query" }),
       max_results: Type.Optional(Type.Number({ description: "Max results per engine (default 5)" })),
       engines: Type.Optional(
         Type.Array(
-          StringEnum(["duckduckgo", "brave", "searxng"] as const),
+          StringEnum(["duckduckgo", "brave", "tavily", "yandex", "searxng"] as const),
           { description: "Search engines to query (default: ['duckduckgo'])" },
         ),
       ),
