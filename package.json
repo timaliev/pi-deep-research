@@ -1,0 +1,13 @@
+{
+  "name": "pi-deep-research",
+  "version": "0.8.0",
+  "description": "Autonomous deep web research extension for Pi coding agent",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/timaliev/pi-deep-research"
+  },
+  "pi": {
+    "extensions": ["./extension/index.ts"]
+  }
+}

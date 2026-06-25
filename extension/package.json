@@ -9,7 +9,5 @@
     "tsx": "^4.0.0",
     "typescript": "^5.0.0"
   },
-  "dependencies": {
-    "duck-duck-scrape": "^2.2.7"
-  }
+  "dependencies": {}
 }

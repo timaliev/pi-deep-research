@@ -10,7 +10,7 @@ A Pi extension and skill that provides autonomous deep web research — planning
 pi install git:github.com/timaliev/pi-deep-research
 ```
 
-This clones the repo to `~/.pi/agent/git/` and links the extension into `~/.pi/agent/extensions/deep-research/`.
+This clones the repo, installs dependencies, and links the extension via the `pi.extensions` field in `package.json`.
 
 To pin a specific version:
 
