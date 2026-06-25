@@ -271,13 +271,6 @@ Use "compare" mode to see results from each engine separately without deduplicat
     async execute(_toolCallId, params, _signal, onUpdate, ctx) {
       const settings = resolveSettings();
 
-      // Read the last assistant message for agent response (used in questioning phase)
-      const entries = ctx.sessionManager.getEntries();
-      const lastAssistant = [...entries].reverse().find(
-        (e: any) => e.type === "assistant" || e.role === "assistant"
-      );
-      const agentResponse = lastAssistant?.content as string | undefined;
-
       // Load or initialize state
       let snapshot: ResearchSnapshot;
 
@@ -328,6 +321,10 @@ Use "compare" mode to see results from each engine separately without deduplicat
 
       // Subsequent calls: load state from session
       const entries = ctx.sessionManager.getEntries();
+      const lastAssistant = [...entries].reverse().find(
+        (e: any) => e.type === "assistant" || e.role === "assistant"
+      );
+      const agentResponse = lastAssistant?.content as string | undefined;
       const lastStateEntry = [...entries].reverse().find((e) => e.customType === STATE_KEY);
       if (!lastStateEntry) {
         return {
