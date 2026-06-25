@@ -317,7 +317,7 @@ export class ResearchStateMachine {
       return {
         phase: "drafting",
         snapshot: { ...snapshot, phase: "drafting" },
-        inject: `⚠️ Empty or too-short response.\n\n${inject}`,
+        inject: `⚠️ No report text in your response.\n\n**Write the report as your response text. Do NOT call run_research or any other tools.** After you write the complete report, then call run_research.\n\n${inject}`,
       };
     }
     this.logger?.event("phase_changed", { from: "drafting", to: "saving" });
@@ -417,7 +417,7 @@ Produce questions as a numbered list. Each question should be specific and resea
 function buildDraftingPrompt(plan: ResearchPlan, findings: Finding[]): string {
   let prompt = `## Final Report
 
-Write a structured markdown research report based on the following plan and findings.
+Write a structured markdown research report based on the following plan and findings. Write the report as your response text directly — do NOT call any tools. Call run_research only after you have written the complete report.
 
 **Topic:** ${plan.topic}
 **Goal:** ${plan.goal}

@@ -12,6 +12,7 @@ Run a multi-step autonomous web research workflow that produces a structured mar
 No setup required. DuckDuckGo is the default search engine (free, no API key). For higher quality results, set environment variables:
 
 - `BRAVE_API_KEY` — [Brave Search API](https://brave.com/search/api/) (free tier: 2,000 queries/month)
+- `TAVILY_API_KEY` — [Tavily Search API](https://tavily.com) (free tier: 1,000 queries/month)
 - SearXNG uses public instances, no key needed (may be unreliable)
 
 ## Protocol
@@ -26,7 +27,7 @@ No setup required. DuckDuckGo is the default search engine (free, no API key). F
    ```json
    {"engines": ["duckduckgo"], "profile": {"name": "default"}}
    ```
-   **Engines:** `duckduckgo` (always available), `brave` (needs `BRAVE_API_KEY`), `searxng`.
+   **Engines:** `duckduckgo` (always available), `brave` (needs `BRAVE_API_KEY`), `tavily` (needs `TAVILY_API_KEY`), `searxng`.
    **Profiles:** `default` (4/2/4 breadth/depth/concurrency), `fast` (2/1/2), `deep` (6/3/4), `custom` (specify numbers).
 
 3. Call `plan_research` again with the params:
@@ -81,7 +82,7 @@ No setup required. DuckDuckGo is the default search engine (free, no API key). F
 3. Between calls, process the injected prompt:
    - **Extraction:** Extract key findings from search results (cite sources)
    - **Questioning:** Generate **numbered** follow-up questions (e.g. `1. What is...?`) — the state machine parses these to drive the next search iteration. Unnumbered responses fall back to the original plan questions.
-   - **Drafting:** Write the final report from accumulated findings
+   - **Drafting:** Write the final report as your response text. Do NOT call any tools (including run_research) until the complete report is written. Then call run_research to finish.
 4. Stop when `phase` is `"done"`. The tool saves the report automatically to `./deep-research/reports/`.
 
 ### Phase 5: Deliver

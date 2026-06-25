@@ -210,6 +210,9 @@ export class PrefilterManager {
   private checkApiKeys(engines: SearchEngine[]): string[] {
     const missing: string[] = [];
     if (engines.includes("brave") && !process.env.BRAVE_API_KEY) missing.push("BRAVE_API_KEY");
+    if (engines.includes("tavily") && !process.env.TAVILY_API_KEY) missing.push("TAVILY_API_KEY");
+    if (engines.includes("yandex") && (!process.env.YANDEX_OAUTH_TOKEN || !process.env.YANDEX_FOLDER_ID))
+      missing.push("YANDEX_OAUTH_TOKEN, YANDEX_FOLDER_ID");
     return missing;
   }
 
@@ -217,7 +220,7 @@ export class PrefilterManager {
     const presets = Object.entries(DEFAULT_PRESETS)
       .map(([name, p]) => `  ${name}: breadth=${p.breadth}, depth=${p.depth}, concurrency=${p.concurrency}`)
       .join("\n");
-    return `## Research Parameters\n\nTopic: ${topic}\n\nChoose search engines and profile. Reply with JSON:\n\`\`\`json\n{"engines":["duckduckgo"],"profile":{"name":"default"}}\n\`\`\`\n\nEngines: duckduckgo, brave (needs BRAVE_API_KEY), searxng.\n\nAvailable profiles:\n${presets}\n  custom: specify breadth, depth, concurrency\n\nYou may change the profile later during plan creation.`;
+    return `## Research Parameters\n\nTopic: ${topic}\n\nChoose search engines and profile. Reply with JSON:\n\`\`\`json\n{"engines":["duckduckgo"],"profile":{"name":"default"}}\n\`\`\`\n\nEngines: duckduckgo (free), brave (needs BRAVE_API_KEY), tavily (needs TAVILY_API_KEY), yandex (needs YANDEX_OAUTH_TOKEN+YANDEX_FOLDER_ID), searxng (public).\n\nAvailable profiles:\n${presets}\n  custom: specify breadth, depth, concurrency\n\nYou may change the profile later during plan creation.`;
   }
 
   private buildApiKeyWarning(missing: string[]): string {
