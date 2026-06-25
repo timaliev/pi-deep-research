@@ -2,7 +2,12 @@
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.
 
-## [0.10.0] — 2026-06-26
+## [0.10.1] — 2026-06-26
+
+### 🐛 Bug Fixes
+
+- *(tool)* Add tavily and yandex to web_search StringEnum
+## [0.10.0] - 2026-06-25
 
 ### 🚀 Features
 
@@ -11,6 +16,10 @@ All notable changes to the Pi Deep Research Extension will be documented in this
 ### 🧪 Testing
 
 - *(search)* Add tavily and yandex search integration tests
+
+### ⚙️ Miscellaneous Tasks
+
+- *(release)* Bump version to 0.10.0
 ## [0.9.0] - 2026-06-25
 
 ### 🚀 Features
