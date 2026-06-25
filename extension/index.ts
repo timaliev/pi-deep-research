@@ -1,4 +1,5 @@
 import { Type } from "typebox";
+import { StringEnum } from "@earendil-works/pi-ai";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
@@ -7,6 +8,8 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { DuckDuckGoProvider } from "./search/duckduckgo.js";
 import { TavilyProvider } from "./search/tavily.js";
 import { BraveProvider } from "./search/brave.js";
+import { multiEngineWebSearch } from "./search/web-search.js";
+import type { SearchEngine } from "./search/web-search.js";
 import { WebScraper } from "./scraper.js";
 import type { SearchProvider } from "./search/provider.js";
 import { PrefilterManager } from "./prefilter.js";
@@ -72,18 +75,57 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "web_search",
     label: "Web Search",
-    description: "Search the web using DuckDuckGo. Returns results with title, URL, and snippet. Use for finding sources during deep research.",
+    description: `Search the web using multiple search engines with delays to emulate user behavior.
+Returns results with title, URL, and snippet.
+Use for finding sources during research or when you need up-to-date information.
+
+Engines: duckduckgo (default, no key), brave (needs BRAVE_API_KEY env), searxng (public instances).
+DuckDuckGo uses honest bot UA with exponential backoff on rate limits (based on ddg-search).
+Use "compare" mode to see results from each engine separately without deduplication.`,
+    promptSnippet: "Search the web using DuckDuckGo, Brave, or SearXNG with honest bot User-Agent and exponential backoff retry.",
+    promptGuidelines: [
+      "Use web_search for finding sources, current information, or web research. Multiple engines can be used with compare mode to cross-check results.",
+      "web_search uses exponential backoff with jitter to handle rate limits. Specify engines to use: duckduckgo, brave, searxng.",
+    ],
     parameters: Type.Object({
       query: Type.String({ description: "Search query" }),
-      max_results: Type.Optional(Type.Number({ description: "Max results (default 5)" })),
+      max_results: Type.Optional(Type.Number({ description: "Max results per engine (default 5)" })),
+      engines: Type.Optional(
+        Type.Array(
+          StringEnum(["duckduckgo", "brave", "searxng"] as const),
+          { description: "Search engines to query (default: ['duckduckgo'])" },
+        ),
+      ),
+      compare: Type.Optional(
+        Type.Boolean({ description: "If true, show results per engine without deduplication (default: false)" }),
+      ),
     }),
-    async execute(_toolCallId, params) {
-      const settings = resolveSettings();
-      const provider = createSearchProvider(settings);
-      const results = await provider.search(params.query, params.max_results ?? 5);
+
+    async execute(_toolCallId, params, signal, onUpdate) {
+      const query = params.query as string;
+      const maxResults = (params.max_results as number) ?? 5;
+      const engines = (params.engines as SearchEngine[]) ?? ["duckduckgo"];
+      const compareMode = (params.compare as boolean) ?? false;
+
+      if (!query || query.trim().length === 0) {
+        return {
+          content: [{ type: "text", text: "Error: query is required and must not be empty." }],
+          details: {},
+        };
+      }
+
+      const output = await multiEngineWebSearch({
+        query,
+        maxResults,
+        engines,
+        compare: compareMode,
+        signal,
+        onUpdate,
+      });
+
       return {
-        content: [{ type: "text", text: JSON.stringify(results, null, 2) }],
-        details: { results },
+        content: [{ type: "text", text: output.markdown }],
+        details: output.details,
       };
     },
   });
