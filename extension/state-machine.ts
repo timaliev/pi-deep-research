@@ -1,5 +1,6 @@
 import type { ResearchPlan } from "./prefilter.js";
 import { generateRunId } from "./ids.js";
+import type { Logger } from "./logger.js";
 import type { searchWeb as SearchWebFn } from "./search/web-search.js";
 import type { WebSearchResult } from "./search/web-search.js";
 import type { SearchEngine } from "./search/web-search.js";
@@ -79,6 +80,7 @@ export class ResearchStateMachine {
     private readonly scraper: Scraper,
     private readonly profile: ResearchProfile,
     private readonly searchEngines: SearchEngine[] = ["duckduckgo"],
+    private readonly logger?: Logger,
   ) {}
 
   static init(plan: ResearchPlan, profile: ResearchProfile): ResearchSnapshot {
@@ -119,6 +121,12 @@ export class ResearchStateMachine {
        (maxSec > 0 && elapsed >= maxSec))
     ) {
       snapshot.softLimitTriggered = true;
+      this.logger?.event("soft_limit_triggered", {
+        searchCalls: snapshot.searchCalls,
+        maxSearchCalls: maxCalls,
+        elapsedSeconds: Math.round(elapsed),
+        maxElapsedSeconds: maxSec,
+      });
     }
   }
 
@@ -145,7 +153,14 @@ export class ResearchStateMachine {
     const searchResults = await Promise.all(
       activeQuestions.map((question) =>
         semaphore.run(async () => {
-          const results = await this.searchFn(question, maxResultsPerQuery, this.searchEngines);
+          const startMs = Date.now();
+          const results = await this.searchFn(question, maxResultsPerQuery, this.searchEngines, { logger: this.logger });
+          this.logger?.event("search_executed", {
+            query: question,
+            resultCount: results.length,
+            elapsedMs: Date.now() - startMs,
+            depth: snapshot.currentDepth,
+          });
           snapshot.searchCalls++;
           return { question, results };
         })
@@ -168,10 +183,19 @@ export class ResearchStateMachine {
       urlsToScrape.map((url) =>
         semaphore.run(async () => {
           try {
+            const startMs = Date.now();
             const page = await this.scraper.scrape(url);
+            this.logger?.event("scrape_executed", {
+              url,
+              title: page.title,
+              bytes: page.content.length,
+              elapsedMs: Date.now() - startMs,
+              depth: snapshot.currentDepth,
+            });
             snapshot.scrapeCalls++;
             return page;
-          } catch {
+          } catch (err: any) {
+            this.logger?.event("scrape_failed", { url, error: err.message, depth: snapshot.currentDepth });
             return null;
           }
         })
@@ -194,6 +218,8 @@ export class ResearchStateMachine {
     this.checkSoftLimits(nextSnapshot);
 
     const inject = buildExtractionPrompt(searchResults, scraped, nextDepth, snapshot.totalDepth);
+    this.logger?.event("phase_changed", { from: "searching", to: "extracting", depth: nextDepth });
+    this.logger?.event("inject_sent", { type: "extraction", length: inject.length, depth: nextDepth });
     return { phase: "extracting", snapshot: nextSnapshot, inject };
   }
 
@@ -202,9 +228,18 @@ export class ResearchStateMachine {
     const shouldDeepen = !snapshot.softLimitTriggered && snapshot.currentDepth < snapshot.totalDepth;
     if (shouldDeepen) {
       const inject = buildQuestioningPrompt(plan, snapshot.currentDepth, snapshot.totalDepth);
+      this.logger?.event("phase_changed", { from: "extracting", to: "questioning", depth: snapshot.currentDepth });
+      this.logger?.event("inject_sent", { type: "deepening", length: inject.length, depth: snapshot.currentDepth });
       return { phase: "questioning", snapshot: { ...snapshot, phase: "questioning" }, inject };
     }
+    this.logger?.event("deepening_skipped", {
+      reason: snapshot.softLimitTriggered ? "soft_limit" : "depth_reached",
+      currentDepth: snapshot.currentDepth,
+      totalDepth: snapshot.totalDepth,
+    });
     const inject = buildDraftingPrompt(plan, snapshot.allFindings);
+    this.logger?.event("phase_changed", { from: "extracting", to: "drafting", depth: snapshot.currentDepth });
+    this.logger?.event("inject_sent", { type: "drafting", length: inject.length });
     return { phase: "drafting", snapshot: { ...snapshot, phase: "drafting" }, inject };
   }
 
@@ -214,10 +249,12 @@ export class ResearchStateMachine {
   }
 
   private doDrafting(snapshot: ResearchSnapshot, _plan: ResearchPlan): ResearchStateResult {
+    this.logger?.event("phase_changed", { from: "drafting", to: "saving" });
     return { phase: "saving", snapshot: { ...snapshot, phase: "saving" } };
   }
 
   private doSaving(snapshot: ResearchSnapshot): ResearchStateResult {
+    this.logger?.event("phase_changed", { from: "saving", to: "done" });
     return { phase: "done", snapshot: { ...snapshot, phase: "done" } };
   }
 }

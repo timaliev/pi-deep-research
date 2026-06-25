@@ -1,4 +1,5 @@
 import { generateRunId } from "./ids.js";
+import type { Logger } from "./logger.js";
 import type { searchWeb as SearchWebFn } from "./search/web-search.js";
 import type { WebSearchResult } from "./search/web-search.js";
 import type { SearchEngine } from "./search/web-search.js";
@@ -54,17 +55,20 @@ export class PrefilterManager {
   private readonly searchEngines: SearchEngine[];
   private readonly scraper: Scraper;
   private readonly artifactsDir: string;
+  private readonly logger?: Logger;
 
   constructor(
     searchFn: typeof SearchWebFn,
     scraper: Scraper,
     artifactsDir: string,
     searchEngines: SearchEngine[] = ["duckduckgo"],
+    logger?: Logger,
   ) {
     this.searchFn = searchFn;
     this.searchEngines = searchEngines;
     this.scraper = scraper;
     this.artifactsDir = artifactsDir;
+    this.logger = logger;
   }
 
   /**
@@ -74,23 +78,34 @@ export class PrefilterManager {
   async start(topic: string): Promise<PrefilterResult> {
     const runId = generateRunId();
 
+    this.logger?.event("prefilter_started", { topic });
+
     // Preliminary search
     const searchQuery = this.buildSearchQuery(topic);
-    const searchResults = await this.searchFn(searchQuery, 3, this.searchEngines);
+    const searchResults = await this.searchFn(searchQuery, 3, this.searchEngines, { logger: this.logger });
 
     // Scrape top results (up to 2)
     const scrapedContent: ScrapedPage[] = [];
     for (const result of searchResults.slice(0, 2)) {
       try {
+        const startMs = Date.now();
         const page = await this.scraper.scrape(result.url);
+        const elapsedMs = Date.now() - startMs;
         scrapedContent.push(page);
-      } catch {
-        // Skip pages that fail to scrape
+        this.logger?.event("scrape_executed", {
+          url: result.url,
+          title: page.title,
+          bytes: page.content.length,
+          elapsedMs,
+        });
+      } catch (err: any) {
+        this.logger?.event("scrape_failed", { url: result.url, error: err.message });
       }
     }
 
     // Build inject prompt with search context
     const inject = this.buildInjectPrompt(topic, searchResults, scrapedContent);
+    this.logger?.event("inject_sent", { type: "plan_prompt", length: inject.length });
 
     return {
       phase: "awaiting_plan",
@@ -115,6 +130,7 @@ export class PrefilterManager {
     try {
       plan = JSON.parse(planJson);
     } catch {
+      this.logger?.event("plan_error", { reason: "invalid_json" });
       return {
         phase: "error",
         runId,
@@ -125,6 +141,7 @@ export class PrefilterManager {
     // Validate required fields
     const validationError = this.validatePlan(plan);
     if (validationError) {
+      this.logger?.event("plan_error", { reason: "validation", error: validationError });
       return { phase: "error", runId, error: validationError };
     }
 
@@ -150,6 +167,8 @@ export class PrefilterManager {
     const fileName = `${runId}-prefilter.json`;
     const artifactPath = path.join(this.artifactsDir, fileName);
     await fs.writeFile(artifactPath, JSON.stringify(artifact, null, 2), "utf-8");
+
+    this.logger?.event("plan_saved", { artifactPath, questions: plan.researchQuestions.length });
 
     return {
       phase: "plan_ready",

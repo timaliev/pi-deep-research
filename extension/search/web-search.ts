@@ -9,6 +9,7 @@
 
 import { request as httpsRequest } from "node:https";
 import { request as httpRequest } from "node:http";
+import type { Logger } from "./logger.js";
 
 // --- Constants (from ddg-search config) ---
 const DDG_BASE_URL = "https://html.duckduckgo.com/html";
@@ -409,6 +410,7 @@ interface SearchCallbacks {
     content: Array<{ type: string; text: string }>;
     details: Record<string, unknown>;
   }) => void;
+  logger?: Logger;
 }
 
 /**
@@ -450,20 +452,34 @@ export async function searchWeb(
     await waitIfNeeded(engine);
 
     try {
+      const startMs = Date.now();
       callbacks?.onUpdate?.({
         content: [{ type: "text", text: `Querying ${engine}...` }],
         details: { phase: "searching", engine },
       });
 
       const results = await fn(query, maxResults);
+      const elapsedMs = Date.now() - startMs;
       engineLastCall[engine] = Date.now();
       allResults.push(...results);
+
+      callbacks?.logger?.event("search_executed", {
+        query,
+        engine,
+        resultCount: results.length,
+        elapsedMs,
+      });
 
       callbacks?.onUpdate?.({
         content: [{ type: "text", text: `${engine}: ${results.length} results` }],
         details: { phase: "done", engine, count: results.length },
       });
     } catch (err: any) {
+      callbacks?.logger?.event("search_failed", {
+        query,
+        engine,
+        error: err.message,
+      });
       callbacks?.onUpdate?.({
         content: [{ type: "text", text: `${engine}: failed — ${err.message}` }],
         details: { phase: "error", engine, error: err.message },

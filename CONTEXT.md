@@ -55,3 +55,7 @@ _Avoid_: hard limit, quota, budget cap
 **Telemetry**:
 Structured usage data recorded during a Research Run: search API call count, scrape call count, phase durations, and (when available) LLM token usage. Saved as `*-telemetry.json` in `./deep-research/logs/` and appended as a summary table to the final report.
 _Avoid_: analytics, metrics, usage report
+
+**Research Log**:
+A JSONL trace file recording every discrete event during a Research Run and its Prefilter phase: phase transitions, search calls, scrape calls, errors, injection prompts sent, soft limit triggers, deepening decisions, and artifact saves. Saved as `<runId>.log` in `./deep-research/logs/`. Complements Telemetry (aggregate) with a step-by-step audit trail. One log per Prefilter run (<runId>-prefilter.log), one per Research Run (<runId>.log).
+_Avoid_: debug log, trace, audit log

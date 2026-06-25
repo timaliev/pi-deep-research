@@ -8,6 +8,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { searchWeb, multiEngineWebSearch } from "./search/web-search.js";
 import type { SearchEngine } from "./search/web-search.js";
 import { WebScraper } from "./scraper.js";
+import { JsonlLogger } from "./logger.js";
 import { PrefilterManager } from "./prefilter.js";
 import { ResearchStateMachine, buildTelemetrySection } from "./state-machine.js";
 import type { ResearchPlan, PrefilterArtifact } from "./prefilter.js";
@@ -180,7 +181,13 @@ Use "compare" mode to see results from each engine separately without deduplicat
 
       const engines = getEngines(settings);
       const scraper = new WebScraper();
-      const manager = new PrefilterManager(searchWeb, scraper, artifactsDir, engines);
+
+      // Create logger for this prefilter run
+      const prefilterRunId = new Date().toISOString().replace(/[:.]/g, "-").substring(0, 19);
+      const logsDir = join(artifactsDir, "..", "logs");
+      const logger = new JsonlLogger(prefilterRunId, join(logsDir, `${prefilterRunId}-prefilter.log`));
+
+      const manager = new PrefilterManager(searchWeb, scraper, artifactsDir, engines, logger);
 
       if (!params.plan_json) {
         // First call: preliminary search
@@ -288,8 +295,12 @@ Use "compare" mode to see results from each engine separately without deduplicat
       const artifactsDir = join(ctx.cwd ?? baseDir, "deep-research", "artifacts");
       mkdirSync(artifactsDir, { recursive: true });
 
-      const searchProvider = createSearchProvider(settings);
+      const engines = getEngines(settings);
       const scraper = new WebScraper();
+
+      // Create logger for this research run
+      const logsDir = join(artifactsDir, "..", "logs");
+      let runLogger: JsonlLogger | undefined;
 
       // Load or initialize state
       let snapshot: ResearchSnapshot;
@@ -304,8 +315,12 @@ Use "compare" mode to see results from each engine separately without deduplicat
         const raw = readFileSync(params.plan_artifact_path, "utf-8");
         const artifact: PrefilterArtifact = JSON.parse(raw);
         const profile = settings.profiles?.[params.profile ?? "default"] ?? DEFAULT_PROFILE;
-        const machine = new ResearchStateMachine(searchWeb, scraper, profile, engines);
         snapshot = ResearchStateMachine.init(artifact.plan, profile);
+
+        // Create logger using the runId from init
+        runLogger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
+        runLogger.event("run_started", { topic: artifact.plan.topic, profile: params.profile ?? "default" });
+        const machine = new ResearchStateMachine(searchWeb, scraper, profile, engines, runLogger);
 
         // Advance to first phase (searching → extracting)
         const result = await machine.next(snapshot, artifact.plan);
@@ -347,7 +362,10 @@ Use "compare" mode to see results from each engine separately without deduplicat
         };
       }
 
-      const machine = new ResearchStateMachine(searchWeb, scraper, profile, engines);
+      // Re-create logger for subsequent calls (same file, appends)
+      runLogger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
+
+      const machine = new ResearchStateMachine(searchWeb, scraper, profile, engines, runLogger);
       const result = await machine.next(snapshot, plan);
 
       // Persist updated state
@@ -377,6 +395,13 @@ Use "compare" mode to see results from each engine separately without deduplicat
         const telemetry = buildTelemetrySection(result.snapshot);
         const fullReport = `${typeof reportText === "string" ? reportText : ""}\n\n${telemetry}\n`;
         writeFileSync(reportPath, fullReport, "utf-8");
+
+        runLogger?.event("report_saved", {
+          path: reportPath,
+          searchCalls: result.snapshot.searchCalls,
+          scrapeCalls: result.snapshot.scrapeCalls,
+          sourcesVisited: result.snapshot.allVisitedUrls.length,
+        });
 
         return {
           content: [{ type: "text", text: `## Research Complete ✅\n\nReport saved to: ${reportPath}\n\nSearch calls: ${result.snapshot.searchCalls}\nScrape calls: ${result.snapshot.scrapeCalls}\nSources visited: ${result.snapshot.allVisitedUrls.length}` }],
