@@ -1,0 +1,98 @@
+# Deep Research for Pi
+
+A Pi extension and skill that provides autonomous deep web research — planning research questions, searching the web, scraping sources, extracting findings, and synthesizing a structured markdown report — all using the user's current Pi LLM model.
+
+## Architecture
+
+```
+user says "research topic X"
+        │
+        ▼
+┌─────────────────────────────────┐
+│  plan_research (3-step)         │
+│  1. negotiate engines + profile │
+│  2. preliminary search          │
+│  3. agent produces plan JSON    │
+│  → saves prefilter.json         │
+└──────────────┬──────────────────┘
+               │ user confirms
+               ▼
+┌─────────────────────────────────┐
+│  run_research (state machine)   │
+│  searching → extracting →       │
+│  questioning → drafting → done  │
+│                                 │
+│  Each phase injects prompt into │
+│  agent conversation, waits for  │
+│  agent response, advances.      │
+│                                 │
+│  → saves report.md              │
+│  → saves <runId>.log (JSONL)    │
+└─────────────────────────────────┘
+```
+
+## File Structure
+
+```
+extension/
+├── index.ts              Extension entry — registers tools
+├── prefilter.ts          Three-step research planning
+├── state-machine.ts      Research run state machine + profile resolution
+├── scraper.ts            Web page scraper
+├── logger.ts             JSONL research log
+├── ids.ts                Shared ID generation
+└── search/
+    └── web-search.ts     Multi-engine web search (DDG, Brave, SearXNG)
+
+tests/                    Unit + integration tests (tsx runner)
+
+deep-research/
+├── artifacts/            Research plans (prefilter.json)
+├── reports/              Final research reports (markdown)
+└── logs/                 Research logs (JSONL)
+```
+
+## Key Concepts
+
+| Term | Description |
+|---|---|
+| **Research Plan** | JSON artifact: topic, goal, research questions, engines, profile, scope, estimated cost |
+| **Research Profile** | Named preset (default/fast/deep) or custom (breadth/depth/concurrency). Negotiated during prefilter, stored in plan |
+| **Prefilter** | Three-step: (1) negotiate engines+profile, (2) preliminary search, (3) agent writes plan |
+| **Injection** | Prompt sent into agent conversation via `pi.sendUserMessage()` — the tool never calls the LLM directly |
+| **Research Log** | JSONL trace file (`<runId>.log`) — every phase transition, search/scrape call, error, decision |
+| **Soft Limit** | Runtime cap (maxSearchCalls, maxElapsedSeconds) — reduces intensity, skips deeper recursion |
+| **Confirmation Gate** | Agent must present plan + cost estimate, get user approval before `run_research` |
+
+## Search Engines
+
+Built-in `searchWeb()` function (multi-engine, retry with exponential backoff):
+
+| Engine | API Key | Quality |
+|---|---|---|
+| `duckduckgo` | none | Good (free) |
+| `brave` | `BRAVE_API_KEY` env | Better |
+| `searxng` | none | Variable (public instances) |
+
+All search calls — user-facing `web_search` tool and pipeline — use the same function with rate-limit backoff and result deduplication.
+
+## Development
+
+```bash
+# Run tests
+cd extension && node --import tsx --test ../tests/*.test.ts
+
+# 40 tests covering:
+# - PrefilterManager (three-step, validation, API key checks)
+# - ResearchStateMachine (full cycle, concurrency, soft limits)
+# - WebScraper (title/content extraction, error handling)
+# - JsonlLogger (write, append, metadata)
+# - Telemetry (markdown table generation)
+```
+
+## Related Documents
+
+- [CONTEXT.md](CONTEXT.md) — domain glossary
+- [docs/adr/0001-state-machine-orchestration.md](docs/adr/0001-state-machine-orchestration.md) — why state machine + injections
+- [docs/adr/0002-pluggable-search-backends.md](docs/adr/0002-pluggable-search-backends.md) — search backend evolution
+- [docs/adr/0003-plan-driven-parameters.md](docs/adr/0003-plan-driven-parameters.md) — engines/profile negotiation

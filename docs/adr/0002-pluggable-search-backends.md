@@ -1,4 +1,8 @@
-# Pluggable search backends with DuckDuckGo as zero-config default
+# Pluggable search backends — SUPERSEDED by unified multi-engine search
+
+> **Status:** Superseded. As of v0.8, the pluggable `SearchProvider` interface was replaced by a unified `searchWeb()` function supporting duckduckgo, brave, and searxng as first-class engines. Engines are selected in the Research Plan during prefilter, not in static settings. See ADR-0003.
+
+The original decision (below) remains for historical context.
 
 The Deep Research extension supports multiple web search providers behind a common interface. The default provider is **DuckDuckGo** — free, no API key, and works out of the box. Tavily and Brave Search are available as opt-in alternatives for users who need higher quality results and are willing to configure API keys.
 
