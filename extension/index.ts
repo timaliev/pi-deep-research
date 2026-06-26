@@ -256,7 +256,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
       const { resolveProfile } = await import("./state-machine.js");
       const profile = resolveProfile(artifact.plan.profile);
       const estSearches = profile.breadth * profile.depth * artifact.plan.researchQuestions.length;
-      const estScrapes = estSearches * 2;
+      const estScrapes = Math.ceil(estSearches * 1.5);
       return {
         content: [{ type: "text", text: [
           `## Research Cost Estimate`,
@@ -272,11 +272,33 @@ Use "compare" mode to see results from each engine separately without deduplicat
     },
   });
 
+  // === TOOL: confirm_research ===
+  pi.registerTool({
+    name: "confirm_research",
+    label: "Confirm Research",
+    description: "Confirm a research plan before running. Call after user explicitly approves the plan and cost estimate.",
+    parameters: Type.Object({
+      plan_artifact_path: Type.String({ description: "Path to the prefilter.json artifact to confirm" }),
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      if (!existsSync(params.plan_artifact_path)) {
+        return { content: [{ type: "text", text: `Error: artifact not found at ${params.plan_artifact_path}` }], details: { error: "artifact_not_found" } };
+      }
+      ctx.sessionManager.appendEntry(CONFIRMATION_KEY, { planArtifactPath: params.plan_artifact_path });
+      return {
+        content: [{ type: "text", text: `## Research Confirmed ✅\n\nPlan: ${params.plan_artifact_path}\n\nReady to run. Call run_research with the plan_artifact_path.` }],
+        details: { confirmed: true, plan_artifact_path: params.plan_artifact_path },
+      };
+    },
+  });
+
   // === TOOL: run_research ===
   // State machine persistence key
   const STATE_KEY = "deep-research:state";
   // Report path key — stored by auto-save, read by save_report for dedup
   const REPORT_PATH_KEY = "deep-research:report-path";
+  // Confirmation gate key — stored by confirm_research, checked by run_research
+  const CONFIRMATION_KEY = "deep-research:plan-confirmed";
 
   pi.registerTool({
     name: "run_research",
@@ -297,6 +319,23 @@ Use "compare" mode to see results from each engine separately without deduplicat
           return {
             content: [{ type: "text", text: `Error: plan artifact not found at ${params.plan_artifact_path}` }],
             details: { error: "artifact_not_found" },
+          };
+        }
+
+        // Confirmation gate: user must confirm before research runs
+        const entries = ctx.sessionManager.getEntries();
+        const confirmed = [...entries].reverse().find((e: any) => e.customType === CONFIRMATION_KEY);
+        if (!confirmed) {
+          return {
+            content: [{ type: "text", text: `## Confirmation Required ⚠️\n\nThe research plan must be confirmed by the user before running.\n\n1. Present the plan and cost estimate to the user\n2. Ask for explicit approval\n3. After approval, call confirm_research with the plan path\n4. Then call run_research` }],
+            details: { error: "plan_not_confirmed" },
+          };
+        }
+        const confirmedPath = confirmed.data?.planArtifactPath as string | undefined;
+        if (confirmedPath && confirmedPath !== params.plan_artifact_path) {
+          return {
+            content: [{ type: "text", text: `## Plan Mismatch ⚠️\n\nConfirmation is for a different plan (${confirmedPath}). Present this plan to the user and re-confirm.` }],
+            details: { error: "plan_mismatch" },
           };
         }
         const raw = readFileSync(params.plan_artifact_path, "utf-8");

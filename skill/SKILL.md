@@ -74,10 +74,15 @@ No setup required. DuckDuckGo is the default search engine (free, no API key). F
    - Estimated search/scrape counts
    - Ask: "Start deep research?"
 3. **Guardrail:** Do NOT call `run_research` until the user explicitly confirms.
+4. After user confirms, call `confirm_research`:
+   ```
+   confirm_research({ plan_artifact_path: "<path from plan_research result>" })
+   ```
+   `run_research` enforces this gate — it will reject unconfirmed plans.
 
 ### Phase 4: Research Loop
 
-1. After user confirmation, call `run_research`:
+1. After confirmation, call `run_research`:
    ```
    run_research({ plan_artifact_path: "<path to prefilter.json>" })
    ```
