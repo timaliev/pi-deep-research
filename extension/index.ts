@@ -16,6 +16,25 @@ import type { ResearchSnapshot } from "./state-machine.js";
 
 const baseDir = dirname(fileURLToPath(import.meta.url));
 
+/** Convert a topic string to a filesystem-safe slug. Handles Unicode (Cyrillic, CJK, etc.). */
+function topicToSlug(topic: string): string {
+  return topic
+    .toLowerCase()
+    // Transliterate common Cyrillic to Latin (naive but effective for filenames)
+    .replace(/[а-яё]/g, (c) => {
+      const map: Record<string, string> = {
+        а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'yo',ж:'zh',з:'z',и:'i',й:'y',
+        к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',
+        х:'h',ц:'ts',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya',
+      };
+      return map[c] ?? c;
+    })
+    .replace(/[^\w]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .substring(0, 80)
+    || "research"; // fallback if all chars were stripped
+}
+
 interface DeepResearchSettings {
   profiles?: Record<string, unknown>;
   artifactsDir?: string;
@@ -132,11 +151,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
       mkdirSync(reportsDir, { recursive: true });
 
       const date = new Date().toISOString().slice(0, 10);
-      const slug = params.topic
-        .toLowerCase()
-        .replace(/[^\w]+/g, "-")
-        .replace(/^-|-$/g, "")
-        .substring(0, 80);
+      const slug = topicToSlug(params.topic);
       const filename = `${date}-${slug}.md`;
       const path = join(reportsDir, filename);
 
@@ -382,8 +397,17 @@ Use "compare" mode to see results from each engine separately without deduplicat
       if (result.phase === "done") {
         const reportText = result.snapshot.draftReport ?? "";
 
+        // Guard: log if draftReport is suspiciously short despite passing doSaving validation
+        if (reportText.length < 40) {
+          runLogger?.event("report_save_warning", {
+            reason: "draft_too_short",
+            draftLength: reportText.length,
+            snapshotPhase: result.snapshot.phase,
+          });
+        }
+
         const date = new Date().toISOString().slice(0, 10);
-        const slug = plan.topic.toLowerCase().replace(/[^\w]+/g, "-").replace(/^-|-$/g, "").substring(0, 80);
+        const slug = topicToSlug(plan.topic);
         const filename = `${date}-${slug}.md`;
         const reportPath = join(reportsDir, filename);
 

@@ -310,6 +310,7 @@ export class ResearchStateMachine {
 
   private doDrafting(snapshot: ResearchSnapshot, plan: ResearchPlan, agentResponse?: unknown): ResearchStateResult {
     const reportText = extractTextContent(agentResponse);
+    this.logger?.event("drafting_extracted", { textLength: reportText.length, agentResponseType: typeof agentResponse, isArray: Array.isArray(agentResponse) });
     if (!reportText || reportText.length < 40) {
       // Agent didn't produce a proper report — re-inject drafting prompt
       const inject = buildDraftingPrompt(plan, snapshot.allFindings);
@@ -329,10 +330,10 @@ export class ResearchStateMachine {
 
   private doSaving(snapshot: ResearchSnapshot): ResearchStateResult {
     if (!snapshot.draftReport || snapshot.draftReport.length < 40) {
-      this.logger?.event("saving_blocked", { reason: "empty_draft" });
+      this.logger?.event("saving_blocked", { reason: "empty_draft", draftLength: snapshot.draftReport?.length ?? 0 });
       return { phase: "saving", snapshot };
     }
-    this.logger?.event("phase_changed", { from: "saving", to: "done" });
+    this.logger?.event("phase_changed", { from: "saving", to: "done", draftLength: snapshot.draftReport.length });
     return { phase: "done", snapshot: { ...snapshot, phase: "done" } };
   }
 }
