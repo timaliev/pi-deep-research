@@ -2,6 +2,12 @@
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.
 
+## [0.11.1] — 2026-06-26
+
+### 🐛 Hotfix
+
+- *(ext)* Restore baseDir declaration accidentally removed during topicToSlug extraction
+
 ## [0.11.0] — 2026-06-26
 
 ### 🚀 Features
