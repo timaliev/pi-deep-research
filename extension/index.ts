@@ -284,7 +284,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
       if (!existsSync(params.plan_artifact_path)) {
         return { content: [{ type: "text", text: `Error: artifact not found at ${params.plan_artifact_path}` }], details: { error: "artifact_not_found" } };
       }
-      ctx.sessionManager.appendEntry(CONFIRMATION_KEY, { planArtifactPath: params.plan_artifact_path });
+      pi.appendEntry(CONFIRMATION_KEY, { planArtifactPath: params.plan_artifact_path });
       return {
         content: [{ type: "text", text: `## Research Confirmed ✅\n\nPlan: ${params.plan_artifact_path}\n\nReady to run. Call run_research with the plan_artifact_path.` }],
         details: { confirmed: true, plan_artifact_path: params.plan_artifact_path },
