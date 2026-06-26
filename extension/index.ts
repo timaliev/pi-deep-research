@@ -15,6 +15,8 @@ import type { ResearchPlan, PrefilterArtifact, ResearchPlanProfile } from "./pre
 import type { ResearchSnapshot } from "./state-machine.js";
 import { topicToSlug } from "./slug.js";
 
+const baseDir = dirname(fileURLToPath(import.meta.url));
+
 interface DeepResearchSettings {
   profiles?: Record<string, unknown>;
   artifactsDir?: string;
