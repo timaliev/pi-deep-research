@@ -2,6 +2,22 @@
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.
 
+## [0.11.0] — 2026-06-26
+
+### 🚀 Features
+
+- *(report)* Add reportStyle choice to prefilter plan — narrative (fixed 5-section) or subtopics (LLM discovers thematic sections)
+- *(slug)* Handle Cyrillic topics in report filenames with transliteration fallback
+
+### 🐛 Bug Fixes
+
+- *(report)* Deduplicate save_report and auto-save report paths via session state
+- *(draft)* Add diagnostic logging for draftReport emptiness at auto-save
+
+### 📚 Documentation
+
+- *(readme)* Add reportStyle to key concepts and architecture diagram
+
 ## [0.10.1] — 2026-06-26
 
 ### 🐛 Bug Fixes
