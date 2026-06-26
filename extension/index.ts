@@ -13,27 +13,7 @@ import { PrefilterManager } from "./prefilter.js";
 import { ResearchStateMachine, buildTelemetrySection, DEFAULT_PRESETS } from "./state-machine.js";
 import type { ResearchPlan, PrefilterArtifact, ResearchPlanProfile } from "./prefilter.js";
 import type { ResearchSnapshot } from "./state-machine.js";
-
-const baseDir = dirname(fileURLToPath(import.meta.url));
-
-/** Convert a topic string to a filesystem-safe slug. Handles Unicode (Cyrillic, CJK, etc.). */
-function topicToSlug(topic: string): string {
-  return topic
-    .toLowerCase()
-    // Transliterate common Cyrillic to Latin (naive but effective for filenames)
-    .replace(/[а-яё]/g, (c) => {
-      const map: Record<string, string> = {
-        а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'yo',ж:'zh',з:'z',и:'i',й:'y',
-        к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',
-        х:'h',ц:'ts',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya',
-      };
-      return map[c] ?? c;
-    })
-    .replace(/[^\w]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .substring(0, 80)
-    || "research"; // fallback if all chars were stripped
-}
+import { topicToSlug } from "./slug.js";
 
 interface DeepResearchSettings {
   profiles?: Record<string, unknown>;
@@ -150,10 +130,18 @@ Use "compare" mode to see results from each engine separately without deduplicat
       const reportsDir = join(ctx.cwd ?? baseDir, "deep-research", "reports");
       mkdirSync(reportsDir, { recursive: true });
 
+      // Prefer path pre-computed by run_research auto-save (dedup with plan.topic slug)
       const date = new Date().toISOString().slice(0, 10);
-      const slug = topicToSlug(params.topic);
-      const filename = `${date}-${slug}.md`;
-      const path = join(reportsDir, filename);
+      let path: string;
+      const entries = ctx.sessionManager.getEntries();
+      const reportPathEntry = [...entries].reverse().find((e: any) => e.customType === REPORT_PATH_KEY);
+      if (reportPathEntry?.data?.path && typeof reportPathEntry.data.path === "string") {
+        path = reportPathEntry.data.path;
+      } else {
+        const slug = topicToSlug(params.topic);
+        const filename = `${date}-${slug}.md`;
+        path = join(reportsDir, filename);
+      }
 
       const { writeFileSync } = await import("node:fs");
       writeFileSync(path, params.markdown, "utf-8");
@@ -285,6 +273,8 @@ Use "compare" mode to see results from each engine separately without deduplicat
   // === TOOL: run_research ===
   // State machine persistence key
   const STATE_KEY = "deep-research:state";
+  // Report path key — stored by auto-save, read by save_report for dedup
+  const REPORT_PATH_KEY = "deep-research:report-path";
 
   pi.registerTool({
     name: "run_research",
@@ -415,6 +405,9 @@ Use "compare" mode to see results from each engine separately without deduplicat
         const telemetry = buildTelemetrySection(result.snapshot);
         const fullReport = `${reportText}\n\n${telemetry}\n`;
         writeFileSync(reportPath, fullReport, "utf-8");
+
+        // Store path so save_report writes to the same file
+        pi.appendEntry(REPORT_PATH_KEY, { path: reportPath });
 
         runLogger?.event("report_saved", {
           path: reportPath,
