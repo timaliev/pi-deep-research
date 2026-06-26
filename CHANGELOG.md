@@ -2,7 +2,12 @@
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.
 
-## [0.11.1] — 2026-06-26
+## [0.12.0] — 2026-06-27
+
+### 🚀 Features
+
+- *(gate)* Add confirm_research tool — programmatic confirmation gate before run_research
+- *(estimate)* Fix scrape estimate formula (~1.5x searches instead of 2x)
 
 ### 🐛 Hotfix
 
