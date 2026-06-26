@@ -106,8 +106,10 @@ user says "research topic X"
 ┌─────────────────────────────────┐
 │  plan_research (3-step)         │
 │  1. negotiate engines + profile │
+│     + report style              │
 │  2. preliminary search          │
 │  3. agent produces plan JSON    │
+│     (incl. reportStyle)         │
 │  → saves prefilter.json         │
 └──────────────┬──────────────────┘
                │ user confirms
@@ -151,8 +153,9 @@ deep-research/
 
 | Term | Description |
 |---|---|
-| **Research Plan** | JSON artifact: topic, goal, research questions, engines, profile, scope, estimated cost |
+| **Research Plan** | JSON artifact: topic, goal, research questions, engines, profile, report style, scope, estimated cost |
 | **Research Profile** | Named preset (default/fast/deep) or custom (breadth/depth/concurrency). Negotiated during prefilter, stored in plan |
+| **Report Style** | `narrative` — fixed 5-section template (Introduction/Findings/Analysis/Recommendations/Sources). `subtopics` — LLM discovers 5–10 thematic sections with subsections, data tables, and quotes |
 | **Prefilter** | Three-step: (1) negotiate engines+profile, (2) preliminary search, (3) agent writes plan |
 | **Injection** | Prompt sent into agent conversation via `pi.sendUserMessage()` — the tool never calls the LLM directly |
 | **Research Log** | JSONL trace file (`<runId>.log`) — every phase transition, search/scrape call, error, decision |
@@ -177,7 +180,7 @@ All search calls — user-facing `web_search` tool and pipeline — use the same
 # Run tests
 cd extension && node --import tsx --test ../tests/*.test.ts
 
-# 40 tests covering:
+# 97 tests covering:
 # - PrefilterManager (three-step, validation, API key checks)
 # - ResearchStateMachine (full cycle, concurrency, soft limits)
 # - WebScraper (title/content extraction, error handling)
