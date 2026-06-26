@@ -415,7 +415,15 @@ Produce questions as a numbered list. Each question should be specific and resea
 `;
 }
 
-function buildDraftingPrompt(plan: ResearchPlan, findings: Finding[]): string {
+export function buildDraftingPrompt(plan: ResearchPlan, findings: Finding[]): string {
+  const style = plan.reportStyle ?? "narrative";
+  if (style === "subtopics") {
+    return buildSubtopicsPrompt(plan, findings);
+  }
+  return buildNarrativePrompt(plan, findings);
+}
+
+function buildNarrativePrompt(plan: ResearchPlan, findings: Finding[]): string {
   let prompt = `## Final Report
 
 Write a structured markdown research report based on the following plan and findings. Write the report as your response text directly — do NOT call any tools. Call run_research only after you have written the complete report.
@@ -430,6 +438,32 @@ Write a structured markdown research report based on the following plan and find
 3. **Analysis** — what the findings mean, patterns, contradictions
 4. **Recommendations** — actionable insights
 5. **Sources** — list of all cited URLs
+
+### Key Findings
+
+`;
+  for (const f of findings) prompt += `- ${f.text} [Source: ${f.sourceUrl}]\n`;
+  return prompt;
+}
+
+function buildSubtopicsPrompt(plan: ResearchPlan, findings: Finding[]): string {
+  let prompt = `## Final Report (Subtopics)
+
+Write a comprehensive markdown research report. Discover ${plan.researchQuestions.length >= 5 ? "8–10" : "5–7"} thematic sections based on the findings below — each section a dedicated topic with subsections where appropriate.
+
+Do NOT use a rigid 5-section template. Instead, let the content drive the structure: group findings into natural themes, give each its own numbered section with descriptive headings, and include data tables, quotes, and comparisons where the evidence supports them.
+
+Write the report as your response text directly — do NOT call any tools. Call run_research only after you have written the complete report.
+
+**Topic:** ${plan.topic}
+**Goal:** ${plan.goal}
+
+### Structure Guidance
+
+- Start with an Executive Summary (unnumbered)
+- Numbered sections (1., 2., 3., …) — each a distinct thematic area discovered from the findings
+- Subsections (1.1, 1.2, …) where a theme has multiple facets
+- End with a Recommendations section and a References section
 
 ### Key Findings
 

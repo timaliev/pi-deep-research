@@ -21,6 +21,8 @@ export interface ResearchPlan {
   engines: SearchEngine[];
   /** Profile controlling depth/breadth. */
   profile: ResearchPlanProfile;
+  /** Report generation style: narrative (5-section) or subtopics (LLM discovers themes). */
+  reportStyle?: "narrative" | "subtopics";
   scope: {
     include: string;
     exclude: string;
@@ -195,6 +197,13 @@ export class PrefilterManager {
     if (!p.estimatedCost || typeof p.estimatedCost !== "object") return "Plan must include 'estimatedCost'";
     if (!p.profile || typeof p.profile !== "object") return "Plan must include 'profile'";
 
+    // Validate reportStyle if present
+    if (p.reportStyle !== undefined) {
+      if (typeof p.reportStyle !== "string" || !["narrative", "subtopics"].includes(p.reportStyle as string)) {
+        return "reportStyle must be 'narrative' or 'subtopics'";
+      }
+    }
+
     const prof = p.profile as Record<string, unknown>;
     if (!prof.name || !["default","fast","deep","custom"].includes(prof.name as string)) {
       return "profile.name must be default, fast, deep, or custom";
@@ -220,7 +229,7 @@ export class PrefilterManager {
     const presets = Object.entries(DEFAULT_PRESETS)
       .map(([name, p]) => `  ${name}: breadth=${p.breadth}, depth=${p.depth}, concurrency=${p.concurrency}`)
       .join("\n");
-    return `## Research Parameters\n\nTopic: ${topic}\n\nChoose search engines and profile. Reply with JSON:\n\`\`\`json\n{"engines":["duckduckgo"],"profile":{"name":"default"}}\n\`\`\`\n\nEngines: duckduckgo (free), brave (needs BRAVE_API_KEY), tavily (needs TAVILY_API_KEY), yandex (needs YANDEX_OAUTH_TOKEN+YANDEX_FOLDER_ID), searxng (public).\n\nAvailable profiles:\n${presets}\n  custom: specify breadth, depth, concurrency\n\nYou may change the profile later during plan creation.`;
+    return `## Research Parameters\n\nTopic: ${topic}\n\nChoose search engines, profile, and report style. Reply with JSON:\n\`\`\`json\n{"engines":["duckduckgo"],"profile":{"name":"default"},"reportStyle":"narrative"}\n\`\`\`\n\nEngines: duckduckgo (free), brave (needs BRAVE_API_KEY), tavily (needs TAVILY_API_KEY), yandex (needs YANDEX_OAUTH_TOKEN+YANDEX_FOLDER_ID), searxng (public).\n\nAvailable profiles:\n${presets}\n  custom: specify breadth, depth, concurrency\n\nReport styles:\n  narrative — fixed 5-section template (Introduction/Findings/Analysis/Recommendations/Sources)\n  subtopics — LLM discovers 5–10 thematic sections from findings\n\nYou may change the profile or report style later during plan creation.`;
   }
 
   private buildApiKeyWarning(missing: string[]): string {
@@ -239,7 +248,7 @@ export class PrefilterManager {
       for (const sp of scrapedContent) p += `**${sp.title}** (${sp.url})\n\n${sp.content.substring(0, 800)}\n\n---\n`;
     }
     p += `\n### Instructions\n\nProduce research plan JSON:
-\`\`\`json\n{"topic":"${topic}","goal":"...","researchQuestions":["Q1"],"engines":${JSON.stringify(engines)},"profile":${JSON.stringify(profile)},"scope":{"include":"...","exclude":"..."},"estimatedCost":{"searchCalls":12,"scrapeCalls":8,"description":"~12 searches"}}\n\`\`\`\nOutput ONLY JSON.`;
+\`\`\`json\n{"topic":"${topic}","goal":"...","researchQuestions":["Q1"],"engines":${JSON.stringify(engines)},"profile":${JSON.stringify(profile)},"scope":{"include":"...","exclude":"..."},"estimatedCost":{"searchCalls":12,"scrapeCalls":8,"description":"~12 searches"}}\n\`\`\`\n\nSet reportStyle to \"narrative\" (fixed 5-section) or \"subtopics\" (LLM discovers thematic sections). Output ONLY JSON.`;
     return p;
   }
 }

@@ -23,12 +23,13 @@ No setup required. DuckDuckGo is the default search engine (free, no API key). F
    ```
    plan_research({ topic: "<user's research topic>" })
    ```
-2. The tool sends a prompt asking you to propose search engines and a research profile. Reply with JSON:
+2. The tool sends a prompt asking you to propose search engines, a research profile, and a report style. Reply with JSON:
    ```json
-   {"engines": ["duckduckgo"], "profile": {"name": "default"}}
+   {"engines": ["duckduckgo"], "profile": {"name": "default"}, "reportStyle": "narrative"}
    ```
    **Engines:** `duckduckgo` (always available), `brave` (needs `BRAVE_API_KEY`), `tavily` (needs `TAVILY_API_KEY`), `searxng`.
    **Profiles:** `default` (4/2/4 breadth/depth/concurrency), `fast` (2/1/2), `deep` (6/3/4), `custom` (specify numbers).
+   **Report styles:** `narrative` (fixed 5-section template: Introduction/Findings/Analysis/Recommendations/Sources) or `subtopics` (LLM discovers 5–10 thematic sections with subsections).
 
 3. Call `plan_research` again with the params:
    ```
@@ -47,11 +48,13 @@ No setup required. DuckDuckGo is the default search engine (free, no API key). F
      "researchQuestions": ["Question 1", "Question 2", "Question 3"],
      "engines": ["duckduckgo"],
      "profile": {"name": "default"},
+     "reportStyle": "narrative",
      "scope": {"include": "What to include", "exclude": "What to exclude"},
      "estimatedCost": {"searchCalls": 12, "scrapeCalls": 8, "description": "~12 searches, ~8 scrapes"}
    }
    ```
    For custom profiles, include `breadth`, `depth`, `concurrency`: `{"name": "custom", "breadth": 5, "depth": 2}`.
+   **Report styles:** `"narrative"` (fixed 5-section: Introduction/Findings/Analysis/Recommendations/Sources) or `"subtopics"` (LLM discovers 5–10 thematic sections from findings).
 
 3. Call `plan_research` again with your plan. `topic` is optional when `plan_json` is provided (extracted from the plan):
    ```
@@ -67,7 +70,7 @@ No setup required. DuckDuckGo is the default search engine (free, no API key). F
    ```
 2. Present to the user:
    - Topic and research questions
-   - Chosen engines and profile
+   - Chosen engines, profile, and report style
    - Estimated search/scrape counts
    - Ask: "Start deep research?"
 3. **Guardrail:** Do NOT call `run_research` until the user explicitly confirms.
