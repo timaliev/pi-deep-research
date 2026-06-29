@@ -107,15 +107,31 @@ class ConcurrencySemaphore {
  * Searches and scrapes run concurrently, limited by profile.concurrency.
  * Soft limits (maxSearchCalls, maxElapsedSeconds) reduce intensity and stop depth recursion.
  */
+export interface ResearchContext {
+  searchFn: typeof SearchWebFn;
+  scraper: Scraper;
+  profilePresets?: Record<string, ResearchProfile>;
+  logger?: Logger;
+  artifactsDir?: string;
+  searchCred?: SearchProviderCredentials;
+}
+
 export class ResearchStateMachine {
-  constructor(
-    private readonly searchFn: typeof SearchWebFn,
-    private readonly scraper: Scraper,
-    private readonly profilePresets?: Record<string, ResearchProfile>,
-    private readonly logger?: Logger,
-    private readonly artifactsDir?: string,
-    private readonly searchCred?: SearchProviderCredentials,
-  ) {}
+  private readonly searchFn: typeof SearchWebFn;
+  private readonly scraper: Scraper;
+  private readonly profilePresets?: Record<string, ResearchProfile>;
+  private readonly logger?: Logger;
+  private readonly artifactsDir?: string;
+  private readonly searchCred?: SearchProviderCredentials;
+
+  constructor(ctx: ResearchContext) {
+    this.searchFn = ctx.searchFn;
+    this.scraper = ctx.scraper;
+    this.profilePresets = ctx.profilePresets;
+    this.logger = ctx.logger;
+    this.artifactsDir = ctx.artifactsDir;
+    this.searchCred = ctx.searchCred;
+  }
 
   static init(plan: ResearchPlan, presets?: Record<string, ResearchProfile>): ResearchSnapshot {
     const profile = resolveProfile(plan.profile, presets);

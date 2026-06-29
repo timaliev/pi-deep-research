@@ -12,3 +12,4 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 - DONE: add GitHub workflow for release, so only after successful tests pass release can be created.
 - TODO: save PDF-version of reports
 - TODO: add profile name and parameters to Telemetry section of each report.
+- TODO: use runid as file name for prefilter.log

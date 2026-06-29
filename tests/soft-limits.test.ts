@@ -19,7 +19,7 @@ function mockScraper(): Scraper { return { async scrape(url: string) { return { 
 describe("ResearchStateMachine soft limits", () => {
   it("stops deepening when maxSearchCalls reached", async () => {
     const plan: ResearchPlan = { ...MOCK_PLAN, profile: { name: "custom", breadth: 3, depth: 3, concurrency: 3 } };
-    const machine = new ResearchStateMachine(mockSearchFn(), mockScraper(), { custom: { breadth: 3, depth: 3, concurrency: 3, maxSearchCalls: 5 } });
+    const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper(), profilePresets: { custom: { breadth: 3, depth: 3, concurrency: 3, maxSearchCalls: 5 } } });
     let s = ResearchStateMachine.init(plan, { custom: { breadth: 3, depth: 3, concurrency: 3, maxSearchCalls: 5 } });
     s = (await machine.next(s, plan)).snapshot; assert.equal(s.searchCalls, 3);
     s = (await machine.next(s, plan)).snapshot;
@@ -33,7 +33,7 @@ describe("ResearchStateMachine soft limits", () => {
   it("does not trigger when limits are 0", async () => {
     const plan: ResearchPlan = { ...MOCK_PLAN, profile: { name: "custom", breadth: 3, depth: 3, concurrency: 3 } };
     const presets = { custom: { breadth: 3, depth: 3, concurrency: 3 } };
-    const machine = new ResearchStateMachine(mockSearchFn(), mockScraper(), presets);
+    const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper(), profilePresets: presets });
     let s = ResearchStateMachine.init(plan, presets);
     for (let i = 0; i < 3; i++) s = (await machine.next(s, plan)).snapshot;
     assert.equal(s.softLimitTriggered, false);

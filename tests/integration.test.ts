@@ -79,7 +79,7 @@ describe("Integration: full research pipeline", () => {
     assert.equal(planResult.phase, "plan_ready");
     const plan: ResearchPlan = planResult.plan!;
 
-    const machine = new ResearchStateMachine(mockSearchFn(), mockScraper());
+    const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper() });
     let snapshot = ResearchStateMachine.init(plan);
 
     assert.equal(snapshot.phase, "searching");
@@ -119,7 +119,7 @@ describe("Integration: full research pipeline", () => {
       estimatedCost: { searchCalls: 1, scrapeCalls: 1, description: "" },
     };
     const snapshot = ResearchStateMachine.init(plan);
-    const machine = new ResearchStateMachine(mockSearchFn([]), mockScraper({}));
+    const machine = new ResearchStateMachine({ searchFn: mockSearchFn([]), scraper: mockScraper() });
 
     // Advance to drafting
     let r = await machine.next(snapshot, plan);
@@ -151,7 +151,7 @@ describe("Integration: full research pipeline", () => {
     assert.equal(r3.phase, "plan_ready");
     const plan: ResearchPlan = r3.plan!;
 
-    const machine = new ResearchStateMachine(mockSearchFn(), mockScraper());
+    const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper() });
     let snapshot = ResearchStateMachine.init(plan);
 
     let totalInjectCount = 0;

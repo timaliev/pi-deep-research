@@ -28,7 +28,7 @@ function slowScraper(delayMs: number): Scraper {
 describe("ResearchStateMachine concurrency", () => {
   it("completes parallel searches faster than sequential", async () => {
     const plan: ResearchPlan = { ...MOCK_PLAN, profile: { name: "custom", breadth: 4, depth: 1, concurrency: 4 } };
-    const machine = new ResearchStateMachine(slowSearchFn(50), slowScraper(5));
+    const machine = new ResearchStateMachine({ searchFn: slowSearchFn(50), scraper: slowScraper(5) });
     const snapshot = ResearchStateMachine.init(plan);
     const start = performance.now();
     const r = await machine.next(snapshot, plan);
@@ -38,7 +38,7 @@ describe("ResearchStateMachine concurrency", () => {
 
   it("completes full cycle with concurrent searches", async () => {
     const plan: ResearchPlan = { ...MOCK_PLAN, profile: { name: "custom", breadth: 3, depth: 1, concurrency: 3 } };
-    const machine = new ResearchStateMachine(slowSearchFn(10), slowScraper(5));
+    const machine = new ResearchStateMachine({ searchFn: slowSearchFn(10), scraper: slowScraper(5) });
     let s = ResearchStateMachine.init(plan);
     s = (await machine.next(s, plan)).snapshot; assert.equal(s.phase, "extracting");
     s = (await machine.next(s, plan)).snapshot; assert.equal(s.phase, "drafting");

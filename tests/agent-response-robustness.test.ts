@@ -18,7 +18,7 @@ function mockScraper(): Scraper { return { async scrape(url: string) { return { 
 
 describe("ResearchStateMachine — agentResponse robustness", () => {
   it("extractQuestions handles string input", async () => {
-    const machine = new ResearchStateMachine(mockSearchFn(), mockScraper());
+    const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper() });
     let s = ResearchStateMachine.init(PLAN);
     s = (await machine.next(s, PLAN)).snapshot;
     s = (await machine.next(s, PLAN)).snapshot; // → questioning
@@ -27,7 +27,7 @@ describe("ResearchStateMachine — agentResponse robustness", () => {
   });
 
   it("extractQuestions handles array input (content blocks)", async () => {
-    const machine = new ResearchStateMachine(mockSearchFn(), mockScraper());
+    const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper() });
     let s = ResearchStateMachine.init(PLAN);
     s = (await machine.next(s, PLAN)).snapshot;
     s = (await machine.next(s, PLAN)).snapshot;
@@ -37,7 +37,7 @@ describe("ResearchStateMachine — agentResponse robustness", () => {
   });
 
   it("extractQuestions handles undefined agentResponse", async () => {
-    const machine = new ResearchStateMachine(mockSearchFn(), mockScraper());
+    const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper() });
     let s = ResearchStateMachine.init(PLAN);
     s = (await machine.next(s, PLAN)).snapshot;
     s = (await machine.next(s, PLAN)).snapshot;

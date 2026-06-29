@@ -17,7 +17,7 @@ import type { ResearchSnapshot } from "./state-machine.js";
 import { topicToSlug } from "./slug.js";
 import { ProfileResolver, loadDeepResearchSettings } from "./profile-resolver.js";
 import type { DeepResearchSettings } from "./profile-resolver.js";
-import { loadSearchProviders, SearchProviderCredentials } from "./search-providers.js";
+import { SessionState } from "./session-state.js";
 
 const baseDir = dirname(fileURLToPath(import.meta.url));
 
@@ -359,7 +359,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
 
         const runLogger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
         runLogger.event("run_started", { topic: artifact.plan.topic, profile: artifact.plan.profile, engines: artifact.plan.engines });
-        const machine = new ResearchStateMachine(searchWeb, scraper, profileResolver.getPresets(), runLogger, artifactsDir, searchCred);
+        const machine = new ResearchStateMachine({ searchFn: searchWeb, scraper, profilePresets: profileResolver.getPresets(), logger: runLogger, artifactsDir, searchCred });
 
         // Advance to first phase (searching → extracting)
         const result = await machine.next(snapshot, artifact.plan);
@@ -427,7 +427,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
       // Re-create logger for subsequent calls (same file, appends)
       const scraper = new WebScraper();
       const runLogger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
-      const machine = new ResearchStateMachine(searchWeb, scraper, profileResolver.getPresets(), runLogger, artifactsDir, searchCred);
+      const machine = new ResearchStateMachine({ searchFn: searchWeb, scraper, profilePresets: profileResolver.getPresets(), logger: runLogger, artifactsDir, searchCred });
       const result = await machine.next(snapshot, plan, agentResponse);
 
       // Persist updated state (strip large draftReport for session safety)

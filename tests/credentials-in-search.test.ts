@@ -30,7 +30,7 @@ describe("credentials passed to searchWeb from state machine", () => {
       brave: { apiKey: "bsa-from-settings" },
     });
 
-    const machine = new ResearchStateMachine(mockSearch, mockScraper, undefined, undefined, undefined, cred);
+    const machine = new ResearchStateMachine({ searchFn: mockSearch, scraper: mockScraper, searchCred: cred });
     const snapshot = ResearchStateMachine.init(MOCK_PLAN);
 
     await machine.next(snapshot, MOCK_PLAN);
@@ -51,7 +51,7 @@ describe("credentials passed to searchWeb from state machine", () => {
       async scrape() { throw new Error("no mock"); },
     };
 
-    const machine = new ResearchStateMachine(mockSearch, mockScraper);
+    const machine = new ResearchStateMachine({ searchFn: mockSearch, scraper: mockScraper });
     const snapshot = ResearchStateMachine.init(MOCK_PLAN);
 
     await machine.next(snapshot, MOCK_PLAN);
