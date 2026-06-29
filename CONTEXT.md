@@ -37,15 +37,19 @@ One level of the recursive research depth. Each iteration: search N queries (bre
 _Avoid_: level, recursion step, pass
 
 **Research Profile**:
-A named preset or custom configuration controlling research budget: `breadth` (queries per level), `depth` (recursion levels), `concurrency` (parallel searches). Presets: `default` (4/2/4), `fast` (2/1/2), `deep` (6/3/4). Custom profiles specify exact numbers. Negotiated during prefilter and stored in the Research Plan. Hardcoded presets may be overridden in `~/.pi/settings.json` under `deepResearch.profiles`.
+A named preset or custom configuration controlling research budget: `breadth` (queries per level), `depth` (recursion levels), `concurrency` (parallel searches). Presets: `default` (4/2/4), `fast` (2/1/2), `deep` (6/3/4). Custom profiles specify exact numbers. Negotiated during prefilter and stored in the Research Plan. Built-in presets may be overridden or extended in `~/.pi/agent/settings.json` under `deepResearch.profiles` (merged, user wins). Default profile name can be changed via `deepResearch.defaultProfile`.
 _Avoid_: config preset, run configuration, research mode
+
+**ProfileResolver**:
+Unified module (extension/profile-resolver.ts) that loads user settings from `~/.pi/agent/settings.json`, merges them with built-in presets, and provides a single `resolve(profile)` interface for all tools. Replaces the scattered `resolveProfile` + `DEFAULT_PRESETS` pattern across the codebase.
+_Avoid_: profile manager, config loader
 
 **Search Engine**:
 A web search backend used by all research tools. The extension uses a unified `searchWeb()` function supporting duckduckgo (free, zero-config, with retry/backoff), brave (needs `BRAVE_API_KEY` env var), and searxng (public instances). Selected during prefilter and stored in the Research Plan. DuckDuckGo is the default and always available; other engines require environment variables.
 _Avoid_: retriever, search backend, search provider
 
 **Confirmation Gate**:
-The boundary between free operations (prefilter/planning) and paid operations (full research). The agent must present the Research Plan and estimated cost to the user and receive explicit approval before calling `run_research`. Enforced by skill instructions, not programmatically.
+The boundary between free operations (prefilter/planning) and paid operations (full research). The agent must present the Research Plan and estimated cost to the user and receive explicit approval, then call `confirm_research` before `run_research`. Enforced programmatically by `run_research` rejecting unconfirmed plans.
 _Avoid_: approval step, user consent, cost check
 
 **Soft Limit**:

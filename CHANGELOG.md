@@ -2,6 +2,18 @@
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.
 
+## [0.13.0] — 2026-06-27
+
+### 🚀 Features
+
+- *(profiles)* Add ProfileResolver — load, merge, and resolve profiles from settings.json
+- *(profiles)* Support defaultProfile config key to change which profile is the default
+- *(profiles)* User profiles merge with built-ins (override fields, add new presets)
+
+### 🧪 Tests
+
+- 12 new tests: settings loading, profile merge, ProfileResolver resolve/fallback/custom/listNames
+
 ## [0.12.1] — 2026-06-27
 
 ### 🐛 Hotfix

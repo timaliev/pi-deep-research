@@ -1,11 +1,11 @@
 # Old GPT Researcher codebase (moved out)
-gptsearch/
+/gptsearch/
 
 # Dependencies
 extension/node_modules/
 
 # Generated artifacts  
-deep-research/
+/deep-research/
 
 # macOS
 .DS_Store

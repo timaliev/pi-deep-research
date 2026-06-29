@@ -5,6 +5,7 @@ import type { WebSearchResult } from "./search/web-search.js";
 import type { SearchEngine } from "./search/web-search.js";
 import type { Scraper, ScrapedPage } from "./scraper.js";
 import { resolveProfile, DEFAULT_PRESETS } from "./state-machine.js";
+import type { ProfileResolver } from "./profile-resolver.js";
 
 export interface ResearchPlanProfile {
   name: "default" | "fast" | "deep" | "custom";
@@ -71,17 +72,20 @@ export class PrefilterManager {
   private readonly scraper: Scraper;
   private readonly artifactsDir: string;
   private readonly logger?: Logger;
+  private readonly profileResolver?: ProfileResolver;
 
   constructor(
     searchFn: typeof SearchWebFn,
     scraper: Scraper,
     artifactsDir: string,
     logger?: Logger,
+    profileResolver?: ProfileResolver,
   ) {
     this.searchFn = searchFn;
     this.scraper = scraper;
     this.artifactsDir = artifactsDir;
     this.logger = logger;
+    this.profileResolver = profileResolver;
   }
 
   /** Step 1: Ask agent to propose engines + profile. */
@@ -226,10 +230,15 @@ export class PrefilterManager {
   }
 
   private buildParamsPrompt(topic: string): string {
-    const presets = Object.entries(DEFAULT_PRESETS)
-      .map(([name, p]) => `  ${name}: breadth=${p.breadth}, depth=${p.depth}, concurrency=${p.concurrency}`)
-      .join("\n");
-    return `## Research Parameters\n\nTopic: ${topic}\n\nChoose search engines, profile, and report style. Reply with JSON:\n\`\`\`json\n{"engines":["duckduckgo"],"profile":{"name":"default"},"reportStyle":"narrative"}\n\`\`\`\n\nEngines: duckduckgo (free), brave (needs BRAVE_API_KEY), tavily (needs TAVILY_API_KEY), yandex (needs YANDEX_OAUTH_TOKEN+YANDEX_FOLDER_ID), searxng (public).\n\nAvailable profiles:\n${presets}\n  custom: specify breadth, depth, concurrency\n\nReport styles:\n  narrative — fixed 5-section template (Introduction/Findings/Analysis/Recommendations/Sources)\n  subtopics — LLM discovers 5–10 thematic sections from findings\n\nYou may change the profile or report style later during plan creation.`;
+    const presets = this.profileResolver
+      ? Object.entries(this.profileResolver.getPresets())
+          .map(([name, p]) => `  ${name}: breadth=${p.breadth}, depth=${p.depth}, concurrency=${p.concurrency}`)
+          .join("\n")
+      : Object.entries(DEFAULT_PRESETS)
+          .map(([name, p]) => `  ${name}: breadth=${p.breadth}, depth=${p.depth}, concurrency=${p.concurrency}`)
+          .join("\n");
+    const defaultName = this.profileResolver?.defaultProfileName ?? "default";
+    return `## Research Parameters\n\nTopic: ${topic}\n\nChoose search engines, profile, and report style. Reply with JSON:\n\`\`\`json\n{"engines":["duckduckgo"],"profile":{"name":"${defaultName}"},"reportStyle":"narrative"}\n\`\`\`\n\nEngines: duckduckgo (free), brave (needs BRAVE_API_KEY), tavily (needs TAVILY_API_KEY), yandex (needs YANDEX_OAUTH_TOKEN+YANDEX_FOLDER_ID), searxng (public).\n\nAvailable profiles (default: **${defaultName}**):\n${presets}\n  custom: specify breadth, depth, concurrency\n\nReport styles:\n  narrative — fixed 5-section template (Introduction/Findings/Analysis/Recommendations/Sources)\n  subtopics — LLM discovers 5–10 thematic sections from findings\n\nYou may change the profile or report style later during plan creation.`;
   }
 
   private buildApiKeyWarning(missing: string[]): string {
@@ -240,8 +249,13 @@ export class PrefilterManager {
     topic: string, engines: SearchEngine[], profile: ResearchPlanProfile,
     searchResults: WebSearchResult[], scrapedContent: ScrapedPage[],
   ): string {
-    const resolved = resolveProfile(profile);
-    let p = `## Research Planning\n\nTopic: ${topic}\nEngines: [${engines.join(", ")}]\nProfile: ${profile.name} (breadth=${resolved.breadth}, depth=${resolved.depth}, concurrency=${resolved.concurrency})\n\nYou may change the profile in the plan JSON — use any named preset (default/fast/deep) or custom with breadth/depth/concurrency. Pick the profile that best fits this research.\n\n### Preliminary Search\n\n`;
+    const resolved = this.profileResolver
+      ? this.profileResolver.resolve(profile)
+      : resolveProfile(profile);
+    const profileNames = this.profileResolver
+      ? this.profileResolver.listNames().join("/")
+      : "default/fast/deep";
+    let p = `## Research Planning\n\nTopic: ${topic}\nEngines: [${engines.join(", ")}]\nProfile: ${profile.name} (breadth=${resolved.breadth}, depth=${resolved.depth}, concurrency=${resolved.concurrency})\n\nYou may change the profile in the plan JSON — use any named preset (${profileNames}) or custom with breadth/depth/concurrency. Pick the profile that best fits this research.\n\n### Preliminary Search\n\n`;
     for (const r of searchResults) p += `- [${r.title}](${r.url}): ${r.snippet}\n`;
     if (scrapedContent.length > 0) {
       p += `\n### Scraped Content\n\n`;

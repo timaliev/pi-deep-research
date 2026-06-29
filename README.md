@@ -59,19 +59,28 @@ Add a `deepResearch` key to `~/.pi/agent/settings.json`:
 {
   "deepResearch": {
     "profiles": {
-      "default": { "breadth": 4, "depth": 2, "concurrency": 4 },
-      "fast":    { "breadth": 2, "depth": 1, "concurrency": 2 },
-      "deep":    { "breadth": 6, "depth": 3, "concurrency": 4 }
+      "deep": { "breadth": 8, "depth": 4, "concurrency": 6 },
+      "exhaustive": { "breadth": 10, "depth": 5, "concurrency": 8, "maxSearchCalls": 100 }
     },
+    "defaultProfile": "deep",
     "artifactsDir": "./deep-research/artifacts",
     "reportsDir": "./deep-research/reports"
   }
 }
 ```
 
+User profiles **merge** with built-in presets (`default`/`fast`/`deep`). You only need to specify what you want to change or add.
+
 ### `profiles`
 
-Named research profiles. Each profile controls:
+Override or extend built-in presets. Partial overrides are merged — missing fields keep built-in values.
+
+```json
+"profiles": {
+  "deep": { "breadth": 8 },
+  "exhaustive": { "breadth": 10, "depth": 5, "concurrency": 8, "maxSearchCalls": 100 }
+}
+```
 
 | Field | Type | Description |
 |---|---|---|
@@ -90,6 +99,14 @@ Named research profiles. Each profile controls:
 ```
 
 During `plan_research`, the agent can reference any named preset or use `"custom"` with inline `breadth`/`depth`/`concurrency`.
+
+### `defaultProfile`
+
+Which profile name is the default (shown in prompts, used when agent doesn't specify). Defaults to `"default"`.
+
+```json
+"defaultProfile": "deep"
+```
 
 ### `artifactsDir` / `reportsDir`
 

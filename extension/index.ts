@@ -14,29 +14,18 @@ import { ResearchStateMachine, buildTelemetrySection, DEFAULT_PRESETS } from "./
 import type { ResearchPlan, PrefilterArtifact, ResearchPlanProfile } from "./prefilter.js";
 import type { ResearchSnapshot } from "./state-machine.js";
 import { topicToSlug } from "./slug.js";
+import { ProfileResolver, loadDeepResearchSettings } from "./profile-resolver.js";
+import type { DeepResearchSettings } from "./profile-resolver.js";
 
 const baseDir = dirname(fileURLToPath(import.meta.url));
 
-interface DeepResearchSettings {
-  profiles?: Record<string, unknown>;
-  artifactsDir?: string;
-  reportsDir?: string;
-}
-
-const DEFAULT_SETTINGS: DeepResearchSettings = {
-  profiles: DEFAULT_PRESETS as unknown as Record<string, unknown>,
-};
-
-function resolveSettings(settings: Record<string, unknown> = {}): DeepResearchSettings {
-  const dr = (settings.deepResearch ?? {}) as Record<string, unknown>;
-  return {
-    profiles: (dr.profiles as Record<string, unknown>) ?? DEFAULT_SETTINGS.profiles,
-    artifactsDir: (dr.artifactsDir as string) ?? join(baseDir, "..", "..", "deep-research", "artifacts"),
-    reportsDir: (dr.reportsDir as string) ?? join(baseDir, "..", "..", "deep-research", "reports"),
-  };
-}
-
 export default function (pi: ExtensionAPI) {
+  // Load user settings and create unified profile resolver
+  const settings = loadDeepResearchSettings();
+  const profileResolver = new ProfileResolver(settings.profiles ?? {}, settings.defaultProfile);
+  const reportsDir = settings.reportsDir ?? join(baseDir, "..", "..", "deep-research", "reports");
+  const artifactsDir = settings.artifactsDir ?? join(baseDir, "..", "..", "deep-research", "artifacts");
+
   // Contribute the skill file
   pi.on("resources_discover", () => ({
     skillPaths: [join(baseDir, "..", "skill", "SKILL.md")],
@@ -167,7 +156,6 @@ Use "compare" mode to see results from each engine separately without deduplicat
       plan_json: Type.Optional(Type.String({ description: "JSON research plan (third call)" })),
     }),
     async execute(_toolCallId, params, _signal, onUpdate, ctx) {
-      const settings = resolveSettings({});
       const artifactsDir = join(ctx.cwd ?? baseDir, "deep-research", "artifacts");
       mkdirSync(artifactsDir, { recursive: true });
 
@@ -176,7 +164,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
       const logsDir = join(artifactsDir, "..", "logs");
       const logger = new JsonlLogger(prefilterRunId, join(logsDir, `${prefilterRunId}-prefilter.log`));
 
-      const manager = new PrefilterManager(searchWeb, scraper, artifactsDir, logger);
+      const manager = new PrefilterManager(searchWeb, scraper, artifactsDir, logger, profileResolver);
 
       // Step 1: topic only → negotiate params
       if (!params.params_json && !params.plan_json) {
@@ -253,8 +241,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
       }
       const raw = readFileSync(params.plan_artifact_path, "utf-8");
       const artifact: PrefilterArtifact = JSON.parse(raw);
-      const { resolveProfile } = await import("./state-machine.js");
-      const profile = resolveProfile(artifact.plan.profile);
+      const profile = profileResolver.resolve(artifact.plan.profile);
       const estSearches = profile.breadth * profile.depth * artifact.plan.researchQuestions.length;
       const estScrapes = Math.ceil(estSearches * 1.5);
       return {
@@ -309,8 +296,6 @@ Use "compare" mode to see results from each engine separately without deduplicat
       plan_artifact_path: Type.Optional(Type.String({ description: "Path to prefilter.json (first call only)" })),
     }),
     async execute(_toolCallId, params, _signal, onUpdate, ctx) {
-      const settings = resolveSettings();
-
       // Load or initialize state
       let snapshot: ResearchSnapshot;
 
@@ -340,7 +325,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
         }
         const raw = readFileSync(params.plan_artifact_path, "utf-8");
         const artifact: PrefilterArtifact = JSON.parse(raw);
-        snapshot = ResearchStateMachine.init(artifact.plan, settings.profiles as any);
+        snapshot = ResearchStateMachine.init(artifact.plan, profileResolver.getPresets());
 
         const scraper = new WebScraper();
 
@@ -354,7 +339,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
 
         const runLogger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
         runLogger.event("run_started", { topic: artifact.plan.topic, profile: artifact.plan.profile, engines: artifact.plan.engines });
-        const machine = new ResearchStateMachine(searchWeb, scraper, settings.profiles as any, runLogger);
+        const machine = new ResearchStateMachine(searchWeb, scraper, profileResolver.getPresets(), runLogger);
 
         // Advance to first phase (searching → extracting)
         const result = await machine.next(snapshot, artifact.plan);
@@ -413,7 +398,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
       // Re-create logger for subsequent calls (same file, appends)
       const scraper = new WebScraper();
       const runLogger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
-      const machine = new ResearchStateMachine(searchWeb, scraper, settings.profiles as any, runLogger);
+      const machine = new ResearchStateMachine(searchWeb, scraper, profileResolver.getPresets(), runLogger);
       const result = await machine.next(snapshot, plan, agentResponse);
 
       // Persist updated state
