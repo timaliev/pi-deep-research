@@ -206,7 +206,7 @@ export class ResearchStateMachine {
       } catch { /* non-critical */ }
     }
 
-    // Concurrent searches
+    // Concurrent searches (pass logger but credentials come from env/settings per-engine)
     const searchResults = await Promise.all(
       activeQuestions.map((question) =>
         semaphore.run(async () => {

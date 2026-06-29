@@ -10,6 +10,8 @@
 import { request as httpsRequest } from "node:https";
 import { request as httpRequest } from "node:http";
 import type { Logger } from "./logger.js";
+import { resolveBraveApiKey, buildBraveSearchParams, parseBraveResponse } from "../brave-search.js";
+import type { SearchProviderCredentials } from "../search-providers.js";
 
 // --- Constants (from ddg-search config) ---
 const DDG_BASE_URL = "https://html.duckduckgo.com/html";
@@ -274,15 +276,16 @@ async function searchDuckDuckGo(
   return [];
 }
 
-// --- Brave Search API (optional - needs BRAVE_API_KEY env var) ---
+// --- Brave Search API (optional - needs BRAVE_API_KEY env var or settings) ---
 async function searchBrave(
   query: string,
   maxResults: number,
+  cred?: SearchProviderCredentials,
 ): Promise<WebSearchResult[]> {
-  const apiKey = process.env.BRAVE_API_KEY;
+  const apiKey = resolveBraveApiKey(cred);
   if (!apiKey) return [];
 
-  const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${maxResults}`;
+  const { url } = buildBraveSearchParams(query, maxResults, {});
   const { status, body } = await fetchUrl(url, {
     timeout: 15_000,
     headers: {
@@ -294,19 +297,7 @@ async function searchBrave(
   });
 
   if (status !== 200) return [];
-
-  try {
-    const data = JSON.parse(body);
-    const web = data.web?.results ?? [];
-    return web.slice(0, maxResults).map((r: any) => ({
-      title: r.title ?? "",
-      url: r.url ?? "",
-      snippet: r.description ?? "",
-      engine: "brave",
-    }));
-  } catch {
-    return [];
-  }
+  return parseBraveResponse(body, maxResults);
 }
 
 // --- Tavily Search API ---
@@ -644,6 +635,7 @@ export interface WebSearchOptions {
   engines?: SearchEngine[];
   compare?: boolean;
   signal?: AbortSignal;
+  credentials?: SearchProviderCredentials;
   onUpdate?: (update: {
     content: Array<{ type: string; text: string }>;
     details: Record<string, unknown>;
@@ -664,6 +656,7 @@ export interface WebSearchOutput {
 
 interface SearchCallbacks {
   signal?: AbortSignal;
+  credentials?: SearchProviderCredentials;
   onUpdate?: (update: {
     content: Array<{ type: string; text: string }>;
     details: Record<string, unknown>;
@@ -695,7 +688,7 @@ export async function searchWeb(
 
   const engineFns: Record<string, (q: string, n: number) => Promise<WebSearchResult[]>> = {
     duckduckgo: (q, n) => searchDuckDuckGo(q, n),
-    brave: searchBrave,
+    brave: (q, n) => searchBrave(q, n, callbacks?.credentials),
     searxng: searchSearXNG,
     tavily: searchTavily,
     yandex: searchYandex,
@@ -769,7 +762,7 @@ export async function multiEngineWebSearch(
   // Collect per-engine results separately for compare mode
   const engineFns: Record<string, (q: string, n: number) => Promise<WebSearchResult[]>> = {
     duckduckgo: (q, n) => searchDuckDuckGo(q, n),
-    brave: searchBrave,
+    brave: (q, n) => searchBrave(q, n, opts.credentials),
     searxng: searchSearXNG,
     tavily: searchTavily,
     yandex: searchYandex,
