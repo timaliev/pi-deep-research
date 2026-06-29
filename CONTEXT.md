@@ -56,6 +56,14 @@ _Avoid_: API key resolver, credential manager
 A bundled object passed to `ResearchStateMachine` constructor, replacing 6 positional parameters. Contains `searchFn`, `scraper`, and optional `profilePresets`, `logger`, `artifactsDir`, `searchCred`. Allows adding new dependencies without touching all call sites.
 _Avoid_: constructor options, DI container
 
+**SessionState**:
+Module (extension/session-state.ts) consolidating persistence of research state, report path, and confirmation markers via `pi.appendEntry`. Exposes typed methods (`saveResearchState`, `saveReportPath`, `saveConfirmation`, `restoreDraft`) behind a single seam. Wired into index.ts, replacing scattered key constants and draft restore logic.
+_Avoid_: state manager, persistence layer
+
+**Engine Adapter**:
+Per-engine search modules under `search/engines/` exporting a standardized `search(query, opts, cred?)` function. `createEngineSearchFn(engine)` factory dispatches via lazy dynamic imports. Replaces the hardcoded `engineFns` inline map in `searchWeb` and `multiEngineWebSearch`.
+_Avoid_: search engine, search provider
+
 **Confirmation Gate**:
 The boundary between free operations (prefilter/planning) and paid operations (full research). The agent must present the Research Plan and estimated cost to the user and receive explicit approval, then call `confirm_research` before `run_research`. Enforced programmatically by `run_research` rejecting unconfirmed plans.
 _Avoid_: approval step, user consent, cost check

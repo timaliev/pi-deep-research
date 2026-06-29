@@ -11,7 +11,7 @@ import type { SearchEngine } from "./search/web-search.js";
 import { WebScraper } from "./scraper.js";
 import { JsonlLogger } from "./logger.js";
 import { PrefilterManager } from "./prefilter.js";
-import { ResearchStateMachine, buildTelemetrySection, readExtensionVersion, extractTextContent, DEFAULT_PRESETS } from "./state-machine.js";
+import { ResearchStateMachine, buildTelemetrySection, readExtensionVersion, DEFAULT_PRESETS } from "./state-machine.js";
 import type { ResearchPlan, PrefilterArtifact, ResearchPlanProfile } from "./prefilter.js";
 import type { ResearchSnapshot } from "./state-machine.js";
 import { topicToSlug } from "./slug.js";
@@ -31,6 +31,7 @@ export default function (pi: ExtensionAPI) {
   const artifactsDir = settings.artifactsDir ?? join(baseDir, "..", "..", "deep-research", "artifacts");
   const searchProviders = loadSearchProviders(join(homedir(), ".pi", "agent", "settings.json"));
   const searchCred = new SearchProviderCredentials(searchProviders);
+  const session = new SessionState({ appendEntry: pi.appendEntry.bind(pi) });
 
   // Contribute the skill file
   pi.on("resources_discover", () => ({
@@ -131,7 +132,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
       const date = new Date().toISOString().slice(0, 10);
       let path: string;
       const entries = ctx.sessionManager.getEntries();
-      const reportPathEntry = [...entries].reverse().find((e: any) => e.customType === REPORT_PATH_KEY);
+      const reportPathEntry = [...entries].reverse().find((e: any) => e.customType === "deep-research:report-path");
       if (reportPathEntry?.data?.path && typeof reportPathEntry.data.path === "string") {
         path = reportPathEntry.data.path;
         // Append telemetry from auto-save if available
@@ -291,7 +292,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
       if (!existsSync(params.plan_artifact_path)) {
         return { content: [{ type: "text", text: `Error: artifact not found at ${params.plan_artifact_path}` }], details: { error: "artifact_not_found" } };
       }
-      pi.appendEntry(CONFIRMATION_KEY, { planArtifactPath: params.plan_artifact_path });
+      session.saveConfirmation(params.plan_artifact_path);
       return {
         content: [{ type: "text", text: `## Research Confirmed ✅\n\nPlan: ${params.plan_artifact_path}\n\nReady to run. Call run_research with the plan_artifact_path.` }],
         details: { confirmed: true, plan_artifact_path: params.plan_artifact_path },
@@ -301,12 +302,6 @@ Use "compare" mode to see results from each engine separately without deduplicat
 
   // === TOOL: run_research ===
   // State machine persistence key
-  const STATE_KEY = "deep-research:state";
-  // Report path key — stored by auto-save, read by save_report for dedup
-  const REPORT_PATH_KEY = "deep-research:report-path";
-  // Confirmation gate key — stored by confirm_research, checked by run_research
-  const CONFIRMATION_KEY = "deep-research:plan-confirmed";
-
   pi.registerTool({
     name: "run_research",
     label: "Run Research",
@@ -329,7 +324,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
 
         // Confirmation gate: user must confirm before research runs
         const entries = ctx.sessionManager.getEntries();
-        const confirmed = [...entries].reverse().find((e: any) => e.customType === CONFIRMATION_KEY);
+        const confirmed = [...entries].reverse().find((e: any) => e.customType === "deep-research:plan-confirmed");
         if (!confirmed) {
           return {
             content: [{ type: "text", text: `## Confirmation Required ⚠️\n\nThe research plan must be confirmed by the user before running.\n\n1. Present the plan and cost estimate to the user\n2. Ask for explicit approval\n3. After approval, call confirm_research with the plan path\n4. Then call run_research` }],
@@ -365,12 +360,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
         const result = await machine.next(snapshot, artifact.plan);
 
         // Persist state with base directory for consistent output location
-        pi.appendEntry(STATE_KEY, {
-          ...result.snapshot,
-          plan: artifact.plan,
-          planArtifactPath: params.plan_artifact_path,
-          deepResearchBase,
-        });
+        session.saveResearchState(result.snapshot, { plan: artifact.plan, planArtifactPath: params.plan_artifact_path, deepResearchBase });
 
         // Inject prompt if any
         if (result.inject) {
@@ -389,7 +379,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
         (e: any) => e.message?.role === "assistant"
       );
       const agentResponse = lastAssistant?.message?.content as string | undefined;
-      const lastStateEntry = [...entries].reverse().find((e) => e.customType === STATE_KEY);
+      const lastStateEntry = [...entries].reverse().find((e) => e.customType === "deep-research:state");
       if (!lastStateEntry) {
         return {
           content: [{ type: "text", text: "Error: no research state found. Call run_research with a plan_artifact_path first." }],
@@ -403,10 +393,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
       const planArtifactPath = stateData.planArtifactPath as string;
 
       // Restore draftReport from agent response if draftReady flag is set
-      if (stateData.draftReady && agentResponse) {
-        const restored = extractTextContent(agentResponse);
-        if (restored && restored.length >= 40) {
-          snapshot.draftReport = restored;
+      snapshot.draftReport = session.restoreDraft(stateData, agentResponse);
         }
       }
       let deepResearchBase = (stateData.deepResearchBase as string) || planArtifactPath ? join(dirname(planArtifactPath), "..") : join(ctx.cwd ?? baseDir, "deep-research");
@@ -430,16 +417,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
       const machine = new ResearchStateMachine({ searchFn: searchWeb, scraper, profilePresets: profileResolver.getPresets(), logger: runLogger, artifactsDir, searchCred });
       const result = await machine.next(snapshot, plan, agentResponse);
 
-      // Persist updated state (strip large draftReport for session safety)
-      const { draftReport: _dr, ...safeSnapshot } = result.snapshot;
-      pi.appendEntry(STATE_KEY, {
-        ...safeSnapshot,
-        draftReady: (result.snapshot.draftReport?.length ?? 0) >= 40,
-        draftLength: result.snapshot.draftReport?.length ?? 0,
-        plan,
-        planArtifactPath,
-        deepResearchBase,
-      });
+      session.saveResearchState(result.snapshot, { plan, planArtifactPath, deepResearchBase });
 
       // Inject prompt if any
       if (result.inject) {
@@ -474,7 +452,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
         writeFileSync(reportPath, fullReport, "utf-8");
 
         // Store path so save_report writes to the same file
-        pi.appendEntry(REPORT_PATH_KEY, { path: reportPath, reportsDir, telemetry });
+        session.saveReportPath(reportPath, reportsDir, telemetry);
 
         runLogger?.event("report_saved", {
           path: reportPath,

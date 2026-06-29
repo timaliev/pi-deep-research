@@ -2,6 +2,19 @@
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.
 
+## [0.14.2] — 2026-06-29
+
+### 🔧 Refactor
+
+- *(session)* Wire SessionState module into index.ts — remove key constants, draft restore, appendEntry calls
+- *(search)* Extract engine adapters with createEngineSearchFn factory + per-engine modules
+
+### 📚 Docs
+
+- ADR-0008: SessionState unified persistence seam
+- ADR-0009: Engine adapters
+- CONTEXT.md: SessionState + Engine Adapter terms
+
 ## [0.14.1] — 2026-06-29
 
 ### 🔧 Refactor

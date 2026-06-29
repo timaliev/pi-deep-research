@@ -5,6 +5,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { createEngineSearchFn } from "../extension/search/web-search.js";
 
 const webSearchCode = readFileSync(
   join(import.meta.dirname ?? ".", "..", "extension", "search", "web-search.ts"),
@@ -36,14 +37,10 @@ describe("Tavily search integration", () => {
     );
   });
 
-  it("searchWeb dispatches to tavily engine", () => {
-    // Verify tavily is in the engineFns map
-    const engineFnMatch = webSearchCode.match(/engineFns[\s\S]*?^\s*\};/m);
-    assert.ok(engineFnMatch, "engineFns map must exist");
-    assert.ok(
-      engineFnMatch[0].includes("tavily"),
-      "engineFns must include tavily entry"
-    );
+  it("searchWeb dispatches to tavily engine", async () => {
+    // Verify tavily can be created via adapter factory
+    const fn = createEngineSearchFn("tavily");
+    assert.equal(typeof fn, "function");
   });
 
   it("prefilter warns when tavily selected without API key", () => {

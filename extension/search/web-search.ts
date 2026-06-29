@@ -231,7 +231,7 @@ function parseDdgHtml(body: string, maxResults: number): WebSearchResult[] {
 }
 
 /** Search DuckDuckGo with retry + exponential backoff + pre-request stagger */
-async function searchDuckDuckGo(
+export async function searchDuckDuckGo(
   query: string,
   maxResults: number,
   maxRetries: number = DEFAULT_MAX_RETRIES,
@@ -277,7 +277,7 @@ async function searchDuckDuckGo(
 }
 
 // --- Brave Search API (optional - needs BRAVE_API_KEY env var or settings) ---
-async function searchBrave(
+export async function searchBrave(
   query: string,
   maxResults: number,
   cred?: SearchProviderCredentials,
@@ -303,7 +303,7 @@ async function searchBrave(
 // --- Tavily Search API ---
 const TAVILY_API_URL = "https://api.tavily.com/search";
 
-async function searchTavily(
+export async function searchTavily(
   query: string,
   maxResults: number,
 ): Promise<WebSearchResult[]> {
@@ -528,7 +528,7 @@ function parseYandexXml(xml: string, maxResults: number): WebSearchResult[] {
   return results;
 }
 
-async function searchYandex(
+export async function searchYandex(
   query: string,
   maxResults: number,
 ): Promise<WebSearchResult[]> {
@@ -554,7 +554,7 @@ async function searchYandex(
 // --- SearXNG public instances ---
 const SEARXNG_INSTANCES = ["https://searx.be", "https://search.sapti.me"];
 
-async function searchSearXNG(
+export async function searchSearXNG(
   query: string,
   maxResults: number,
   instanceIndex: number = 0,
@@ -615,7 +615,7 @@ const ENGINE_MIN_DELAY: Record<string, number> = {
   yandex: 500,
 };
 
-async function waitIfNeeded(engine: string): Promise<void> {
+export async function waitIfNeeded(engine: string): Promise<void> {
   const last = engineLastCall[engine] ?? 0;
   const minDelay = ENGINE_MIN_DELAY[engine] ?? 1000;
   const elapsed = Date.now() - last;
@@ -628,6 +628,36 @@ async function waitIfNeeded(engine: string): Promise<void> {
 // --- Public API ---
 
 export type SearchEngine = "duckduckgo" | "brave" | "searxng" | "tavily" | "yandex";
+
+export type EngineSearchFn = (
+  query: string,
+  opts: WebSearchOptions,
+  cred?: SearchProviderCredentials,
+) => Promise<WebSearchResult[]>;
+
+const ENGINE_LOADERS: Record<SearchEngine, () => Promise<{ search: EngineSearchFn }>> = {
+  duckduckgo: async () => (await import("./engines/duckduckgo.js")),
+  brave: async () => (await import("./engines/brave.js")),
+  tavily: async () => (await import("./engines/tavily.js")),
+  yandex: async () => (await import("./engines/yandex.js")),
+  searxng: async () => (await import("./engines/searxng.js")),
+};
+
+export function createEngineSearchFn(engine: SearchEngine): EngineSearchFn {
+  const loader = ENGINE_LOADERS[engine];
+  if (!loader) {
+    return async () => [];
+  }
+  // Return a sync proxy — the actual dynamic import happens on first call
+  let cached: EngineSearchFn | null = null;
+  return async (query, opts, cred) => {
+    if (!cached) {
+      const mod = await loader();
+      cached = mod.search;
+    }
+    return cached(query, opts, cred);
+  };
+}
 
 export interface WebSearchOptions {
   query: string;
@@ -686,15 +716,13 @@ export async function searchWeb(
     details: { phase: "searching", engine: engines[0] },
   });
 
-  const engineFns: Record<string, (q: string, n: number) => Promise<WebSearchResult[]>> = {
-    duckduckgo: (q, n) => searchDuckDuckGo(q, n),
-    brave: (q, n) => searchBrave(q, n, callbacks?.credentials),
-    searxng: searchSearXNG,
-    tavily: searchTavily,
-    yandex: searchYandex,
-  };
+  const engineFns: Record<string, EngineSearchFn> = {};
+  for (const engine of engines) {
+    engineFns[engine] = createEngineSearchFn(engine);
+  }
 
   const allResults: WebSearchResult[] = [];
+  const searchOpts: WebSearchOptions = { query, maxResults };
 
   for (const engine of engines) {
     if (callbacks?.signal?.aborted) break;
@@ -711,7 +739,7 @@ export async function searchWeb(
         details: { phase: "searching", engine },
       });
 
-      const results = await fn(query, maxResults);
+      const results = await fn(query, searchOpts, callbacks?.credentials);
       const elapsedMs = Date.now() - startMs;
       engineLastCall[engine] = Date.now();
       allResults.push(...results);
@@ -760,13 +788,10 @@ export async function multiEngineWebSearch(
   }
 
   // Collect per-engine results separately for compare mode
-  const engineFns: Record<string, (q: string, n: number) => Promise<WebSearchResult[]>> = {
-    duckduckgo: (q, n) => searchDuckDuckGo(q, n),
-    brave: (q, n) => searchBrave(q, n, opts.credentials),
-    searxng: searchSearXNG,
-    tavily: searchTavily,
-    yandex: searchYandex,
-  };
+  const engineFns: Record<string, EngineSearchFn> = {};
+  for (const engine of engines) {
+    engineFns[engine] = createEngineSearchFn(engine);
+  }
 
   const allResults: WebSearchResult[] = [];
   const perEngine: Record<string, WebSearchResult[]> = {};
@@ -786,7 +811,7 @@ export async function multiEngineWebSearch(
         details: { phase: "searching", engine },
       });
 
-      const results = await fn(query, maxResults);
+      const results = await fn(query, opts, opts.credentials);
       engineLastCall[engine] = Date.now();
       perEngine[engine] = results;
       allResults.push(...results);
