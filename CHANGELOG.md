@@ -2,6 +2,18 @@
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.
 
+## [0.14.1] — 2026-06-29
+
+### 🔧 Refactor
+
+- *(state)* Bundle ResearchStateMachine constructor into ResearchContext object (6 params → 1)
+- *(state)* Create SessionState module for persistence seam (pending index.ts wiring)
+
+### 📚 Docs
+
+- ADR-0007: ResearchContext bundled constructor
+- CONTEXT.md: ResearchContext term
+
 ## [0.14.0] — 2026-06-29
 
 ### 🚀 Features
