@@ -14,6 +14,7 @@ export interface DeepResearchSettings {
 }
 
 const HOME_AGENT_DIR = join(homedir(), ".pi", "agent");
+const CWD_PI_DIR = ".pi";
 
 function readJsonFile(path: string): Record<string, unknown> | null {
   try {
@@ -25,15 +26,19 @@ function readJsonFile(path: string): Record<string, unknown> | null {
   }
 }
 
-/** Load deepResearch settings from the global agent settings file. */
-export function loadDeepResearchSettings(): DeepResearchSettings {
+/** Load deepResearch settings, merging global + project-local. */
+export function loadDeepResearchSettings(cwd?: string): DeepResearchSettings {
   const global = readJsonFile(join(HOME_AGENT_DIR, "settings.json"));
-  const dr = (global?.deepResearch ?? {}) as DeepResearchSettings;
+  const local = cwd ? readJsonFile(join(cwd, CWD_PI_DIR, "settings.json")) : null;
+
+  const globalDr = (global?.deepResearch ?? {}) as DeepResearchSettings;
+  const localDr = (local?.deepResearch ?? {}) as DeepResearchSettings;
+
   return {
-    profiles: dr.profiles ?? {},
-    defaultProfile: dr.defaultProfile,
-    artifactsDir: dr.artifactsDir,
-    reportsDir: dr.reportsDir,
+    profiles: { ...globalDr.profiles, ...localDr.profiles },
+    defaultProfile: localDr.defaultProfile ?? globalDr.defaultProfile,
+    artifactsDir: localDr.artifactsDir ?? globalDr.artifactsDir,
+    reportsDir: localDr.reportsDir ?? globalDr.reportsDir,
   };
 }
 
