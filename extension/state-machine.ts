@@ -370,7 +370,7 @@ function extractTextContent(agentResponse?: unknown): string {
 }
 
 /** Build a telemetry summary section to append to the final report. */
-export function buildTelemetrySection(snapshot: ResearchSnapshot, extensionVersion?: string): string {
+export function buildTelemetrySection(snapshot: ResearchSnapshot, extensionVersion?: string, artifactLinks?: string[]): string {
   const durationSec = Math.round((Date.now() - snapshot.startedAt) / 1000);
   const durationStr =
     durationSec < 60
@@ -398,6 +398,10 @@ export function buildTelemetrySection(snapshot: ResearchSnapshot, extensionVersi
     `## Research Telemetry`,
     ``,
     ...rows,
+    ``,
+    ...(artifactLinks && artifactLinks.length > 0
+      ? [`## Artifacts`, ``, ...artifactLinks.map((p) => `- [${p}](${p})`), ``]
+      : []),
     ``,
   ].join("\n");
 }

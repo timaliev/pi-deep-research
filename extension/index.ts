@@ -447,7 +447,10 @@ Use "compare" mode to see results from each engine separately without deduplicat
 
         const { writeFileSync } = await import("node:fs");
         const extensionVersion = readExtensionVersion();
-        const telemetry = buildTelemetrySection(result.snapshot, extensionVersion);
+        const telemetry = buildTelemetrySection(result.snapshot, extensionVersion, [
+          planArtifactPath,
+          join(logsDir, `${result.snapshot.runId}.log`),
+        ]);
         const fullReport = `${reportText}\n\n${telemetry}\n`;
         writeFileSync(reportPath, fullReport, "utf-8");
 
