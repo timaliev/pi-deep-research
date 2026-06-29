@@ -134,6 +134,17 @@ Use "compare" mode to see results from each engine separately without deduplicat
       const reportPathEntry = [...entries].reverse().find((e: any) => e.customType === REPORT_PATH_KEY);
       if (reportPathEntry?.data?.path && typeof reportPathEntry.data.path === "string") {
         path = reportPathEntry.data.path;
+        // Append telemetry from auto-save if available
+        const telemetry = (reportPathEntry.data as any).telemetry as string | undefined;
+        if (telemetry) {
+          const reportWithTelemetry = `${params.markdown}\n\n${telemetry}\n`;
+          const { writeFileSync } = await import("node:fs");
+          writeFileSync(path, reportWithTelemetry, "utf-8");
+          return {
+            content: [{ type: "text", text: `Report saved (with telemetry): ${path}` }],
+            details: { report_path: path },
+          };
+        }
       } else {
         const slug = topicToSlug(params.topic);
         const filename = `${date}-${slug}.md`;
@@ -441,7 +452,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
         writeFileSync(reportPath, fullReport, "utf-8");
 
         // Store path so save_report writes to the same file
-        pi.appendEntry(REPORT_PATH_KEY, { path: reportPath });
+        pi.appendEntry(REPORT_PATH_KEY, { path: reportPath, telemetry });
 
         runLogger?.event("report_saved", {
           path: reportPath,
