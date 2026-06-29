@@ -2,6 +2,23 @@
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.
 
+## [0.14.0] — 2026-06-29
+
+### 🚀 Features
+
+- *(brave)* Implement Brave web search per API documentation (freshness, country, lang, extra_snippets, pagination)
+- *(queue)* Build search request queue with delay scheduling, save as JSON artifact
+- *(telemetry)* Add artifact reference links below telemetry table
+- *(telemetry)* Append telemetry in save_report when auto-save data available
+
+### 🐛 Fixes
+
+- *(telemetry)* save_report now appends telemetry from auto-save session state
+
+### 🧪 Tests
+
+- 27 new tests: Brave search (13), queue (9), artifact links (5)
+
 ## [0.13.3] — 2026-06-29
 
 ### 🚀 Features
