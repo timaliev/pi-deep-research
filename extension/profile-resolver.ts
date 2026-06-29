@@ -27,8 +27,9 @@ function readJsonFile(path: string): Record<string, unknown> | null {
 }
 
 /** Load deepResearch settings, merging global + project-local. */
-export function loadDeepResearchSettings(cwd?: string): DeepResearchSettings {
-  const global = readJsonFile(join(HOME_AGENT_DIR, "settings.json"));
+export function loadDeepResearchSettings(cwd?: string, agentDir?: string): DeepResearchSettings {
+  const homeAgentDir = agentDir ?? HOME_AGENT_DIR;
+  const global = readJsonFile(join(homeAgentDir, "settings.json"));
   const local = cwd ? readJsonFile(join(cwd, CWD_PI_DIR, "settings.json")) : null;
 
   const globalDr = (global?.deepResearch ?? {}) as DeepResearchSettings;
