@@ -5,6 +5,9 @@ import type { searchWeb as SearchWebFn } from "./search/web-search.js";
 import type { WebSearchResult } from "./search/web-search.js";
 import type { SearchEngine } from "./search/web-search.js";
 import type { Scraper, ScrapedPage } from "./scraper.js";
+import { existsSync, readFileSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
 /** Parameters controlling research depth and breadth. */
 export interface ResearchProfile {
@@ -352,25 +355,34 @@ function extractTextContent(agentResponse?: unknown): string {
 }
 
 /** Build a telemetry summary section to append to the final report. */
-export function buildTelemetrySection(snapshot: ResearchSnapshot): string {
+export function buildTelemetrySection(snapshot: ResearchSnapshot, extensionVersion?: string): string {
   const durationSec = Math.round((Date.now() - snapshot.startedAt) / 1000);
   const durationStr =
     durationSec < 60
       ? `${durationSec}s`
       : `${Math.floor(durationSec / 60)}m ${durationSec % 60}s`;
 
-  return [
-    `## Research Telemetry`,
-    ``,
+  const rows = [
     `| Metric | Value |`,
     `| --- | --- |`,
     `| Run ID | \`${snapshot.runId}\` |`,
+  ];
+  if (extensionVersion) {
+    rows.push(`| Version | \`${extensionVersion}\` |`);
+  }
+  rows.push(
     `| Search calls | ${snapshot.searchCalls} |`,
     `| Scrape calls | ${snapshot.scrapeCalls} |`,
     `| Sources visited | ${snapshot.allVisitedUrls.length} |`,
     `| Depth reached | ${snapshot.currentDepth}/${snapshot.totalDepth} |`,
     `| Duration | ${durationStr} |`,
     `| Soft limit triggered | ${snapshot.softLimitTriggered ? "yes" : "no"} |`,
+  );
+
+  return [
+    `## Research Telemetry`,
+    ``,
+    ...rows,
     ``,
   ].join("\n");
 }
@@ -470,4 +482,19 @@ Write the report as your response text directly — do NOT call any tools. Call 
 `;
   for (const f of findings) prompt += `- ${f.text} [Source: ${f.sourceUrl}]\n`;
   return prompt;
+}
+
+const stateMachineDir = dirname(fileURLToPath(import.meta.url));
+const rootPkgPath = join(stateMachineDir, "..", "package.json");
+
+/** Read extension version from root package.json. Returns undefined if unreadable. */
+export function readExtensionVersion(pkgPath?: string): string | undefined {
+  try {
+    const path = pkgPath ?? rootPkgPath;
+    if (!existsSync(path)) return undefined;
+    const pkg = JSON.parse(readFileSync(path, "utf-8"));
+    return pkg.version || undefined;
+  } catch {
+    return undefined;
+  }
 }

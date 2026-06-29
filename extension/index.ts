@@ -11,7 +11,7 @@ import type { SearchEngine } from "./search/web-search.js";
 import { WebScraper } from "./scraper.js";
 import { JsonlLogger } from "./logger.js";
 import { PrefilterManager } from "./prefilter.js";
-import { ResearchStateMachine, buildTelemetrySection, DEFAULT_PRESETS } from "./state-machine.js";
+import { ResearchStateMachine, buildTelemetrySection, readExtensionVersion, DEFAULT_PRESETS } from "./state-machine.js";
 import type { ResearchPlan, PrefilterArtifact, ResearchPlanProfile } from "./prefilter.js";
 import type { ResearchSnapshot } from "./state-machine.js";
 import { topicToSlug } from "./slug.js";
@@ -20,6 +20,8 @@ import type { DeepResearchSettings } from "./profile-resolver.js";
 import { loadSearchProviders, SearchProviderCredentials } from "./search-providers.js";
 
 const baseDir = dirname(fileURLToPath(import.meta.url));
+
+const rootDir = join(baseDir, "..");
 
 export default function (pi: ExtensionAPI) {
   // Load user settings and create unified profile resolver
@@ -432,7 +434,8 @@ Use "compare" mode to see results from each engine separately without deduplicat
         const reportPath = join(reportsDir, filename);
 
         const { writeFileSync } = await import("node:fs");
-        const telemetry = buildTelemetrySection(result.snapshot);
+        const extensionVersion = readExtensionVersion();
+        const telemetry = buildTelemetrySection(result.snapshot, extensionVersion);
         const fullReport = `${reportText}\n\n${telemetry}\n`;
         writeFileSync(reportPath, fullReport, "utf-8");
 

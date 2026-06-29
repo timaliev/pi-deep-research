@@ -2,6 +2,16 @@
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.
 
+## [0.13.2] — 2026-06-29
+
+### 🚀 Features
+
+- *(telemetry)* Add extension version row to report telemetry table (read from package.json)
+
+### 🧪 Tests
+
+- 6 new tests: telemetry version row, version reading from package.json
+
 ## [0.13.1] — 2026-06-29
 
 ### 🚀 Features
