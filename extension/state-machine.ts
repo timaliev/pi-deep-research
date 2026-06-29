@@ -10,6 +10,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildSearchQueue, saveQueue } from "./search-queue.js";
 import type { SearchProviderCredentials } from "./search-providers.js";
+import { createReportStyle } from "./report-styles.js";
 
 /** Parameters controlling research depth and breadth. */
 export interface ResearchProfile {
@@ -292,7 +293,8 @@ export class ResearchStateMachine {
     // Check soft limits after this round's searches
     this.checkSoftLimits(nextSnapshot);
 
-    const inject = buildExtractionPrompt(searchResults, scraped, nextDepth, snapshot.totalDepth);
+    const style = createReportStyle(plan.reportStyle ?? "narrative");
+    const inject = style.buildExtractionPrompt(searchResults, scraped, nextDepth, snapshot.totalDepth);
     this.logger?.event("phase_changed", { from: "searching", to: "extracting", depth: nextDepth });
     this.logger?.event("inject_sent", { type: "extraction", length: inject.length, depth: nextDepth });
     return { phase: "extracting", snapshot: nextSnapshot, inject };
@@ -302,7 +304,7 @@ export class ResearchStateMachine {
     // Soft limit: stop deepening, go straight to drafting
     const shouldDeepen = !snapshot.softLimitTriggered && snapshot.currentDepth < snapshot.totalDepth;
     if (shouldDeepen) {
-      const inject = buildQuestioningPrompt(plan, snapshot.currentDepth, snapshot.totalDepth);
+    const inject = createReportStyle(plan.reportStyle ?? "narrative").buildQuestioningPrompt(plan, snapshot.currentDepth, snapshot.totalDepth);
       this.logger?.event("phase_changed", { from: "extracting", to: "questioning", depth: snapshot.currentDepth });
       this.logger?.event("inject_sent", { type: "deepening", length: inject.length, depth: snapshot.currentDepth });
       return { phase: "questioning", snapshot: { ...snapshot, phase: "questioning" }, inject };
@@ -312,7 +314,7 @@ export class ResearchStateMachine {
       currentDepth: snapshot.currentDepth,
       totalDepth: snapshot.totalDepth,
     });
-    const inject = buildDraftingPrompt(plan, snapshot.allFindings);
+    const inject = createReportStyle(plan.reportStyle ?? "narrative").buildDraftingPrompt(plan, snapshot.allFindings);
     this.logger?.event("phase_changed", { from: "extracting", to: "drafting", depth: snapshot.currentDepth });
     this.logger?.event("inject_sent", { type: "drafting", length: inject.length });
     return { phase: "drafting", snapshot: { ...snapshot, phase: "drafting" }, inject };
@@ -349,7 +351,7 @@ export class ResearchStateMachine {
     this.logger?.event("drafting_extracted", { textLength: reportText.length, agentResponseType: typeof agentResponse, isArray: Array.isArray(agentResponse) });
     if (!reportText || reportText.length < 40) {
       // Agent didn't produce a proper report — re-inject drafting prompt
-      const inject = buildDraftingPrompt(plan, snapshot.allFindings);
+      const inject = createReportStyle(plan.reportStyle ?? "narrative").buildDraftingPrompt(plan, snapshot.allFindings);
       this.logger?.event("drafting_retry", { reason: "empty_response", length: reportText?.length ?? 0 });
       return {
         phase: "drafting",
@@ -424,102 +426,6 @@ export function buildTelemetrySection(snapshot: ResearchSnapshot, extensionVersi
   ].join("\n");
 }
 
-function buildExtractionPrompt(
-  allResults: Array<{ question: string; results: WebSearchResult[] }>,
-  scraped: ScrapedPage[],
-  depth: number,
-  totalDepth: number
-): string {
-  let prompt = `## Research Extraction — Depth ${depth}/${totalDepth}\n\n`;
-  prompt += `Extract key findings from the following search results. For each finding, include:\n`;
-  prompt += `- The insight (1-2 sentences)\n`;
-  prompt += `- Source URL\n`;
-  prompt += `- A relevant quote/citation from the source\n\n`;
-  prompt += `### Search Results\n\n`;
-  for (const { question, results } of allResults) {
-    prompt += `**Query:** ${question}\n`;
-    for (const r of results) prompt += `- [${r.title}](${r.url}): ${r.snippet}\n`;
-    prompt += `\n`;
-  }
-  if (scraped.length > 0) {
-    prompt += `### Scraped Content\n\n`;
-    for (const page of scraped) {
-      const excerpt = page.content.length > 1000 ? page.content.substring(0, 1000) + "..." : page.content;
-      prompt += `**Source: ${page.title}** (${page.url})\n\n${excerpt}\n\n---\n`;
-    }
-  }
-  prompt += `\nProduce findings as a numbered list. Each finding must cite its source URL in parentheses.`;
-  return prompt;
-}
-
-function buildQuestioningPrompt(plan: ResearchPlan, currentDepth: number, totalDepth: number): string {
-  return `## Research Deepening — Depth ${currentDepth}/${totalDepth}
-
-Based on the findings so far, generate 2-3 follow-up questions to deepen the research.
-These questions should explore aspects not yet fully covered.
-
-**Original research goal:** ${plan.goal}
-
-Produce questions as a numbered list. Each question should be specific and researchable via web search.
-`;
-}
-
-export function buildDraftingPrompt(plan: ResearchPlan, findings: Finding[]): string {
-  const style = plan.reportStyle ?? "narrative";
-  if (style === "subtopics") {
-    return buildSubtopicsPrompt(plan, findings);
-  }
-  return buildNarrativePrompt(plan, findings);
-}
-
-function buildNarrativePrompt(plan: ResearchPlan, findings: Finding[]): string {
-  let prompt = `## Final Report
-
-Write a structured markdown research report based on the following plan and findings. Write the report as your response text directly — do NOT call any tools. Call run_research only after you have written the complete report.
-
-**Topic:** ${plan.topic}
-**Goal:** ${plan.goal}
-
-### Structure
-
-1. **Introduction** — background and why this matters
-2. **Findings** — organized by theme, with citations
-3. **Analysis** — what the findings mean, patterns, contradictions
-4. **Recommendations** — actionable insights
-5. **Sources** — list of all cited URLs
-
-### Key Findings
-
-`;
-  for (const f of findings) prompt += `- ${f.text} [Source: ${f.sourceUrl}]\n`;
-  return prompt;
-}
-
-function buildSubtopicsPrompt(plan: ResearchPlan, findings: Finding[]): string {
-  let prompt = `## Final Report (Subtopics)
-
-Write a comprehensive markdown research report. Discover ${plan.researchQuestions.length >= 5 ? "8–10" : "5–7"} thematic sections based on the findings below — each section a dedicated topic with subsections where appropriate.
-
-Do NOT use a rigid 5-section template. Instead, let the content drive the structure: group findings into natural themes, give each its own numbered section with descriptive headings, and include data tables, quotes, and comparisons where the evidence supports them.
-
-Write the report as your response text directly — do NOT call any tools. Call run_research only after you have written the complete report.
-
-**Topic:** ${plan.topic}
-**Goal:** ${plan.goal}
-
-### Structure Guidance
-
-- Start with an Executive Summary (unnumbered)
-- Numbered sections (1., 2., 3., …) — each a distinct thematic area discovered from the findings
-- Subsections (1.1, 1.2, …) where a theme has multiple facets
-- End with a Recommendations section and a References section
-
-### Key Findings
-
-`;
-  for (const f of findings) prompt += `- ${f.text} [Source: ${f.sourceUrl}]\n`;
-  return prompt;
-}
 
 const stateMachineDir = dirname(fileURLToPath(import.meta.url));
 const rootPkgPath = join(stateMachineDir, "..", "package.json");
@@ -534,4 +440,8 @@ export function readExtensionVersion(pkgPath?: string): string | undefined {
   } catch {
     return undefined;
   }
+}
+/** @deprecated Use createReportStyle instead. */
+export function buildDraftingPrompt(plan: ResearchPlan, findings: Finding[]): string {
+  return createReportStyle(plan.reportStyle ?? "narrative").buildDraftingPrompt(plan, findings);
 }
