@@ -108,6 +108,23 @@ Which profile name is the default (shown in prompts, used when agent doesn't spe
 "defaultProfile": "deep"
 ```
 
+### `searchProviders`
+
+API keys for search engines. Alternative to environment variables (env vars still win).
+
+```json
+"searchProviders": {
+  "brave": { "apiKey": "BSA..." },
+  "tavily": { "apiKey": "tvly-..." },
+  "yandex": { "oauthToken": "...", "folderId": "..." }
+}
+```
+
+Keys per engine:
+- `brave`: `apiKey` (or `BRAVE_API_KEY` env)
+- `tavily`: `apiKey` (or `TAVILY_API_KEY` env)
+- `yandex`: `oauthToken`, `folderId` (or `YANDEX_OAUTH_TOKEN`/`YANDEX_FOLDER_ID` env)
+
 ### `artifactsDir` / `reportsDir`
 
 Override default output paths. Defaults resolve to `<cwd>/deep-research/artifacts` and `<cwd>/deep-research/reports`. Use relative paths (resolved against `cwd`) or absolute paths.

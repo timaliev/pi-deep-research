@@ -48,6 +48,10 @@ _Avoid_: profile manager, config loader
 A web search backend used by all research tools. The extension uses a unified `searchWeb()` function supporting duckduckgo (free, zero-config, with retry/backoff), brave (needs `BRAVE_API_KEY` env var), and searxng (public instances). Selected during prefilter and stored in the Research Plan. DuckDuckGo is the default and always available; other engines require environment variables.
 _Avoid_: retriever, search backend, search provider
 
+**SearchProviderCredentials**:
+Module (extension/search-providers.ts) resolving API keys for search engines. Loads from `deepResearch.searchProviders` in `~/.pi/agent/settings.json`, falls back to `process.env` (env wins). Used by `checkApiKeys` in prefilter and search functions.
+_Avoid_: API key resolver, credential manager
+
 **Confirmation Gate**:
 The boundary between free operations (prefilter/planning) and paid operations (full research). The agent must present the Research Plan and estimated cost to the user and receive explicit approval, then call `confirm_research` before `run_research`. Enforced programmatically by `run_research` rejecting unconfirmed plans.
 _Avoid_: approval step, user consent, cost check

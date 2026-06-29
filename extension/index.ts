@@ -3,6 +3,7 @@ import { StringEnum } from "@earendil-works/pi-ai";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 import { searchWeb, multiEngineWebSearch } from "./search/web-search.js";
@@ -16,6 +17,7 @@ import type { ResearchSnapshot } from "./state-machine.js";
 import { topicToSlug } from "./slug.js";
 import { ProfileResolver, loadDeepResearchSettings } from "./profile-resolver.js";
 import type { DeepResearchSettings } from "./profile-resolver.js";
+import { loadSearchProviders, SearchProviderCredentials } from "./search-providers.js";
 
 const baseDir = dirname(fileURLToPath(import.meta.url));
 
@@ -25,6 +27,8 @@ export default function (pi: ExtensionAPI) {
   const profileResolver = new ProfileResolver(settings.profiles ?? {}, settings.defaultProfile);
   const reportsDir = settings.reportsDir ?? join(baseDir, "..", "..", "deep-research", "reports");
   const artifactsDir = settings.artifactsDir ?? join(baseDir, "..", "..", "deep-research", "artifacts");
+  const searchProviders = loadSearchProviders(join(homedir(), ".pi", "agent", "settings.json"));
+  const searchCred = new SearchProviderCredentials(searchProviders);
 
   // Contribute the skill file
   pi.on("resources_discover", () => ({
@@ -164,7 +168,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
       const logsDir = join(artifactsDir, "..", "logs");
       const logger = new JsonlLogger(prefilterRunId, join(logsDir, `${prefilterRunId}-prefilter.log`));
 
-      const manager = new PrefilterManager(searchWeb, scraper, artifactsDir, logger, profileResolver);
+      const manager = new PrefilterManager(searchWeb, scraper, artifactsDir, logger, profileResolver, searchCred);
 
       // Step 1: topic only → negotiate params
       if (!params.params_json && !params.plan_json) {

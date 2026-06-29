@@ -2,6 +2,17 @@
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.
 
+## [0.13.1] — 2026-06-29
+
+### 🚀 Features
+
+- *(credentials)* Add SearchProviderCredentials — load API keys from settings.json (env vars win)
+- *(credentials)* Wire into prefilter checkApiKeys with fallback to process.env
+
+### 🧪 Tests
+
+- 11 new tests: credential load, get, env override, has, prefilter integration
+
 ## [0.13.0] — 2026-06-27
 
 ### 🚀 Features

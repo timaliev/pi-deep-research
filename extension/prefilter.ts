@@ -6,6 +6,7 @@ import type { SearchEngine } from "./search/web-search.js";
 import type { Scraper, ScrapedPage } from "./scraper.js";
 import { resolveProfile, DEFAULT_PRESETS } from "./state-machine.js";
 import type { ProfileResolver } from "./profile-resolver.js";
+import type { SearchProviderCredentials } from "./search-providers.js";
 
 export interface ResearchPlanProfile {
   name: "default" | "fast" | "deep" | "custom";
@@ -73,6 +74,7 @@ export class PrefilterManager {
   private readonly artifactsDir: string;
   private readonly logger?: Logger;
   private readonly profileResolver?: ProfileResolver;
+  private readonly searchCred?: SearchProviderCredentials;
 
   constructor(
     searchFn: typeof SearchWebFn,
@@ -80,12 +82,14 @@ export class PrefilterManager {
     artifactsDir: string,
     logger?: Logger,
     profileResolver?: ProfileResolver,
+    searchCred?: SearchProviderCredentials,
   ) {
     this.searchFn = searchFn;
     this.scraper = scraper;
     this.artifactsDir = artifactsDir;
     this.logger = logger;
     this.profileResolver = profileResolver;
+    this.searchCred = searchCred;
   }
 
   /** Step 1: Ask agent to propose engines + profile. */
@@ -221,11 +225,15 @@ export class PrefilterManager {
   }
 
   private checkApiKeys(engines: SearchEngine[]): string[] {
+    const cred = this.searchCred;
     const missing: string[] = [];
-    if (engines.includes("brave") && !process.env.BRAVE_API_KEY) missing.push("BRAVE_API_KEY");
-    if (engines.includes("tavily") && !process.env.TAVILY_API_KEY) missing.push("TAVILY_API_KEY");
-    if (engines.includes("yandex") && (!process.env.YANDEX_OAUTH_TOKEN || !process.env.YANDEX_FOLDER_ID))
-      missing.push("YANDEX_OAUTH_TOKEN, YANDEX_FOLDER_ID");
+    if (engines.includes("brave") && !cred?.get("brave", "apiKey") && !process.env.BRAVE_API_KEY) missing.push("BRAVE_API_KEY");
+    if (engines.includes("tavily") && !cred?.get("tavily", "apiKey") && !process.env.TAVILY_API_KEY) missing.push("TAVILY_API_KEY");
+    if (engines.includes("yandex")) {
+      const hasToken = cred?.get("yandex", "oauthToken") || process.env.YANDEX_OAUTH_TOKEN;
+      const hasFolder = cred?.get("yandex", "folderId") || process.env.YANDEX_FOLDER_ID;
+      if (!hasToken || !hasFolder) missing.push("YANDEX_OAUTH_TOKEN, YANDEX_FOLDER_ID");
+    }
     return missing;
   }
 
