@@ -5,9 +5,10 @@ import type { searchWeb as SearchWebFn } from "./search/web-search.js";
 import type { WebSearchResult } from "./search/web-search.js";
 import type { SearchEngine } from "./search/web-search.js";
 import type { Scraper, ScrapedPage } from "./scraper.js";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { buildSearchQueue, saveQueue } from "./search-queue.js";
 
 /** Parameters controlling research depth and breadth. */
 export interface ResearchProfile {
@@ -111,6 +112,7 @@ export class ResearchStateMachine {
     private readonly scraper: Scraper,
     private readonly profilePresets?: Record<string, ResearchProfile>,
     private readonly logger?: Logger,
+    private readonly artifactsDir?: string,
   ) {}
 
   static init(plan: ResearchPlan, presets?: Record<string, ResearchProfile>): ResearchSnapshot {
@@ -190,6 +192,19 @@ export class ResearchStateMachine {
     const semaphore = new ConcurrencySemaphore(prof.concurrency);
     const newVisited = new Set(snapshot.allVisitedUrls);
     const engines = plan.engines;
+
+    // Build and save search request queue for post-mortem analysis
+    const queue = buildSearchQueue(activeQuestions, engines.length > 0 ? engines : ["duckduckgo"]);
+    if (this.artifactsDir) {
+      try {
+        saveQueue(queue, join(this.artifactsDir, `queue-${snapshot.runId}-d${snapshot.currentDepth}.json`));
+        this.logger?.event("queue_saved", {
+          depth: snapshot.currentDepth,
+          entries: queue.length,
+          engines: engines.join(","),
+        });
+      } catch { /* non-critical */ }
+    }
 
     // Concurrent searches
     const searchResults = await Promise.all(

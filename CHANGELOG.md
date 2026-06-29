@@ -2,6 +2,16 @@
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.
 
+## [0.13.3] — 2026-06-29
+
+### 🚀 Features
+
+- *(queue)* Build search request queue with delay scheduling, save as JSON artifact for post-mortem
+
+### 🧪 Tests
+
+- 9 new tests: queue builder, round-robin, delay accumulation, save/round-trip
+
 ## [0.13.2] — 2026-06-29
 
 ### 🚀 Features
