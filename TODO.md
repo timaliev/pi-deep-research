@@ -10,3 +10,5 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 - DONE: include all artifacts files pertaining to the report as reference links in `## Research Telemetry` section of each report.
 - DONE: read `https://api-dashboard.search.brave.com/app/documentation/web-search/get-started` and implement `brave` web search accordingly.
 - DONE: add GitHub workflow for release, so only after successful tests pass release can be created.
+- TODO: save PDF-version of reports
+- TODO: add profile name and parameters to Telemetry section of each report.

@@ -9,6 +9,7 @@ import { existsSync, readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildSearchQueue, saveQueue } from "./search-queue.js";
+import type { SearchProviderCredentials } from "./search-providers.js";
 
 /** Parameters controlling research depth and breadth. */
 export interface ResearchProfile {
@@ -113,6 +114,7 @@ export class ResearchStateMachine {
     private readonly profilePresets?: Record<string, ResearchProfile>,
     private readonly logger?: Logger,
     private readonly artifactsDir?: string,
+    private readonly searchCred?: SearchProviderCredentials,
   ) {}
 
   static init(plan: ResearchPlan, presets?: Record<string, ResearchProfile>): ResearchSnapshot {
@@ -211,7 +213,7 @@ export class ResearchStateMachine {
       activeQuestions.map((question) =>
         semaphore.run(async () => {
           const startMs = Date.now();
-          const results = await this.searchFn(question, maxResultsPerQuery, engines, { logger: this.logger });
+          const results = await this.searchFn(question, maxResultsPerQuery, engines, { logger: this.logger, credentials: this.searchCred });
           this.logger?.event("search_executed", {
             query: question,
             resultCount: results.length,
@@ -357,7 +359,7 @@ export class ResearchStateMachine {
 }
 
 /** Extract plain text from agent response (handles string and content blocks array). */
-function extractTextContent(agentResponse?: unknown): string {
+export function extractTextContent(agentResponse?: unknown): string {
   if (!agentResponse) return "";
   if (typeof agentResponse === "string") return agentResponse;
   if (Array.isArray(agentResponse)) {

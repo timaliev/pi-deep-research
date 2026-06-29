@@ -112,7 +112,7 @@ export class PrefilterManager {
     }
 
     const searchQuery = this.buildSearchQuery(topic);
-    const searchResults = await this.searchFn(searchQuery, 3, engines, { logger: this.logger });
+    const searchResults = await this.searchFn(searchQuery, 3, engines, { logger: this.logger, credentials: this.searchCred });
 
     const scrapedContent: ScrapedPage[] = [];
     for (const result of searchResults.slice(0, 2)) {

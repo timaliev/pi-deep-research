@@ -11,7 +11,7 @@ import type { SearchEngine } from "./search/web-search.js";
 import { WebScraper } from "./scraper.js";
 import { JsonlLogger } from "./logger.js";
 import { PrefilterManager } from "./prefilter.js";
-import { ResearchStateMachine, buildTelemetrySection, readExtensionVersion, DEFAULT_PRESETS } from "./state-machine.js";
+import { ResearchStateMachine, buildTelemetrySection, readExtensionVersion, extractTextContent, DEFAULT_PRESETS } from "./state-machine.js";
 import type { ResearchPlan, PrefilterArtifact, ResearchPlanProfile } from "./prefilter.js";
 import type { ResearchSnapshot } from "./state-machine.js";
 import { topicToSlug } from "./slug.js";
@@ -146,6 +146,9 @@ Use "compare" mode to see results from each engine separately without deduplicat
           };
         }
       } else {
+        const reportsDir = (reportPathEntry?.data as any)?.reportsDir as string | undefined
+          ?? join(ctx.cwd ?? baseDir, "deep-research", "reports");
+        mkdirSync(reportsDir, { recursive: true });
         const slug = topicToSlug(params.topic);
         const filename = `${date}-${slug}.md`;
         path = join(reportsDir, filename);
@@ -356,7 +359,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
 
         const runLogger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
         runLogger.event("run_started", { topic: artifact.plan.topic, profile: artifact.plan.profile, engines: artifact.plan.engines });
-        const machine = new ResearchStateMachine(searchWeb, scraper, profileResolver.getPresets(), runLogger, artifactsDir);
+        const machine = new ResearchStateMachine(searchWeb, scraper, profileResolver.getPresets(), runLogger, artifactsDir, searchCred);
 
         // Advance to first phase (searching → extracting)
         const result = await machine.next(snapshot, artifact.plan);
@@ -398,6 +401,14 @@ Use "compare" mode to see results from each engine separately without deduplicat
       snapshot = stateData as unknown as ResearchSnapshot;
       const plan = stateData.plan as ResearchPlan;
       const planArtifactPath = stateData.planArtifactPath as string;
+
+      // Restore draftReport from agent response if draftReady flag is set
+      if (stateData.draftReady && agentResponse) {
+        const restored = extractTextContent(agentResponse);
+        if (restored && restored.length >= 40) {
+          snapshot.draftReport = restored;
+        }
+      }
       let deepResearchBase = (stateData.deepResearchBase as string) || planArtifactPath ? join(dirname(planArtifactPath), "..") : join(ctx.cwd ?? baseDir, "deep-research");
       // Ensure it's an absolute path
       if (!deepResearchBase.startsWith("/")) deepResearchBase = join(ctx.cwd ?? baseDir, deepResearchBase);
@@ -416,11 +427,19 @@ Use "compare" mode to see results from each engine separately without deduplicat
       // Re-create logger for subsequent calls (same file, appends)
       const scraper = new WebScraper();
       const runLogger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
-      const machine = new ResearchStateMachine(searchWeb, scraper, profileResolver.getPresets(), runLogger, artifactsDir);
+      const machine = new ResearchStateMachine(searchWeb, scraper, profileResolver.getPresets(), runLogger, artifactsDir, searchCred);
       const result = await machine.next(snapshot, plan, agentResponse);
 
-      // Persist updated state
-      pi.appendEntry(STATE_KEY, { ...result.snapshot, plan, planArtifactPath, deepResearchBase });
+      // Persist updated state (strip large draftReport for session safety)
+      const { draftReport: _dr, ...safeSnapshot } = result.snapshot;
+      pi.appendEntry(STATE_KEY, {
+        ...safeSnapshot,
+        draftReady: (result.snapshot.draftReport?.length ?? 0) >= 40,
+        draftLength: result.snapshot.draftReport?.length ?? 0,
+        plan,
+        planArtifactPath,
+        deepResearchBase,
+      });
 
       // Inject prompt if any
       if (result.inject) {
@@ -455,7 +474,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
         writeFileSync(reportPath, fullReport, "utf-8");
 
         // Store path so save_report writes to the same file
-        pi.appendEntry(REPORT_PATH_KEY, { path: reportPath, telemetry });
+        pi.appendEntry(REPORT_PATH_KEY, { path: reportPath, reportsDir, telemetry });
 
         runLogger?.event("report_saved", {
           path: reportPath,
