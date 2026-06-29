@@ -9,4 +9,4 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 - TODO: ensure that `## Research Telemetry` section is appended to each report at the end of file.
 - TODO: include all artifacts files pertaining to the report as reference links in `## Research Telemetry` section of each report.
 - TODO: read `https://api-dashboard.search.brave.com/app/documentation/web-search/get-started` and implement `brave` web search accordingly.
-- TODO: add GitHub workflow for release, so only after successful tests pass release can be created.
+- DONE: add GitHub workflow for release, so only after successful tests pass release can be created.
