@@ -11,6 +11,8 @@ import { fileURLToPath } from "node:url";
 import { buildSearchQueue, saveQueue } from "./search-queue.js";
 import type { SearchProviderCredentials } from "./search-providers.js";
 import { createReportStyle } from "./report-styles.js";
+import { DEFAULT_PRESETS, resolveProfile } from "./profile-resolver.js";
+import { JsonlLogger } from "./logger.js";
 
 /** Parameters controlling research depth and breadth. */
 export interface ResearchProfile {
@@ -21,32 +23,6 @@ export interface ResearchProfile {
   maxSearchCalls?: number;
   /** Maximum wall-clock seconds before soft limit triggers (0 = unlimited). */
   maxElapsedSeconds?: number;
-}
-
-/** Hardcoded presets, overridable via settings. */
-export const DEFAULT_PRESETS: Record<string, ResearchProfile> = {
-  default: { breadth: 4, depth: 2, concurrency: 4 },
-  fast:    { breadth: 2, depth: 1, concurrency: 2 },
-  deep:    { breadth: 6, depth: 3, concurrency: 4 },
-};
-
-/** Resolve a ResearchPlanProfile into a concrete ResearchProfile. */
-export function resolveProfile(
-  planProfile: ResearchPlanProfile,
-  presets?: Record<string, ResearchProfile>,
-): ResearchProfile {
-  const p = presets ?? DEFAULT_PRESETS;
-  if (planProfile.name !== "custom") {
-    return p[planProfile.name] ?? p.default;
-  }
-  const preset = p.custom;
-  return {
-    breadth: planProfile.breadth ?? preset?.breadth ?? 4,
-    depth: planProfile.depth ?? preset?.depth ?? 2,
-    concurrency: planProfile.concurrency ?? preset?.concurrency ?? 4,
-    maxSearchCalls: preset?.maxSearchCalls,
-    maxElapsedSeconds: preset?.maxElapsedSeconds,
-  };
 }
 
 export interface Finding {
@@ -112,7 +88,6 @@ export interface ResearchContext {
   searchFn: typeof SearchWebFn;
   scraper: Scraper;
   profilePresets?: Record<string, ResearchProfile>;
-  logger?: Logger;
   artifactsDir?: string;
   searchCred?: SearchProviderCredentials;
 }
@@ -121,7 +96,7 @@ export class ResearchStateMachine {
   private readonly searchFn: typeof SearchWebFn;
   private readonly scraper: Scraper;
   private readonly profilePresets?: Record<string, ResearchProfile>;
-  private readonly logger?: Logger;
+  private logger?: Logger;
   private readonly artifactsDir?: string;
   private readonly searchCred?: SearchProviderCredentials;
 
@@ -129,8 +104,7 @@ export class ResearchStateMachine {
     this.searchFn = ctx.searchFn;
     this.scraper = ctx.scraper;
     this.profilePresets = ctx.profilePresets;
-    this.logger = ctx.logger;
-    this.artifactsDir = ctx.artifactsDir;
+    this.artifactsDir = ctx.artifactsDir ?? defaultArtifactsDir();
     this.searchCred = ctx.searchCred;
   }
 
@@ -154,6 +128,12 @@ export class ResearchStateMachine {
   }
 
   async next(snapshot: ResearchSnapshot, plan: ResearchPlan, agentResponse?: string): Promise<ResearchStateResult> {
+    // Create logger lazily on first call
+    if (!this.logger) {
+      const logsDir = join(this.artifactsDir!, "..", "logs");
+      mkdirSync(logsDir, { recursive: true });
+      this.logger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
+    }
     if (!snapshot.profile) {
       snapshot.profile = resolveProfile(plan.profile, this.profilePresets);
       snapshot.totalDepth = snapshot.profile.depth;
@@ -428,6 +408,7 @@ export function buildTelemetrySection(snapshot: ResearchSnapshot, extensionVersi
 
 
 const stateMachineDir = dirname(fileURLToPath(import.meta.url));
+const defaultArtifactsDir = () => join(stateMachineDir, "..", "..", "deep-research", "artifacts");
 const rootPkgPath = join(stateMachineDir, "..", "package.json");
 
 /** Read extension version from root package.json. Returns undefined if unreadable. */

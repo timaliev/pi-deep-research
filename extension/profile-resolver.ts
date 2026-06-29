@@ -1,9 +1,36 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { DEFAULT_PRESETS } from "./state-machine.js";
 import type { ResearchProfile } from "./state-machine.js";
 import type { ResearchPlanProfile } from "./prefilter.js";
+
+/** Built-in profile presets. Owned here — not in state-machine.ts. */
+export const DEFAULT_PRESETS: Record<string, ResearchProfile> = {
+  default: { breadth: 4, depth: 2, concurrency: 4 },
+  fast:    { breadth: 2, depth: 1, concurrency: 2 },
+  deep:    { breadth: 6, depth: 3, concurrency: 4 },
+};
+
+/** Resolve a ResearchPlanProfile into a concrete ResearchProfile.
+ *  @deprecated Use ProfileResolver.resolve() instead for user-merged presets.
+ *  Kept as a pure function for tests and backward-compat. */
+export function resolveProfile(
+  planProfile: ResearchPlanProfile,
+  presets?: Record<string, ResearchProfile>,
+): ResearchProfile {
+  const p = presets ?? DEFAULT_PRESETS;
+  if (planProfile.name !== "custom") {
+    return p[planProfile.name] ?? p.default;
+  }
+  const preset = p.custom;
+  return {
+    breadth: planProfile.breadth ?? preset?.breadth ?? 4,
+    depth: planProfile.depth ?? preset?.depth ?? 2,
+    concurrency: planProfile.concurrency ?? preset?.concurrency ?? 4,
+    maxSearchCalls: preset?.maxSearchCalls,
+    maxElapsedSeconds: preset?.maxElapsedSeconds,
+  };
+}
 
 /** Shape of deepResearch section in settings.json. */
 export interface DeepResearchSettings {

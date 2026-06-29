@@ -352,9 +352,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
         const reportsDir = join(deepResearchBase, "reports");
         mkdirSync(reportsDir, { recursive: true });
 
-        const runLogger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
-        runLogger.event("run_started", { topic: artifact.plan.topic, profile: artifact.plan.profile, engines: artifact.plan.engines });
-        const machine = new ResearchStateMachine({ searchFn: searchWeb, scraper, profilePresets: profileResolver.getPresets(), logger: runLogger, artifactsDir, searchCred });
+        const machine = new ResearchStateMachine({ searchFn: searchWeb, scraper, profilePresets: profileResolver.getPresets(), artifactsDir, searchCred });
 
         // Advance to first phase (searching → extracting)
         const result = await machine.next(snapshot, artifact.plan);
@@ -413,8 +411,8 @@ Use "compare" mode to see results from each engine separately without deduplicat
 
       // Re-create logger for subsequent calls (same file, appends)
       const scraper = new WebScraper();
-      const runLogger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
-      const machine = new ResearchStateMachine({ searchFn: searchWeb, scraper, profilePresets: profileResolver.getPresets(), logger: runLogger, artifactsDir, searchCred });
+      const machine = new ResearchStateMachine({ searchFn: searchWeb, scraper, profilePresets: profileResolver.getPresets(), artifactsDir, searchCred });
+      const saveLogger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
       const result = await machine.next(snapshot, plan, agentResponse);
 
       session.saveResearchState(result.snapshot, { plan, planArtifactPath, deepResearchBase });
@@ -430,7 +428,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
 
         // Guard: log if draftReport is suspiciously short despite passing doSaving validation
         if (reportText.length < 40) {
-          runLogger?.event("report_save_warning", {
+          saveLogger.event("report_save_warning", {
             reason: "draft_too_short",
             draftLength: reportText.length,
             snapshotPhase: result.snapshot.phase,
@@ -454,7 +452,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
         // Store path so save_report writes to the same file
         session.saveReportPath(reportPath, reportsDir, telemetry);
 
-        runLogger?.event("report_saved", {
+        saveLogger.event("report_saved", {
           path: reportPath,
           searchCalls: result.snapshot.searchCalls,
           scrapeCalls: result.snapshot.scrapeCalls,

@@ -2,6 +2,17 @@
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.
 
+## [0.14.3] — 2026-06-29
+
+### 🔧 Refactor
+
+- *(profile)* Move DEFAULT_PRESETS + resolveProfile to profile-resolver.ts (ADR-0010)
+- *(logger)* ResearchStateMachine creates logger internally, removes from ResearchContext (ADR-0011)
+
+### 🧪 Tests
+
+- +10 architecture tests for presets ownership + logger locality
+
 ## [0.14.2] — 2026-06-29
 
 ### 🔧 Refactor

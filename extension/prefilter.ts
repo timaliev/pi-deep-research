@@ -4,8 +4,8 @@ import type { searchWeb as SearchWebFn } from "./search/web-search.js";
 import type { WebSearchResult } from "./search/web-search.js";
 import type { SearchEngine } from "./search/web-search.js";
 import type { Scraper, ScrapedPage } from "./scraper.js";
-import { resolveProfile, DEFAULT_PRESETS } from "./state-machine.js";
 import type { ProfileResolver } from "./profile-resolver.js";
+import { DEFAULT_PRESETS, resolveProfile } from "./profile-resolver.js";
 import type { SearchProviderCredentials } from "./search-providers.js";
 
 export interface ResearchPlanProfile {
