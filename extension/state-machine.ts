@@ -281,9 +281,8 @@ export class ResearchStateMachine {
   }
 
   private doExtracting(snapshot: ResearchSnapshot, plan: ResearchPlan): ResearchStateResult {
-    // Soft limit: stop deepening, go straight to drafting
-    const shouldDeepen = !snapshot.softLimitTriggered && snapshot.currentDepth < snapshot.totalDepth;
-    if (shouldDeepen) {
+    const nextPhase = phaseRouter(snapshot);
+    if (nextPhase === "questioning") {
     const inject = createReportStyle(plan.reportStyle ?? "narrative").buildQuestioningPrompt(plan, snapshot.currentDepth, snapshot.totalDepth);
       this.logger?.event("phase_changed", { from: "extracting", to: "questioning", depth: snapshot.currentDepth });
       this.logger?.event("inject_sent", { type: "deepening", length: inject.length, depth: snapshot.currentDepth });
@@ -360,6 +359,12 @@ export class ResearchStateMachine {
     this.logger?.event("phase_changed", { from: "saving", to: "done", draftLength: text.length });
     return { phase: "done", snapshot: { ...snapshot, phase: "done", draftReport: text } };
   }
+}
+
+/** Pure function: decide next phase after extraction. Returns "questioning" or "drafting". */
+export function phaseRouter(snapshot: ResearchSnapshot): "questioning" | "drafting" {
+  const shouldDeepen = !snapshot.softLimitTriggered && snapshot.currentDepth < snapshot.totalDepth;
+  return shouldDeepen ? "questioning" : "drafting";
 }
 
 /** Extract plain text from agent response (handles string and content blocks array).
