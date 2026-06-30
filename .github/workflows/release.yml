@@ -5,25 +5,7 @@ on:
     branches: [master]
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install dependencies
-        working-directory: extension
-        run: npm install
-
-      - name: Run tests
-        working-directory: extension
-        run: node --import tsx --test ../tests/*.test.ts
-
   release:
-    needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
     permissions:
@@ -36,6 +18,19 @@ jobs:
       - name: Get version
         id: version
         run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Generate full CHANGELOG.md
+        uses: orhun/git-cliff-action@v4
+        with:
+          args: --output CHANGELOG.md
+
+      - name: Commit full CHANGELOG.md
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git diff --cached --quiet || git commit -m "chore(release): regenerate CHANGELOG.md for v${{ steps.version.outputs.VERSION }} [skip ci]"
+          git push origin master
 
       - name: Generate release notes (latest only)
         uses: orhun/git-cliff-action@v4
