@@ -52,6 +52,9 @@ _Avoid_: retriever, search backend, search provider
 Module (extension/search-providers.ts) resolving API keys for search engines. Loads from `deepResearch.searchProviders` in `~/.pi/agent/settings.json`, falls back to `process.env` (env wins). Used by `checkApiKeys` in prefilter and search functions.
 _Avoid_: API key resolver, credential manager
 
+**SettingsContext**:
+Unified singleton module (extension/settings-context.ts) that loads all settings once with a uniform priority cascade: env vars -> <cwd>/.pi/settings.json -> ~/.pi/agent/settings.json -> built-in defaults. Exposes flat fields: reportsDir, artifactsDir, defaultProfile, profiles (merged), credentials (SearchProviderCredentials). Replaces scattered loadDeepResearchSettings() + loadSearchProviders(). ProfileResolver built from it, not embedded.
+_Avoid_: config, configuration loader, settings manager
 **ResearchContext**:
 A bundled object passed to `ResearchStateMachine` constructor, replacing 6 positional parameters. Contains `searchFn`, `scraper`, and optional `profilePresets`, `logger`, `artifactsDir`, `searchCred`. Allows adding new dependencies without touching all call sites.
 _Avoid_: constructor options, DI container

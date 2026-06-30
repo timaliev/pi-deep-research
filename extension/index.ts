@@ -11,12 +11,12 @@ import type { SearchEngine } from "./search/web-search.js";
 import { WebScraper } from "./scraper.js";
 import { JsonlLogger } from "./logger.js";
 import { PrefilterManager } from "./prefilter.js";
-import { ResearchStateMachine, buildTelemetrySection, readExtensionVersion, DEFAULT_PRESETS } from "./state-machine.js";
+import { ResearchStateMachine, buildTelemetrySection, readExtensionVersion } from "./state-machine.js";
 import type { ResearchPlan, PrefilterArtifact, ResearchPlanProfile } from "./prefilter.js";
 import type { ResearchSnapshot } from "./state-machine.js";
 import { topicToSlug } from "./slug.js";
-import { ProfileResolver, loadDeepResearchSettings } from "./profile-resolver.js";
-import type { DeepResearchSettings } from "./profile-resolver.js";
+import { SettingsContext } from "./settings-context.js";
+import { ProfileResolver } from "./profile-resolver.js";
 import { SessionState } from "./session-state.js";
 
 const baseDir = dirname(fileURLToPath(import.meta.url));
@@ -24,13 +24,12 @@ const baseDir = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(baseDir, "..");
 
 export default function (pi: ExtensionAPI) {
-  // Load user settings and create unified profile resolver
-  const settings = loadDeepResearchSettings();
-  const profileResolver = new ProfileResolver(settings.profiles ?? {}, settings.defaultProfile);
-  const reportsDir = settings.reportsDir ?? join(baseDir, "..", "..", "deep-research", "reports");
-  const artifactsDir = settings.artifactsDir ?? join(baseDir, "..", "..", "deep-research", "artifacts");
-  const searchProviders = loadSearchProviders(join(homedir(), ".pi", "agent", "settings.json"));
-  const searchCred = new SearchProviderCredentials(searchProviders);
+  // Load unified settings
+  const settings = SettingsContext.init({ cwd: baseDir });
+  const profileResolver = new ProfileResolver({}, settings.defaultProfile, settings.profiles);
+  const reportsDir = settings.reportsDir;
+  const artifactsDir = settings.artifactsDir;
+  const searchCred = settings.credentials;
   const session = new SessionState({ appendEntry: pi.appendEntry.bind(pi) });
 
   // Contribute the skill file

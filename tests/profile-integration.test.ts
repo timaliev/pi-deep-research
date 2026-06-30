@@ -8,7 +8,7 @@ import { PrefilterManager } from "../extension/prefilter.js";
 import type { WebSearchResult } from "../extension/search/web-search.js";
 import type { Scraper, ScrapedPage } from "../extension/scraper.js";
 
-const TEST_DIR = join(import.meta.dirname ?? ".", "..", "test-settings-merge");
+const TEST_DIR = join(import.meta.dirname ?? ".", "..", "test-settings-merge-int");
 const TEST_HOME = join(TEST_DIR, "home", ".pi", "agent");
 const TEST_CWD = join(TEST_DIR, "project");
 

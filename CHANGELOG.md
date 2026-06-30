@@ -2,6 +2,23 @@
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.
 
+## [0.15.0] — 2026-06-30
+
+### 🏗️ Architecture
+
+- *(settings)* SettingsContext singleton — unified cascade env → local → global → built-in (ADR-0012)
+- Wire index.ts to use SettingsContext — removes scattered loadDeepResearchSettings + loadSearchProviders
+
+### 🔧 Refactor
+
+- *(settings)* profiles, API keys, dirs all follow same priority chain
+- *(settings)* search providers now merge local → global (was global-only)
+
+### 🧪 Tests
+
+- +11 SettingsContext cascade tests
+- Fix profile-integration TEST_DIR collision
+
 ## [0.14.3] — 2026-06-29
 
 ### 🔧 Refactor
