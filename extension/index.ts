@@ -136,9 +136,9 @@ Use "compare" mode to see results from each engine separately without deduplicat
       const reportPathEntry = [...entries].reverse().find((e: any) => e.customType === "deep-research:report-path");
       if (reportPathEntry?.data?.path && typeof reportPathEntry.data.path === "string") {
         path = reportPathEntry.data.path;
-        // Append telemetry from auto-save if available
+        // Append telemetry from auto-save if available and not already present
         const telemetry = (reportPathEntry.data as any).telemetry as string | undefined;
-        if (telemetry) {
+        if (telemetry && !params.markdown.includes("## Research Telemetry")) {
           const reportWithTelemetry = `${params.markdown}\n\n${telemetry}\n`;
           const { writeFileSync } = await import("node:fs");
           writeFileSync(path, reportWithTelemetry, "utf-8");

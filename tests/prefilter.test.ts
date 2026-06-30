@@ -178,5 +178,18 @@ describe("PrefilterManager", () => {
       assert.equal(artifact.preliminarySearch.scrapedUrls.length, 0,
         "fresh instance has no scraped URLs");
     });
+
+    it("rejects duplicate finalize (idempotency guard)", async () => {
+      const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+      await manager.start("test");
+      await manager.withParams("test", ["duckduckgo"], { name: "default" });
+
+      const r1 = await manager.finalize("test", VALID_PLAN);
+      assert.equal(r1.phase, "plan_ready", "first finalize must succeed");
+
+      const r2 = await manager.finalize("test", VALID_PLAN);
+      assert.equal(r2.phase, "error", "second finalize must return error");
+      assert.ok(r2.error!.includes("already finalized"), "error must mention already finalized");
+    });
   });
 });
