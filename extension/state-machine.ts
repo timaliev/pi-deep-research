@@ -143,7 +143,7 @@ export class ResearchStateMachine {
       case "extracting": return this.doExtracting(snapshot, plan);
       case "questioning": return this.doQuestioning(snapshot, plan, agentResponse);
       case "drafting":   return this.doDrafting(snapshot, plan, agentResponse);
-      case "saving":     return this.doSaving(snapshot);
+      case "saving":     return this.doSaving(snapshot, agentResponse);
       case "done":       return { phase: "done", snapshot };
     }
   }
@@ -346,13 +346,19 @@ export class ResearchStateMachine {
     };
   }
 
-  private doSaving(snapshot: ResearchSnapshot): ResearchStateResult {
-    if (!snapshot.draftReport || snapshot.draftReport.length < 40) {
-      this.logger?.event("saving_blocked", { reason: "empty_draft", draftLength: snapshot.draftReport?.length ?? 0 });
+  private doSaving(snapshot: ResearchSnapshot, agentResponse?: unknown): ResearchStateResult {
+    let text = snapshot.draftReport ?? "";
+    // Fallback: if draft was stripped by session persistence, try re-extracting
+    // from the agent response passed directly (bypasses fragile assistant-message lookup)
+    if (text.length < 40 && agentResponse !== undefined) {
+      text = extractTextContent(agentResponse);
+    }
+    if (text.length < 40) {
+      this.logger?.event("saving_blocked", { reason: "empty_draft", draftLength: text.length });
       return { phase: "saving", snapshot };
     }
-    this.logger?.event("phase_changed", { from: "saving", to: "done", draftLength: snapshot.draftReport.length });
-    return { phase: "done", snapshot: { ...snapshot, phase: "done" } };
+    this.logger?.event("phase_changed", { from: "saving", to: "done", draftLength: text.length });
+    return { phase: "done", snapshot: { ...snapshot, phase: "done", draftReport: text } };
   }
 }
 

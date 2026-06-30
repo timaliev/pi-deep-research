@@ -79,9 +79,11 @@ export class SettingsContext implements SettingsContextData {
     );
 
     // ─── Search providers: local → global (env handled inside cred) ──
-    const globalProviders = (globalDr.searchProviders ?? {}) as Record<string, Record<string, string>>;
-    const localProviders = (localDr.searchProviders ?? {}) as Record<string, Record<string, string>>;
-    const mergedProviders = { ...globalProviders, ...localProviders };
+    const globalProvidersRaw = globalDr.searchProviders;
+    const localProvidersRaw = localDr.searchProviders;
+    // Merge raw, then normalize — handles array format and field casing
+    const mergedProvidersRaw = { ...(globalProvidersRaw as Record<string, unknown> ?? {}), ...(localProvidersRaw as Record<string, unknown> ?? {}) };
+    const mergedProviders = normalizeSearchProviders(mergedProvidersRaw);
     this.credentials = new SearchProviderCredentials(mergedProviders);
   }
 
@@ -104,6 +106,57 @@ export class SettingsContext implements SettingsContextData {
 }
 
 // ─── Helpers ────────────────────────────────────────────────────
+
+/** Normalize searchProviders from settings.json into the canonical
+ *  Record&lt;engine, Record&lt;key, value&gt;&gt; shape expected by SearchProviderCredentials.
+ *
+ *  Handles two common format mismatches silently:
+ *  1. Array format  [{name: "brave", apikey: "..."}]  →  {brave: {apiKey: "..."}}
+ *  2. Case mismatch  apikey → apiKey, oauth_token → oauthToken
+ *
+ *  Already-correct input passes through unchanged. */
+function normalizeSearchProviders(raw: unknown): Record<string, Record<string, string>> {
+  if (!raw || typeof raw !== "object") return {};
+
+  // Field name normalisation map (lowercase → canonical camelCase)
+  const KEY_MAP: Record<string, string> = {
+    apikey: "apiKey",
+    oauth_token: "oauthToken",
+    oauthtoken: "oauthToken",
+    folder_id: "folderId",
+    folderid: "folderId",
+  };
+
+  const normalizeFields = (fields: Record<string, unknown>): Record<string, string> => {
+    const out: Record<string, string> = {};
+    for (const [key, value] of Object.entries(fields)) {
+      if (typeof value !== "string") continue;
+      const canonical = KEY_MAP[key.toLowerCase()] ?? key;
+      out[canonical] = value;
+    }
+    return out;
+  };
+
+  // Array format: [{name: "brave", apikey: "..."}, ...]
+  if (Array.isArray(raw)) {
+    const result: Record<string, Record<string, string>> = {};
+    for (const item of raw as Array<Record<string, unknown>>) {
+      const name = item?.name;
+      if (typeof name !== "string" || name.length === 0) continue;
+      const { name: _, ...fields } = item;
+      result[name] = normalizeFields(fields);
+    }
+    return result;
+  }
+
+  // Object format: {brave: {apiKey: "..."}, tavily: {apiKey: "..."}}
+  const result: Record<string, Record<string, string>> = {};
+  for (const [engine, fields] of Object.entries(raw as Record<string, unknown>)) {
+    if (!fields || typeof fields !== "object") continue;
+    result[engine] = normalizeFields(fields as Record<string, unknown>);
+  }
+  return result;
+}
 
 function readJsonFile(path: string): Record<string, unknown> | null {
   try {

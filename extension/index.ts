@@ -18,6 +18,7 @@ import { topicToSlug } from "./slug.js";
 import { SettingsContext } from "./settings-context.js";
 import { ProfileResolver } from "./profile-resolver.js";
 import { SessionState } from "./session-state.js";
+import { generateRunId } from "./ids.js";
 
 const baseDir = dirname(fileURLToPath(import.meta.url));
 
@@ -181,8 +182,8 @@ Use "compare" mode to see results from each engine separately without deduplicat
       mkdirSync(artifactsDir, { recursive: true });
 
       const scraper = new WebScraper();
-      const prefilterRunId = new Date().toISOString().replace(/[:.]/g, "-").substring(0, 19);
       const logsDir = join(artifactsDir, "..", "logs");
+      const prefilterRunId = generateRunId();
       const logger = new JsonlLogger(prefilterRunId, join(logsDir, `${prefilterRunId}-prefilter.log`));
 
       const manager = new PrefilterManager(searchWeb, scraper, artifactsDir, logger, profileResolver, searchCred);
@@ -390,8 +391,8 @@ Use "compare" mode to see results from each engine separately without deduplicat
       const plan = stateData.plan as ResearchPlan;
       const planArtifactPath = stateData.planArtifactPath as string;
 
-      // Restore draftReport from agent response if draftReady flag is set
-      snapshot.draftReport = session.restoreDraft(stateData, agentResponse);
+      // Restore draftReport: try dedicated draft entry first, fall back to agent response
+      snapshot.draftReport = session.restoreDraft(stateData, agentResponse, entries);
       let deepResearchBase = (stateData.deepResearchBase as string) || planArtifactPath ? join(dirname(planArtifactPath), "..") : join(ctx.cwd ?? baseDir, "deep-research");
       // Ensure it's an absolute path
       if (!deepResearchBase.startsWith("/")) deepResearchBase = join(ctx.cwd ?? baseDir, deepResearchBase);
@@ -414,6 +415,11 @@ Use "compare" mode to see results from each engine separately without deduplicat
       const result = await machine.next(snapshot, plan, agentResponse);
 
       session.saveResearchState(result.snapshot, { plan, planArtifactPath, deepResearchBase });
+
+      // Persist draft text separately so doSaving can recover it reliably
+      if (result.phase === "saving" && result.snapshot.draftReport && result.snapshot.draftReport.length >= 40) {
+        session.saveDraft(result.snapshot.runId, result.snapshot.draftReport);
+      }
 
       // Inject prompt if any
       if (result.inject) {
