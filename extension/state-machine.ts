@@ -376,7 +376,7 @@ export function extractTextContent(agentResponse?: unknown): string {
 }
 
 /** Build a telemetry summary section to append to the final report. */
-export function buildTelemetrySection(snapshot: ResearchSnapshot, extensionVersion?: string, artifactLinks?: string[], profileName?: string): string {
+export function buildTelemetrySection(snapshot: ResearchSnapshot, extensionVersion?: string, artifactLinks?: string[], profileName?: string, reportStyle?: string): string {
   const durationSec = Math.round((Date.now() - snapshot.startedAt) / 1000);
   const durationStr =
     durationSec < 60
@@ -399,6 +399,9 @@ export function buildTelemetrySection(snapshot: ResearchSnapshot, extensionVersi
     rows.push(`| Concurrency | ${prof.concurrency} |`);
     if (prof.maxSearchCalls) rows.push(`| Max search calls | ${prof.maxSearchCalls} |`);
     if (prof.maxElapsedSeconds) rows.push(`| Max elapsed (s) | ${prof.maxElapsedSeconds} |`);
+  }
+  if (reportStyle) {
+    rows.push(`| Report style | ${reportStyle} |`);
   }
   rows.push(
     `| Search calls | ${snapshot.searchCalls} |`,

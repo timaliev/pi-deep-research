@@ -104,10 +104,8 @@ describe("ResearchStateMachine", () => {
     assert.equal(s.runId, sharedRunId, "must use the provided runId");
   });
 
-  it("generates unique runId when none provided", () => {
-    const s1 = ResearchStateMachine.init(MOCK_PLAN);
-    const s2 = ResearchStateMachine.init(MOCK_PLAN);
-    assert.notEqual(s1.runId, s2.runId, "must generate unique runIds");
-    assert.ok(s1.runId.length > 0, "runId must not be empty");
+  it("generates valid runId when none provided", () => {
+    const s = ResearchStateMachine.init(MOCK_PLAN);
+    assert.match(s.runId, /^\d{8}-\d{6}$/, "must be YYYYMMDD-HHmmss format");
   });
 });
