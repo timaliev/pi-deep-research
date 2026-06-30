@@ -90,6 +90,8 @@ export interface ResearchContext {
   profilePresets?: Record<string, ResearchProfile>;
   artifactsDir?: string;
   searchCred?: SearchProviderCredentials;
+  /** Optional logger — when provided, the machine uses it instead of creating one lazily. */
+  logger?: Logger;
 }
 
 export class ResearchStateMachine {
@@ -106,6 +108,7 @@ export class ResearchStateMachine {
     this.profilePresets = ctx.profilePresets;
     this.artifactsDir = ctx.artifactsDir ?? defaultArtifactsDir();
     this.searchCred = ctx.searchCred;
+    this.logger = ctx.logger;
   }
 
   static init(plan: ResearchPlan, presets?: Record<string, ResearchProfile>, runId?: string): ResearchSnapshot {
@@ -128,7 +131,7 @@ export class ResearchStateMachine {
   }
 
   async next(snapshot: ResearchSnapshot, plan: ResearchPlan, agentResponse?: string): Promise<ResearchStateResult> {
-    // Create logger lazily on first call
+    // Create logger lazily only if not injected via ResearchContext
     if (!this.logger) {
       const logsDir = join(this.artifactsDir!, "..", "logs");
       mkdirSync(logsDir, { recursive: true });
