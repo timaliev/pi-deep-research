@@ -18,6 +18,7 @@ import { topicToSlug } from "./slug.js";
 import { SettingsContext } from "./settings-context.js";
 import { ProfileResolver } from "./profile-resolver.js";
 import { SessionState } from "./session-state.js";
+import { assembleReport } from "./report-assembly.js";
 
 const baseDir = dirname(fileURLToPath(import.meta.url));
 
@@ -432,22 +433,17 @@ Use "compare" mode to see results from each engine separately without deduplicat
           });
         }
 
-        const date = new Date().toISOString().slice(0, 10);
-        const slug = topicToSlug(plan.topic);
-        const filename = `${date}-${slug}.md`;
-        const reportPath = join(reportsDir, filename);
-
-        const { writeFileSync } = await import("node:fs");
-        const extensionVersion = readExtensionVersion();
-        const telemetry = buildTelemetrySection(result.snapshot, extensionVersion, [
+        const reportPath = assembleReport({
+          snapshot: result.snapshot,
+          topic: plan.topic,
+          reportsDir: settings.reportsDir,
           planArtifactPath,
-          join(logsDir, `${result.snapshot.runId}.log`),
-        ]);
-        const fullReport = `${reportText}\n\n${telemetry}\n`;
-        writeFileSync(reportPath, fullReport, "utf-8");
+          logsDir,
+          profileName: typeof plan.profile === "object" && "name" in plan.profile ? (plan.profile as any).name : undefined,
+        });
 
         // Store path so save_report writes to the same file
-        session.saveReportPath(reportPath, reportsDir, telemetry);
+        session.saveReportPath(reportPath, settings.reportsDir, "");
 
         saveLogger.event("report_saved", {
           path: reportPath,
