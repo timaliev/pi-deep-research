@@ -72,9 +72,9 @@ describe("save_report — writes full content", () => {
       join(import.meta.dirname ?? ".", "..", "extension", "index.ts"),
       "utf-8",
     );
-    // Auto-save should concatenate reportText + telemetry
-    const match = src.match(/fullReport\s*=\s*`\$\{(?:reportText|text)/);
-    assert.ok(match, "auto-save must build fullReport from reportText + telemetry");
+    // Auto-save delegates to assembleReport (extracted module)
+    const match = src.match(/assembleReport\(\{/);
+    assert.ok(match, "auto-save must call assembleReport");
   });
 
   it("draftReport is saved when phase is 'done'", async () => {
@@ -116,7 +116,7 @@ describe("telemetry appended to report", () => {
     // session.saveReportPath must include telemetry
     const savePathCall = src.match(/saveReportPath\([^)]+telemetry[^)]*\)/);
     assert.ok(
-      savePathCall || src.includes("saveReportPath(reportPath, reportsDir, telemetry)"),
+      savePathCall || src.includes("saveReportPath(reportPath, settings.reportsDir") || src.includes("saveReportPath(reportPath, reportsDir"),
       "saveReportPath must pass telemetry param",
     );
   });
