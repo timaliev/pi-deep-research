@@ -2,7 +2,16 @@
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.
 
-## [0.16.0] — 2026-06-30
+## [0.16.2] — 2026-06-30
+
+### 🐛 Bug Fixes
+
+- *(session)* draftReport recovery now uses dedicated session entry — eliminates fragile assistant-message extraction
+- *(session)* doSaving accepts agentResponse fallback when draft was stripped by persistence
+- *(settings)* normalizeSearchProviders — array format and field casing now validated at SettingsContext seam
+- *(index)* prefilter log uses generateRunId() for consistent naming with research logs
+
+## [0.16.1] — 2026-06-30
 
 ### 🚀 Features
 
@@ -47,6 +56,17 @@ All notable changes to the Pi Deep Research Extension will be documented in this
 ### ⚙️ CI/CD
 
 - *(workflow)* Add GitHub Actions release workflow (test gate before release)
+
+## [0.16.0] — 2026-06-30
+
+### 🔧 Refactor
+
+- *(session)* Wire SessionState into index.ts + extract engine adapters
+- *(settings)* SettingsContext singleton — unified cascade env → local → global → built-in (ADR-0012)
+
+### 🐛 Fixes
+
+- *(session)* remove orphan closing braces from draft restore replacement
 
 ## [0.15.0] — 2026-06-30
 
