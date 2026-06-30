@@ -124,7 +124,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
       markdown: Type.String({ description: "Report content in markdown" }),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-      const reportsDir = join(ctx.cwd ?? baseDir, "deep-research", "reports");
+      const reportsDir = settings.reportsDir;
       mkdirSync(reportsDir, { recursive: true });
 
       // Prefer path pre-computed by run_research auto-save (dedup with plan.topic slug)
@@ -147,7 +147,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
         }
       } else {
         const reportsDir = (reportPathEntry?.data as any)?.reportsDir as string | undefined
-          ?? join(ctx.cwd ?? baseDir, "deep-research", "reports");
+          ?? settings.reportsDir;
         mkdirSync(reportsDir, { recursive: true });
         const slug = topicToSlug(params.topic);
         const filename = `${date}-${slug}.md`;
@@ -176,7 +176,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
       plan_json: Type.Optional(Type.String({ description: "JSON research plan (third call)" })),
     }),
     async execute(_toolCallId, params, _signal, onUpdate, ctx) {
-      const artifactsDir = join(ctx.cwd ?? baseDir, "deep-research", "artifacts");
+      const artifactsDir = settings.artifactsDir;
       mkdirSync(artifactsDir, { recursive: true });
 
       const scraper = new WebScraper();
