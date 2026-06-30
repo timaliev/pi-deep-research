@@ -40,7 +40,7 @@ Environment variables take precedence over settings.json. Example settings.json:
    ```
    plan_research({ topic: "<user's research topic>" })
    ```
-2. The tool sends a prompt asking you to propose search engines, a research profile, and a report style. Reply with JSON:
+2. The tool responds with a prompt that includes **which API keys are currently available** (from env vars or settings.json). DuckDuckGo is always available. Propose only engines that have keys configured. Reply with JSON:
    ```json
    {"engines": ["duckduckgo"], "profile": {"name": "default"}, "reportStyle": "narrative"}
    ```
@@ -52,7 +52,7 @@ Environment variables take precedence over settings.json. Example settings.json:
    ```
    plan_research({ topic: "<topic>", params_json: '<your params JSON>' })
    ```
-4. **Guardrail:** If the result warns about missing API keys, tell the user to set the key (env var or settings.json), then retry step 3.
+4. **Guardrail:** If the result warns about missing API keys, tell the user to configure the key (env var or settings.json), then retry step 3.
 
 ### Phase 2: Plan Research
 
