@@ -78,6 +78,7 @@ export class PrefilterManager {
   private readonly sharedRunId?: string;
   private lastSearchResultCount = 0;
   private lastScrapedUrls: string[] = [];
+  private finalized = false;
 
   constructor(
     searchFn: typeof SearchWebFn,
@@ -143,6 +144,9 @@ export class PrefilterManager {
     topic: string,
     planJson: string
   ): Promise<PrefilterResult> {
+    if (this.finalized) {
+      return { phase: "error", runId: this.runId(), error: "Prefilter already finalized — plan_research called twice with plan_json" };
+    }
     const runId = this.runId();
 
     // Parse JSON
@@ -187,6 +191,7 @@ export class PrefilterManager {
     const fileName = `${runId}-prefilter.json`;
     const artifactPath = path.join(this.artifactsDir, fileName);
     await fs.writeFile(artifactPath, JSON.stringify(artifact, null, 2), "utf-8");
+    this.finalized = true;
 
     this.logger?.event("plan_saved", { artifactPath, questions: plan.researchQuestions.length });
 
