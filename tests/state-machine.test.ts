@@ -97,4 +97,17 @@ describe("ResearchStateMachine", () => {
     const r = await machine.next(s, depth1Plan);
     assert.equal(r.phase, "drafting", "skip questioning at max depth");
   });
+
+  it("uses provided runId instead of generating a new one", () => {
+    const sharedRunId = "shared-run-123";
+    const s = ResearchStateMachine.init(MOCK_PLAN, undefined, sharedRunId);
+    assert.equal(s.runId, sharedRunId, "must use the provided runId");
+  });
+
+  it("generates unique runId when none provided", () => {
+    const s1 = ResearchStateMachine.init(MOCK_PLAN);
+    const s2 = ResearchStateMachine.init(MOCK_PLAN);
+    assert.notEqual(s1.runId, s2.runId, "must generate unique runIds");
+    assert.ok(s1.runId.length > 0, "runId must not be empty");
+  });
 });

@@ -75,6 +75,7 @@ export class PrefilterManager {
   private readonly logger?: Logger;
   private readonly profileResolver?: ProfileResolver;
   private readonly searchCred?: SearchProviderCredentials;
+  private readonly sharedRunId?: string;
 
   constructor(
     searchFn: typeof SearchWebFn,
@@ -83,6 +84,7 @@ export class PrefilterManager {
     logger?: Logger,
     profileResolver?: ProfileResolver,
     searchCred?: SearchProviderCredentials,
+    sharedRunId?: string,
   ) {
     this.searchFn = searchFn;
     this.scraper = scraper;
@@ -90,11 +92,14 @@ export class PrefilterManager {
     this.logger = logger;
     this.profileResolver = profileResolver;
     this.searchCred = searchCred;
+    this.sharedRunId = sharedRunId;
   }
+
+  private runId(): string { return this.sharedRunId ?? generateRunId(); }
 
   /** Step 1: Ask agent to propose engines + profile. */
   async start(topic: string): Promise<PrefilterResult> {
-    const runId = generateRunId();
+    const runId = this.runId();
     this.logger?.event("prefilter_started", { topic });
     const inject = this.buildParamsPrompt(topic);
     return { phase: "awaiting_params", runId, inject };
@@ -102,7 +107,7 @@ export class PrefilterManager {
 
   /** Step 2: Agent chose engines + profile. Prelim search, ask for full plan. */
   async withParams(topic: string, engines: SearchEngine[], profile: ResearchPlanProfile): Promise<PrefilterResult> {
-    const runId = generateRunId();
+    const runId = this.runId();
     this.logger?.event("prefilter_params_set", { engines, profile });
 
     const missingKeys = this.checkApiKeys(engines);
@@ -133,7 +138,7 @@ export class PrefilterManager {
     topic: string,
     planJson: string
   ): Promise<PrefilterResult> {
-    const runId = generateRunId();
+    const runId = this.runId();
 
     // Parse JSON
     let plan: ResearchPlan;

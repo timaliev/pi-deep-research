@@ -1,5 +1,7 @@
 /** Shared ID generators for deep-research artifacts. */
 
+let _counter = 0;
+
 export function generateRunId(): string {
   const now = new Date();
   const y = now.getFullYear();
@@ -8,5 +10,9 @@ export function generateRunId(): string {
   const h = String(now.getHours()).padStart(2, "0");
   const mi = String(now.getMinutes()).padStart(2, "0");
   const s = String(now.getSeconds()).padStart(2, "0");
-  return `${y}${m}${d}-${h}${mi}${s}`;
+  const ms = String(now.getMilliseconds()).padStart(3, "0");
+  // Monotonic counter prevents collisions within same millisecond
+  _counter = (_counter + 1) % 1000;
+  const seq = String(_counter).padStart(3, "0");
+  return `${y}${m}${d}-${h}${mi}${s}${ms}${seq}`;
 }
