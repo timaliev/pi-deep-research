@@ -167,6 +167,11 @@ Use "compare" mode to see results from each engine separately without deduplicat
   });
 
   // === TOOL: plan_research ===
+  // Persist PrefilterManager across execute() calls so withParams results
+  // survive into finalize (each execute() invocation creates a fresh closure)
+  let _prefilterManager: PrefilterManager | null = null;
+  let _prefilterRunId = "";
+
   pi.registerTool({
     name: "plan_research",
     label: "Plan Research",
@@ -183,10 +188,14 @@ Use "compare" mode to see results from each engine separately without deduplicat
 
       const scraper = new WebScraper();
       const logsDir = join(artifactsDir, "..", "logs");
-      const prefilterRunId = generateRunId();
-      const logger = new JsonlLogger(prefilterRunId, join(logsDir, `${prefilterRunId}-prefilter.log`));
 
-      const manager = new PrefilterManager(searchWeb, scraper, artifactsDir, logger, profileResolver, searchCred, prefilterRunId);
+      // Reuse manager across calls so withParams results survive into finalize
+      if (!_prefilterManager) {
+        _prefilterRunId = generateRunId();
+        const logger = new JsonlLogger(_prefilterRunId, join(logsDir, `${_prefilterRunId}-prefilter.log`));
+        _prefilterManager = new PrefilterManager(searchWeb, scraper, artifactsDir, logger, profileResolver, searchCred, _prefilterRunId);
+      }
+      const manager = _prefilterManager;
 
       // Step 1: topic only → negotiate params
       if (!params.params_json && !params.plan_json) {

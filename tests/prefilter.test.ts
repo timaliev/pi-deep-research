@@ -153,7 +153,7 @@ describe("PrefilterManager", () => {
       assert.match(r1.runId, /^\d{8}-\d{6}$/, "must generate valid runId");
     });
 
-    it("stores actual search result count and scraped URLs in artifact", async () => {
+    it("stores actual search result count and scraped URLs in artifact (same instance)", async () => {
       const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
       await manager.start("state machines");
       const paramsResult = await manager.withParams("state machines", ["duckduckgo"], { name: "default" });
@@ -166,6 +166,17 @@ describe("PrefilterManager", () => {
         "scrapedUrls must contain scraped URLs");
       assert.ok(artifact.preliminarySearch.scrapedUrls.includes("https://xstate.js.org/docs/"),
         "scrapedUrls must include xstate URL");
+    });
+
+    it("fresh instance starts with empty results (caller must reuse same instance)", async () => {
+      const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+      // Skip withParams — results are empty without it
+      const result = await manager.finalize("state machines", VALID_PLAN);
+      const artifact = JSON.parse(readFileSync(result.planArtifactPath!, "utf-8"));
+      assert.equal(artifact.preliminarySearch.resultsCount, 0,
+        "fresh instance has no prior search results");
+      assert.equal(artifact.preliminarySearch.scrapedUrls.length, 0,
+        "fresh instance has no scraped URLs");
     });
   });
 });
