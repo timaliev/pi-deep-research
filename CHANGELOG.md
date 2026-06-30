@@ -1,3 +1,14 @@
+## [0.16.9] - 2026-06-30
+
+### 🐛 Bug Fixes
+
+- *(ci)* Update CHANGELOG.md on release, use latest-only for release body
+- *(ci)* Remove CHANGELOG push from workflow, update locally instead
+- Report filename uses runId prefix instead of date
+
+### ⚙️ Miscellaneous Tasks
+
+- *(release)* Bump to 0.16.9
 ## [0.16.8] - 2026-06-30
 
 ### 🐛 Bug Fixes
