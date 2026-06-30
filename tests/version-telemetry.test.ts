@@ -32,7 +32,7 @@ describe("buildTelemetrySection with version", () => {
     const snap = makeSnapshot();
     const section = buildTelemetrySection(snap, "0.13.1");
 
-    assert.ok(section.includes("| Version |"), "must have Version row");
+    assert.ok(section.includes("| Pi Extension version |"), "must have Pi Extension version row");
     assert.ok(section.includes("`0.13.1`"), "must include version number");
   });
 
@@ -40,7 +40,7 @@ describe("buildTelemetrySection with version", () => {
     const snap = makeSnapshot();
     const section = buildTelemetrySection(snap);
 
-    assert.ok(!section.includes("| Version |"), "must NOT have Version row when undefined");
+    assert.ok(!section.includes("| Pi Extension version |"), "must NOT have version row when undefined");
     assert.ok(section.includes("| Run ID |"), "must still have other rows");
   });
 
@@ -50,11 +50,11 @@ describe("buildTelemetrySection with version", () => {
 
     const lines = section.split("\n");
     const runIdIdx = lines.findIndex((l) => l.includes("Run ID"));
-    const versionIdx = lines.findIndex((l) => l.includes("Version"));
+    const versionIdx = lines.findIndex((l) => l.includes("Pi Extension version"));
 
     assert.ok(runIdIdx >= 0, "Run ID row must exist");
-    assert.ok(versionIdx >= 0, "Version row must exist");
-    assert.equal(versionIdx, runIdIdx + 1, "Version must be right after Run ID");
+    assert.ok(versionIdx >= 0, "Pi Extension version row must exist");
+    assert.equal(versionIdx, runIdIdx + 1, "Pi Extension version must be right after Run ID");
   });
 });
 

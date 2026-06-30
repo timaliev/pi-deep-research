@@ -35,4 +35,43 @@ describe("Telemetry", () => {
     assert.ok(section.includes("| --- |"));
     assert.ok(!section.includes("undefined"));
   });
+
+  it("includes profile name and parameters when profileName is passed", () => {
+    const snapshot = ResearchStateMachine.init(MOCK_PLAN);
+    snapshot.profile = { breadth: 6, depth: 3, concurrency: 4 };
+    const section = buildTelemetrySection(snapshot, undefined, undefined, "deep");
+    assert.ok(section.includes("| Profile | deep |"), "must show profile name");
+    assert.ok(section.includes("| Breadth | 6 |"), "must show breadth");
+    assert.ok(section.includes("| Depth | 3 |"), "must show depth");
+    assert.ok(section.includes("| Concurrency | 4 |"), "must show concurrency");
+  });
+
+  it("shows optional max limits when set", () => {
+    const snapshot = ResearchStateMachine.init(MOCK_PLAN);
+    snapshot.profile = { breadth: 4, depth: 2, concurrency: 4, maxSearchCalls: 100, maxElapsedSeconds: 300 };
+    const section = buildTelemetrySection(snapshot, undefined, undefined, "exhaustive");
+    assert.ok(section.includes("| Max search calls | 100 |"), "must show max search calls");
+    assert.ok(section.includes("| Max elapsed (s) | 300 |"), "must show max elapsed seconds");
+  });
+
+  it("omits max limits when not set", () => {
+    const snapshot = ResearchStateMachine.init(MOCK_PLAN);
+    snapshot.profile = { breadth: 4, depth: 2, concurrency: 4 };
+    const section = buildTelemetrySection(snapshot, undefined, undefined, "default");
+    assert.ok(!section.includes("Max search calls"), "must not show max search calls when unset");
+    assert.ok(!section.includes("Max elapsed"), "must not show max elapsed when unset");
+  });
+
+  it("uses Pi Extension version label instead of Version", () => {
+    const snapshot = ResearchStateMachine.init(MOCK_PLAN);
+    const section = buildTelemetrySection(snapshot, "0.16.2");
+    assert.ok(section.includes("| Pi Extension version |"), "must use Pi Extension version label");
+    assert.ok(!section.includes("| Version |"), "must not use bare Version label");
+  });
+
+  it("omits profile section when no profileName passed (backward compat)", () => {
+    const snapshot = ResearchStateMachine.init(MOCK_PLAN);
+    const section = buildTelemetrySection(snapshot);
+    assert.ok(!section.includes("| Profile |"), "must not show Profile when profileName is undefined");
+  });
 });

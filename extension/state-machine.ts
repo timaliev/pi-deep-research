@@ -376,20 +376,29 @@ export function extractTextContent(agentResponse?: unknown): string {
 }
 
 /** Build a telemetry summary section to append to the final report. */
-export function buildTelemetrySection(snapshot: ResearchSnapshot, extensionVersion?: string, artifactLinks?: string[]): string {
+export function buildTelemetrySection(snapshot: ResearchSnapshot, extensionVersion?: string, artifactLinks?: string[], profileName?: string): string {
   const durationSec = Math.round((Date.now() - snapshot.startedAt) / 1000);
   const durationStr =
     durationSec < 60
       ? `${durationSec}s`
       : `${Math.floor(durationSec / 60)}m ${durationSec % 60}s`;
 
+  const prof = snapshot.profile;
   const rows = [
     `| Metric | Value |`,
     `| --- | --- |`,
     `| Run ID | \`${snapshot.runId}\` |`,
   ];
   if (extensionVersion) {
-    rows.push(`| Version | \`${extensionVersion}\` |`);
+    rows.push(`| Pi Extension version | \`${extensionVersion}\` |`);
+  }
+  if (profileName && prof) {
+    rows.push(`| Profile | ${profileName} |`);
+    rows.push(`| Breadth | ${prof.breadth} |`);
+    rows.push(`| Depth | ${prof.depth} |`);
+    rows.push(`| Concurrency | ${prof.concurrency} |`);
+    if (prof.maxSearchCalls) rows.push(`| Max search calls | ${prof.maxSearchCalls} |`);
+    if (prof.maxElapsedSeconds) rows.push(`| Max elapsed (s) | ${prof.maxElapsedSeconds} |`);
   }
   rows.push(
     `| Search calls | ${snapshot.searchCalls} |`,
