@@ -261,7 +261,24 @@ export class PrefilterManager {
           .map(([name, p]) => `  ${name}: breadth=${p.breadth}, depth=${p.depth}, concurrency=${p.concurrency}`)
           .join("\n");
     const defaultName = this.profileResolver?.defaultProfileName ?? "default";
-    return `## Research Parameters\n\nTopic: ${topic}\n\nChoose search engines, profile, and report style. Reply with JSON:\n\`\`\`json\n{"engines":["duckduckgo"],"profile":{"name":"${defaultName}"},"reportStyle":"narrative"}\n\`\`\`\n\nEngines: duckduckgo (free), brave (needs BRAVE_API_KEY), tavily (needs TAVILY_API_KEY), yandex (needs YANDEX_OAUTH_TOKEN+YANDEX_FOLDER_ID), searxng (public).\n\nAvailable profiles (default: **${defaultName}**):\n${presets}\n  custom: specify breadth, depth, concurrency\n\nReport styles:\n  narrative — fixed 5-section template (Introduction/Findings/Analysis/Recommendations/Sources)\n  subtopics — LLM discovers 5–10 thematic sections from findings\n\nYou may change the profile or report style later during plan creation.`;
+
+    // Check which engines have API keys configured
+    const engineStatus = this.buildEngineStatus();
+
+    return `## Research Parameters\n\nTopic: ${topic}\n\nChoose search engines, profile, and report style. Reply with JSON:\n\`\`\`json\n{"engines":["duckduckgo"],"profile":{"name":"${defaultName}"},"reportStyle":"narrative"}\n\`\`\`\n\nEngine availability:\n${engineStatus}\n\nAvailable profiles (default: **${defaultName}**):\n${presets}\n  custom: specify breadth, depth, concurrency\n\nReport styles:\n  narrative — fixed 5-section template (Introduction/Findings/Analysis/Recommendations/Sources)\n  subtopics — LLM discovers 5–10 thematic sections from findings\n\nYou may change the profile or report style later during plan creation.`;
+  }
+
+  private buildEngineStatus(): string {
+    const engines: Array<{ name: string; key: string; available: boolean }> = [
+      { name: "duckduckgo", key: "none", available: true },
+      { name: "brave", key: "BRAVE_API_KEY", available: this.searchCred?.get("brave", "apiKey") != null },
+      { name: "tavily", key: "TAVILY_API_KEY", available: this.searchCred?.get("tavily", "apiKey") != null },
+      { name: "yandex", key: "YANDEX_OAUTH_TOKEN", available: this.searchCred?.get("yandex", "oauthToken") != null },
+      { name: "searxng", key: "none", available: true },
+    ];
+    return engines
+      .map((e) => `  ${e.available ? "✅" : "❌"} ${e.name}${e.key !== "none" ? ` (needs ${e.key})` : ""}`)
+      .join("\n");
   }
 
   private buildApiKeyWarning(missing: string[]): string {
