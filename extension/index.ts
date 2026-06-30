@@ -391,8 +391,6 @@ Use "compare" mode to see results from each engine separately without deduplicat
 
       // Restore draftReport from agent response if draftReady flag is set
       snapshot.draftReport = session.restoreDraft(stateData, agentResponse);
-        }
-      }
       let deepResearchBase = (stateData.deepResearchBase as string) || planArtifactPath ? join(dirname(planArtifactPath), "..") : join(ctx.cwd ?? baseDir, "deep-research");
       // Ensure it's an absolute path
       if (!deepResearchBase.startsWith("/")) deepResearchBase = join(ctx.cwd ?? baseDir, deepResearchBase);
