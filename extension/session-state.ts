@@ -30,8 +30,8 @@ export class SessionState {
     this.writer.appendEntry(DRAFT_KEY, { runId, draftText });
   }
 
-  saveReportPath(path: string, reportsDir: string, telemetry: string): void {
-    this.writer.appendEntry(REPORT_PATH_KEY, { path, reportsDir, telemetry });
+  saveReportPath(path: string, reportsDir: string, telemetry: string, runId?: string): void {
+    this.writer.appendEntry(REPORT_PATH_KEY, { path, reportsDir, telemetry, runId });
   }
 
   saveConfirmation(planArtifactPath: string): void {
