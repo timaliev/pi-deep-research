@@ -2,6 +2,52 @@
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.
 
+## [0.16.0] — 2026-06-30
+
+### 🚀 Features
+
+- *(search)* Distribute queries round-robin across multiple engines when plan.engines > 1
+- *(telemetry)* Add profile name + parameters (breadth, depth, concurrency) to report telemetry
+- *(telemetry)* Rename telemetry label "Version" → "Pi Extension version"
+- *(prefilter)* Use generateRunId() for prefilter log filename (consistent format)
+
+### 🐛 Fixes
+
+- *(drafting)* Strip tool-call XML from extractTextContent string input — fixes 56-byte reports
+- *(reports)* Use settings.reportsDir from SettingsContext instead of hardcoded CWD path
+- *(logging)* Rename inject_sent data field type→injectType to prevent event type collision
+- *(run)* Guard against accidental re-init when agent passes plan_artifact_path on drafting call
+- *(run)* Fix deepResearchBase operator precedence bug — || bound tighter than ?:
+
+### 🏗️ Architecture
+
+- *(orchestrator)* Extract ResearchRunOrchestrator — first-call/subsequent-call branching (ADR-0014)
+- *(report)* Extract ReportAssembly module — markdown + telemetry + artifact links (ADR-0013)
+- *(state)* Extract phaseRouter pure function — phase decision decoupled from Injection (ADR-0015)
+- *(logger)* Inject logger through ResearchContext — single instance per run (ADR-0011 amended)
+- *(draft)* Guard restoreDraft behind snapshot.phase === "drafting" check
+
+### 🔧 Refactor
+
+- *(index)* Shrink index.ts from 470 to 386 lines via orchestrator + ReportAssembly extraction
+- *(index)* run_research handler: 150 → 60 lines
+
+### 📚 Documentation
+
+- *(readme)* Add tavily/yandex engines, mark all ADRs as current
+- *(context)* Add ReportAssembly, ResearchRunOrchestrator, PhaseRouter terms to CONTEXT.md
+- *(skill)* Update output section to reflect configurable paths
+- *(adr)* Fix 7 outdated ADR references (0002, 0004, 0005, 0006, 0007, 0008, 0012)
+
+### 🧪 Tests
+
+- +50 tests across 16 test files
+- New: extractTextContent, logger collision guard, research-run-orchestrator, report-assembly, phase-router, deep-research-base-path, engine-distribution, telemetry-labels
+
+### ⚙️ CI/CD
+
+- *(workflow)* Add GitHub Actions release workflow (test gate before release)
+
 ## [0.15.0] — 2026-06-30
 
 ### 🏗️ Architecture
