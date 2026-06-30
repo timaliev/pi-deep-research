@@ -126,5 +126,32 @@ describe("PrefilterManager", () => {
       }));
       assert.equal(result.phase, "error");
     });
+
+    it("uses shared runId across all three steps when set via constructor", async () => {
+      const sharedRunId = "shared-run-001";
+      const manager = new PrefilterManager(
+        mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS,
+        undefined, undefined, undefined, sharedRunId
+      );
+
+      const r1 = await manager.start("state machines");
+      assert.equal(r1.runId, sharedRunId, "start must use shared runId");
+
+      const r2 = await manager.withParams("state machines", ["duckduckgo"], { name: "default" });
+      assert.equal(r2.runId, sharedRunId, "withParams must use shared runId");
+
+      const r3 = await manager.finalize("state machines", VALID_PLAN);
+      assert.equal(r3.runId, sharedRunId, "finalize must use shared runId");
+
+      const artifact = JSON.parse(readFileSync(r3.planArtifactPath!, "utf-8"));
+      assert.equal(artifact.runId, sharedRunId, "artifact must store shared runId");
+    });
+
+    it("generates unique runId when no shared runId provided", async () => {
+      const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+      const r1 = await manager.start("test");
+      const r2 = await manager.withParams("test", ["duckduckgo"], { name: "default" });
+      assert.notEqual(r1.runId, r2.runId, "without shared runId, each step generates its own");
+    });
   });
 });

@@ -186,7 +186,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
       const prefilterRunId = generateRunId();
       const logger = new JsonlLogger(prefilterRunId, join(logsDir, `${prefilterRunId}-prefilter.log`));
 
-      const manager = new PrefilterManager(searchWeb, scraper, artifactsDir, logger, profileResolver, searchCred);
+      const manager = new PrefilterManager(searchWeb, scraper, artifactsDir, logger, profileResolver, searchCred, prefilterRunId);
 
       // Step 1: topic only → negotiate params
       if (!params.params_json && !params.plan_json) {
@@ -341,7 +341,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
         }
         const raw = readFileSync(params.plan_artifact_path, "utf-8");
         const artifact: PrefilterArtifact = JSON.parse(raw);
-        snapshot = ResearchStateMachine.init(artifact.plan, profileResolver.getPresets());
+        snapshot = ResearchStateMachine.init(artifact.plan, profileResolver.getPresets(), artifact.runId);
 
         const scraper = new WebScraper();
 

@@ -108,11 +108,11 @@ export class ResearchStateMachine {
     this.searchCred = ctx.searchCred;
   }
 
-  static init(plan: ResearchPlan, presets?: Record<string, ResearchProfile>): ResearchSnapshot {
+  static init(plan: ResearchPlan, presets?: Record<string, ResearchProfile>, runId?: string): ResearchSnapshot {
     const profile = resolveProfile(plan.profile, presets);
     return {
       phase: "searching",
-      runId: generateRunId(),
+      runId: runId ?? generateRunId(),
       currentDepth: 0,
       totalDepth: profile.depth,
       allFindings: [],
