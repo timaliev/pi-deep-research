@@ -362,10 +362,13 @@ export class ResearchStateMachine {
   }
 }
 
-/** Extract plain text from agent response (handles string and content blocks array). */
+/** Extract plain text from agent response (handles string and content blocks array).
+ *  Strips <tool_calls>...</tool_calls> XML blocks from string input. */
 export function extractTextContent(agentResponse?: unknown): string {
   if (!agentResponse) return "";
-  if (typeof agentResponse === "string") return agentResponse;
+  if (typeof agentResponse === "string") {
+    return agentResponse.replace(/<tool_calls>[\s\S]*?<\/tool_calls>/g, "").trim();
+  }
   if (Array.isArray(agentResponse)) {
     return (agentResponse as any[])
       .filter((b: any) => b.type === "text" && b.text)
