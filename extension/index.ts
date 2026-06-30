@@ -86,6 +86,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
         engines,
         compare: compareMode,
         signal,
+        credentials: searchCred,
         onUpdate,
       });
 
