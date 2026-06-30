@@ -7,6 +7,15 @@
 ### ⚙️ Miscellaneous Tasks
 
 - *(release)* Bump to 0.16.8
+## [0.16.8] - 2026-06-30
+
+### 🐛 Bug Fixes
+
+- Idempotent plan_research, dedup telemetry, git-cliff release notes
+
+### ⚙️ Miscellaneous Tasks
+
+- *(release)* Bump to 0.16.8
 # Changelog
 
 All notable changes to the Pi Deep Research Extension will be documented in this file.

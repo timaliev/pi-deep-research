@@ -75,38 +75,39 @@ describe("resolveSaveReportPath", () => {
     ];
 
     const paramsTopic = "эллиптические тренажеры РФ"; // different from plan
-    const date = "2026-06-26";
+    const runId = "20260630-191202";
 
-    const resolved = resolveSaveReportPath(paramsTopic, date, mockEntries);
+    const resolved = resolveSaveReportPath(paramsTopic, runId, mockEntries);
 
     assert.equal(resolved, storedReportPath,
       "must use stored reportPath from state, not derive from params.topic");
   });
 
-  it("falls back to params.topic when no state entry exists", () => {
+  it("falls back to runId-based filename when no state entry exists", () => {
     const paramsTopic = "эллиптические тренажеры РФ";
-    const date = "2026-06-26";
+    const runId = "20260630-191202";
     const expectedSlug = topicToSlug(paramsTopic);
 
-    const resolved = resolveSaveReportPath(paramsTopic, date, []);
+    const resolved = resolveSaveReportPath(paramsTopic, runId, []);
 
-    assert.ok(resolved.endsWith(`${date}-${expectedSlug}.md`),
-      `must fall back to params.topic slug, got: ${resolved}`);
+    assert.ok(resolved.endsWith(`${runId}-${expectedSlug}.md`),
+      `must use runId-slug format, got: ${resolved}`);
     assert.ok(resolved.includes(expectedSlug));
   });
 
   it("falls back when state entry has no path field", () => {
     const paramsTopic = "тест";
-    const date = "2026-06-26";
+    const runId = "20260630-191202";
     const expectedSlug = topicToSlug(paramsTopic);
 
     const mockEntries = [
       { customType: STATE_KEY, data: {} }, // missing path
     ];
 
-    const resolved = resolveSaveReportPath(paramsTopic, date, mockEntries);
+    const resolved = resolveSaveReportPath(paramsTopic, runId, mockEntries);
 
     assert.ok(resolved.includes(expectedSlug));
+    assert.ok(resolved.includes(runId));
   });
 });
 
@@ -119,7 +120,7 @@ describe("resolveSaveReportPath", () => {
  */
 function resolveSaveReportPath(
   paramsTopic: string,
-  date: string,
+  runId: string,
   entries: Array<{ customType?: string; data?: Record<string, unknown> }>,
 ): string {
   // Prefer the pre-computed path from auto-save's session state
@@ -128,7 +129,7 @@ function resolveSaveReportPath(
   if (stateEntry?.data?.path && typeof stateEntry.data.path === "string") {
     return stateEntry.data.path;
   }
-  // Fallback: derive from params.topic
+  // Fallback: derive from params.topic with runId prefix
   const slug = topicToSlug(paramsTopic);
-  return `reports/${date}-${slug}.md`;
+  return `reports/${runId}-${slug}.md`;
 }

@@ -152,7 +152,8 @@ Use "compare" mode to see results from each engine separately without deduplicat
           ?? settings.reportsDir;
         mkdirSync(reportsDir, { recursive: true });
         const slug = topicToSlug(params.topic);
-        const filename = `${date}-${slug}.md`;
+        const runId = (reportPathEntry?.data as any)?.runId as string | undefined ?? date;
+        const filename = `${runId}-${slug}.md`;
         path = join(reportsDir, filename);
       }
 
@@ -448,9 +449,8 @@ Use "compare" mode to see results from each engine separately without deduplicat
           });
         }
 
-        const date = new Date().toISOString().slice(0, 10);
         const slug = topicToSlug(plan.topic);
-        const filename = `${date}-${slug}.md`;
+        const filename = `${result.snapshot.runId}-${slug}.md`;
         const reportPath = join(reportsDir, filename);
 
         const { writeFileSync } = await import("node:fs");
@@ -463,7 +463,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
         writeFileSync(reportPath, fullReport, "utf-8");
 
         // Store path so save_report writes to the same file
-        session.saveReportPath(reportPath, reportsDir, telemetry);
+        session.saveReportPath(reportPath, reportsDir, telemetry, result.snapshot.runId);
 
         saveLogger.event("report_saved", {
           path: reportPath,
