@@ -33,8 +33,8 @@ describe("buildSearchQueue", () => {
     const queue = buildSearchQueue(["q1", "q2", "q3"], ["duckduckgo"]);
 
     assert.ok(queue[0].scheduledDelayMs >= 0, "first request no delay");
-    assert.ok(queue[1].scheduledDelayMs >= 1000, "second request delay >= 1s");
-    assert.ok(queue[1].scheduledDelayMs <= 3000, "second request delay <= 3s");
+    assert.ok(queue[1].scheduledDelayMs >= 2000, "second request delay >= 2s");
+    assert.ok(queue[1].scheduledDelayMs <= 4000, "second request delay <= 4s");
     assert.ok(queue[2].scheduledDelayMs >= queue[1].scheduledDelayMs,
       "delays increase sequentially");
   });
@@ -54,7 +54,7 @@ describe("buildSearchQueue", () => {
     assert.ok(queue[0].timestamp.includes("T"), "ISO format");
   });
 
-  it("delay accumulates for DDG: random 1000-3000ms between requests", () => {
+  it("delay accumulates for DDG: random 2000-4000ms between requests", () => {
     const queue = buildSearchQueue(
       ["q1", "q2", "q3", "q4", "q5"],
       ["duckduckgo"],
@@ -62,10 +62,10 @@ describe("buildSearchQueue", () => {
 
     for (let i = 1; i < queue.length; i++) {
       const gap = queue[i].scheduledDelayMs - queue[i - 1].scheduledDelayMs;
-      assert.ok(gap >= 1000,
-        `gap between ${i - 1} and ${i} must be >= 1000ms, got ${gap}ms`);
-      assert.ok(gap <= 3000,
-        `gap between ${i - 1} and ${i} must be <= 3000ms, got ${gap}ms`);
+      assert.ok(gap >= 2000,
+        `gap between ${i - 1} and ${i} must be >= 2000ms, got ${gap}ms`);
+      assert.ok(gap <= 4000,
+        `gap between ${i - 1} and ${i} must be <= 4000ms, got ${gap}ms`);
     }
   });
 });

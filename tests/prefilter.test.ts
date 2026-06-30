@@ -153,16 +153,19 @@ describe("PrefilterManager", () => {
       assert.match(r1.runId, /^\d{8}-\d{6}$/, "must generate valid runId");
     });
 
-    it("stores actual search result count in artifact", async () => {
+    it("stores actual search result count and scraped URLs in artifact", async () => {
       const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
       await manager.start("state machines");
-      // withParams returns 2 mock results — finalize should capture that count
       const paramsResult = await manager.withParams("state machines", ["duckduckgo"], { name: "default" });
       const finalResult = await manager.finalize("state machines", VALID_PLAN);
 
       const artifact = JSON.parse(readFileSync(finalResult.planArtifactPath!, "utf-8"));
       assert.equal(artifact.preliminarySearch.resultsCount, paramsResult.searchResults!.length,
         "resultsCount must match actual search result count");
+      assert.equal(artifact.preliminarySearch.scrapedUrls.length, 2,
+        "scrapedUrls must contain scraped URLs");
+      assert.ok(artifact.preliminarySearch.scrapedUrls.includes("https://xstate.js.org/docs/"),
+        "scrapedUrls must include xstate URL");
     });
   });
 });

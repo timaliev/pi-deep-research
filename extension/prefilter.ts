@@ -77,6 +77,7 @@ export class PrefilterManager {
   private readonly searchCred?: SearchProviderCredentials;
   private readonly sharedRunId?: string;
   private lastSearchResultCount = 0;
+  private lastScrapedUrls: string[] = [];
 
   constructor(
     searchFn: typeof SearchWebFn,
@@ -122,10 +123,12 @@ export class PrefilterManager {
     this.lastSearchResultCount = searchResults.length;
 
     const scrapedContent: ScrapedPage[] = [];
+    this.lastScrapedUrls = [];
     for (const result of searchResults.slice(0, 2)) {
       try {
         const page = await this.scraper.scrape(result.url);
         scrapedContent.push(page);
+        this.lastScrapedUrls.push(result.url);
       } catch { /* skip */ }
     }
 
@@ -177,7 +180,7 @@ export class PrefilterManager {
       preliminarySearch: {
         query: this.buildSearchQuery(topic),
         resultsCount: this.lastSearchResultCount,
-        scrapedUrls: [],
+        scrapedUrls: this.lastScrapedUrls,
       },
     };
 

@@ -1,8 +1,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
-const DDG_MIN_DELAY_MS = 1000;
-const DDG_MAX_DELAY_MS = 3000;
+const DDG_MIN_DELAY_MS = 2000;
+const DDG_MAX_DELAY_MS = 4000;
 
 /** A single queued search request with scheduling metadata. */
 export interface QueuedSearch {
