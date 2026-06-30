@@ -449,7 +449,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
         const telemetry = buildTelemetrySection(result.snapshot, extensionVersion, [
           planArtifactPath,
           join(logsDir, `${result.snapshot.runId}.log`),
-        ], plan.profile.name);
+        ], plan.profile.name, plan.reportStyle);
         const fullReport = `${reportText}\n\n${telemetry}\n`;
         writeFileSync(reportPath, fullReport, "utf-8");
 

@@ -74,4 +74,16 @@ describe("Telemetry", () => {
     const section = buildTelemetrySection(snapshot);
     assert.ok(!section.includes("| Profile |"), "must not show Profile when profileName is undefined");
   });
+
+  it("includes reportStyle when passed", () => {
+    const snapshot = ResearchStateMachine.init(MOCK_PLAN);
+    const section = buildTelemetrySection(snapshot, undefined, undefined, undefined, "subtopics");
+    assert.ok(section.includes("| Report style | subtopics |"), "must show report style");
+  });
+
+  it("omits reportStyle when not passed", () => {
+    const snapshot = ResearchStateMachine.init(MOCK_PLAN);
+    const section = buildTelemetrySection(snapshot);
+    assert.ok(!section.includes("Report style"), "must not show Report style when undefined");
+  });
 });

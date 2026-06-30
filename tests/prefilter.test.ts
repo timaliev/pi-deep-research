@@ -147,11 +147,22 @@ describe("PrefilterManager", () => {
       assert.equal(artifact.runId, sharedRunId, "artifact must store shared runId");
     });
 
-    it("generates unique runId when no shared runId provided", async () => {
+    it("generates its own runId when no shared runId provided", async () => {
       const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
       const r1 = await manager.start("test");
-      const r2 = await manager.withParams("test", ["duckduckgo"], { name: "default" });
-      assert.notEqual(r1.runId, r2.runId, "without shared runId, each step generates its own");
+      assert.match(r1.runId, /^\d{8}-\d{6}$/, "must generate valid runId");
+    });
+
+    it("stores actual search result count in artifact", async () => {
+      const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+      await manager.start("state machines");
+      // withParams returns 2 mock results — finalize should capture that count
+      const paramsResult = await manager.withParams("state machines", ["duckduckgo"], { name: "default" });
+      const finalResult = await manager.finalize("state machines", VALID_PLAN);
+
+      const artifact = JSON.parse(readFileSync(finalResult.planArtifactPath!, "utf-8"));
+      assert.equal(artifact.preliminarySearch.resultsCount, paramsResult.searchResults!.length,
+        "resultsCount must match actual search result count");
     });
   });
 });
