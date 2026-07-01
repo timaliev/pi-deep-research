@@ -1,3 +1,19 @@
+## [0.16.10] - 2026-06-30
+
+### 🐛 Bug Fixes
+
+- *(ci)* Test on all branches except master, regenerate full CHANGELOG on release
+
+### 🧪 Testing
+
+- Add unit tests for extractTextContent utility
+
+### ⚙️ Miscellaneous Tasks
+
+- Mark completed tasks in TODO.md and clean up old artifacts
+- Sync package.json version to 0.16.9 from master
+- *(release)* Bump to 0.16.10
+- *(release)* Bump to 0.16.10
 ## [0.16.9] - 2026-06-30
 
 ### 🐛 Bug Fixes
