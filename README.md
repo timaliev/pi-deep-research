@@ -2,6 +2,8 @@
 
 A Pi extension and skill that provides autonomous deep web research — planning research questions, searching the web, scraping sources, extracting findings, and synthesizing a structured markdown report — all using the user's current Pi LLM model.
 
+Inspired by [https://github.com/assafelovic/gpt-researcher](gpt-researcher).
+
 ## Installation
 
 ### Via pi packages (recommended)

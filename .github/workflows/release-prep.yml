@@ -1,0 +1,117 @@
+name: Release Prep
+
+on:
+  push:
+    branches: [release]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        working-directory: extension
+        run: npm install
+      - name: Run tests
+        working-directory: extension
+        run: node --import tsx --test ../tests/*.test.ts
+
+  changelog:
+    needs: test
+    if: success()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: orhun/git-cliff-action@v4
+        with:
+          args: --version
+
+      - name: Get version from git-cliff
+        id: version
+        run: |
+          VERSION=$(git cliff --bumped-version)
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Write version to package.json
+        run: |
+          node -e "
+            const pkg = require('./package.json');
+            pkg.version = '${{ steps.version.outputs.VERSION }}';
+            require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+      - name: Generate changelog header
+        uses: orhun/git-cliff-action@v4
+        with:
+          args: --body "" --strip footer --offline
+        env:
+          OUTPUT: CHANGELOG-header.md
+
+      - name: Generate changes for current release
+        uses: orhun/git-cliff-action@v4
+        with:
+          args: --bump --unreleased --strip all
+        env:
+          OUTPUT: CHANGELOG-bump.md
+
+      - name: Fetch prior changelog from master
+        run: |
+          git fetch origin master
+          git checkout origin/master -- CHANGELOG.md 2>/dev/null || true
+          if [ -f CHANGELOG.md ]; then
+            sed -n '/^## \[/,$p' CHANGELOG.md > CHANGELOG-prior.md
+          else
+            touch CHANGELOG-prior.md
+          fi
+
+      - name: Assemble full CHANGELOG.md
+        run: |
+          cat CHANGELOG-header.md > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          cat CHANGELOG-bump.md >> CHANGELOG.md
+          if [ -s CHANGELOG-prior.md ]; then
+            echo "" >> CHANGELOG.md
+            cat CHANGELOG-prior.md >> CHANGELOG.md
+          fi
+
+      - name: Create PR to master
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: |
+            chore(release): prepare release from release branch, bump to ${{ steps.version.outputs.VERSION }} [skip ci]
+          branch: release
+          base: master
+          title: |
+            Release ${{ steps.version.outputs.VERSION }} release → master
+          body: |
+            ## Merge release branch into master
+
+            This PR merges the `release` branch into `master` for production deployment.
+
+            - Version: `${{ steps.version.outputs.VERSION }}`
+            - CHANGELOG.md regenerated
+            - `version` in package.json updated
+
+            ### Review checklist:
+            - [ ] All tests pass
+            - [ ] Changelog updated
+            - [ ] Version bumped
+
+            ---
+            Automated changes by [create-pull-request](https://github.com/peter-evans/create-pull-request) GitHub action
+          labels: |
+            release
+            automated
+          draft: false
+          delete-branch: false
