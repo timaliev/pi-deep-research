@@ -155,6 +155,33 @@ New rows in Telemetry table:
 
 `estimatedCost` remains web search/scrape calls only. Local and MCP sources use agent tools (grep, read, mcp__*), not search API credits. A note is added to the estimation description.
 
+### 4. Profile listing in plan creation
+
+During `plan_research` step 3 (`buildPlanPrompt` in `PrefilterManager`), the agent receives a full listing of all available Research Profiles with their parameters (breadth, depth, concurrency). This includes:
+
+- Built-in presets (`default`, `fast`, `deep`)
+- User-defined profiles from `~/.pi/agent/settings.json` under `deepResearch.profiles`
+- Merged presets via `ProfileResolver.getPresets()`
+
+**Current state:** Step 3 only shows profile names (`default/fast/deep`) without parameters. The agent knows a profile is changeable but lacks parameter data to make an informed choice.
+
+**New state:** `buildPlanPrompt` includes:
+
+```
+You may change the profile in the plan JSON. Available profiles:
+  default: breadth=4, depth=2, concurrency=4
+  fast: breadth=2, depth=1, concurrency=2
+  deep: breadth=6, depth=3, concurrency=4
+  my-custom: breadth=3, depth=2, concurrency=2
+  custom: specify breadth, depth, concurrency
+
+Pick the profile that best fits this research.
+```
+
+**Implementation:** Same code pattern as `buildParamsPrompt` (step 1) — iterate `ProfileResolver.getPresets()` and format `name: breadth=X, depth=Y, concurrency=Z`. The `ProfileResolver` already dynamically discovers all profiles (built-in + user overrides from settings.json). No new dependencies. Replaces the current one-liner `use any named preset (${profileNames}) or custom with breadth/depth/concurrency` with the full listing.
+
+**Why not a separate tool:** A `list_profiles` tool would be over-engineered. The agent needs profile data during plan creation, not independently. The plan prompt is the right place — similar to how `buildEngineStatus` lists available engines inline rather than via a separate tool.
+
 ## Consequences
 
 ### Mind-map
