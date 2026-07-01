@@ -2,11 +2,16 @@ name: Test
 
 on:
   push:
-    branches-ignore: [master]
+    branches-ignore: [master, release]
+  pull_request:
+    branches: [develop]
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 

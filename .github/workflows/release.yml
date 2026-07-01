@@ -5,27 +5,8 @@ on:
     branches: [master]
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install dependencies
-        working-directory: extension
-        run: npm install
-
-      - name: Run tests
-        working-directory: extension
-        run: node --import tsx --test ../tests/*.test.ts
-
   release:
-    needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
     permissions:
       contents: write
     steps:
@@ -33,11 +14,35 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get version
-        id: version
-        run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+      - uses: orhun/git-cliff-action@v4
+        with:
+          args: --version
 
-      - name: Generate release notes (latest version only)
+      - name: Get version from package.json
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Create and push tag (replace if exists on wrong commit)
+        run: |
+          TAG="v${{ steps.version.outputs.VERSION }}"
+          COMMIT=$(git rev-parse HEAD)
+
+          EXISTING=$(git ls-remote --tags origin "$TAG" | awk '{print $1}')
+          if [ -n "$EXISTING" ] && [ "$EXISTING" != "$COMMIT" ]; then
+            echo "Tag $TAG exists on $EXISTING, replacing on $COMMIT"
+            git push origin ":refs/tags/$TAG"
+            git tag -d "$TAG" 2>/dev/null || true
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+
+      - name: Generate release notes (latest only)
         uses: orhun/git-cliff-action@v4
         with:
           args: --latest --strip header
@@ -54,3 +59,17 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create backmerge PR and enable auto-merge
+        run: |
+          gh pr create \
+            --base develop \
+            --head master \
+            --title "chore: merge release v${{ steps.version.outputs.VERSION }} back to develop" \
+            --body "Backmerge after v${{ steps.version.outputs.VERSION }} release. Contains CHANGELOG.md and version bump." \
+            --label "automated,backmerge" \
+            || true
+
+          gh pr merge --auto --merge || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
