@@ -1,8 +1,83 @@
+## [0.16.11] - 2026-06-30
+
+### ⚙️ Miscellaneous Tasks
+
+- *(release)* Bump to 0.16.11
 ## [0.16.10] - 2026-06-30
+
+### ⚙️ Miscellaneous Tasks
+
+- *(release)* Bump to 0.16.10
+## [0.16.9] - 2026-06-30
+
+### ⚙️ Miscellaneous Tasks
+
+- *(release)* Bump to 0.16.9
+## [0.16.8] - 2026-06-30
+
+### ⚙️ Miscellaneous Tasks
+
+- *(release)* Bump to 0.16.8
+## [0.16.7] - 2026-06-30
+
+### ⚙️ Miscellaneous Tasks
+
+- Trigger CI release for v0.16.6
+- *(release)* Bump to 0.16.7
+## [0.16.6] - 2026-06-30
+
+### ⚙️ Miscellaneous Tasks
+
+- *(release)* Bump to 0.16.6
+## [0.16.5] - 2026-06-30
+
+### ⚙️ Miscellaneous Tasks
+
+- *(release)* Bump to 0.16.5
+## [0.16.4] - 2026-06-30
+
+### ⚙️ Miscellaneous Tasks
+
+- *(release)* Bump to 0.16.4
+## [0.16.3] - 2026-06-30
+
+### 🚀 Features
+
+- *(prefilter)* Show engine API key availability (✅/❌) in params prompt
 
 ### 🐛 Bug Fixes
 
+- *(telemetry)* Add profile params to report, rename Version label
+- *(runId)* Single shared runId across prefilter and research run
+- RunId YYYYMMDD-HHmmss format, reportStyle in telemetry, random queue delays, resultsCount in artifact
+- Store scrapedUrls in artifact, DDG delay 2000-4000ms
+- *(ci)* Add contents:write permission to release workflow
+- *(prefilter)* Reuse PrefilterManager across plan_research calls
+- Idempotent plan_research, dedup telemetry, git-cliff release notes
+- *(ci)* Update CHANGELOG.md on release, use latest-only for release body
+- *(ci)* Remove CHANGELOG push from workflow, update locally instead
+- Report filename uses runId prefix instead of date
 - *(ci)* Test on all branches except master, regenerate full CHANGELOG on release
+- Strip tool-call XML from extractTextContent string input
+- Include report-assembly.ts (missing from orchestrator branch)
+
+### 💼 Other
+
+- Refactor/extract-phase-router — add phaseRouter pure function
+- Refactor/extract-report-assembly — ReportAssembly module
+- Refactor/extract-research-run-orchestrator — wire orchestrator into index.ts
+
+### 🚜 Refactor
+
+- *(state-machine)* Extract phaseRouter as pure function, decouple phase decision from injection building
+- *(report)* Extract ReportAssembly module, shrink index.ts done phase by 20 lines
+- *(logger)* Inject logger through ResearchContext, eliminate dual logger pattern
+- *(orchestrator)* Wire ResearchRunOrchestrator into index.ts, shrink handler from 150 to 60 lines
+
+### 📚 Documentation
+
+- *(skill)* Broaden engine list, add settings.json keys, fix drafting conflict, add plan_artifact_path guardrail
+- *(skill)* Instruct agent to check available API keys from tool response before proposing engines
 
 ### 🧪 Testing
 
@@ -13,257 +88,159 @@
 - Mark completed tasks in TODO.md and clean up old artifacts
 - Sync package.json version to 0.16.9 from master
 - *(release)* Bump to 0.16.10
-- *(release)* Bump to 0.16.10
-## [0.16.9] - 2026-06-30
+- *(release)* Configure git remote with release PAT token
+- *(workflows)* Split changelog generation (PR) from release (master push)
+- *(changelog)* Use --tag flag instead of --bumped-version for git-cliff
+- *(release)* Bump version to 0.17.0
+- *(release)* Bump to 0.16.3
+## [0.16.2] - 2026-06-30
 
 ### 🐛 Bug Fixes
 
-- *(ci)* Update CHANGELOG.md on release, use latest-only for release body
-- *(ci)* Remove CHANGELOG push from workflow, update locally instead
-- Report filename uses runId prefix instead of date
+- *(extension)* Harden draft persistence, validate settings format, unify runId naming
 
 ### ⚙️ Miscellaneous Tasks
 
-- *(release)* Bump to 0.16.9
-## [0.16.8] - 2026-06-30
+- *(release)* Bump to 0.16.1, update changelog
+## [0.16.0] - 2026-06-30
 
 ### 🐛 Bug Fixes
 
-- Idempotent plan_research, dedup telemetry, git-cliff release notes
+- Remove orphan closing braces from draft restore replacement
+- Plan_research and save_report use settings.artifactsDir/reportsDir instead of ctx.cwd
+- Pass credentials to multiEngineWebSearch in web_search tool
 
 ### ⚙️ Miscellaneous Tasks
 
-- *(release)* Bump to 0.16.8
-## [0.16.8] - 2026-06-30
+- *(release)* Bump to 0.16.0, update changelog, add release workflow
+## [0.15.0] - 2026-06-30
+
+### 🚜 Refactor
+
+- SettingsContext — unified settings cascade (ADR-0012)
+## [0.14.3] - 2026-06-29
+
+### 🚜 Refactor
+
+- Move DEFAULT_PRESETS+resolveProfile to profile-resolver (ADR-0010)
+## [0.14.2] - 2026-06-29
+
+### 🚜 Refactor
+
+- Move injection prompts behind ReportStyle adapters
+- Wire SessionState into index.ts + extract engine adapters
+## [0.14.1] - 2026-06-29
 
 ### 🐛 Bug Fixes
 
-- Idempotent plan_research, dedup telemetry, git-cliff release notes
+- Resolve four extension failures
 
-### ⚙️ Miscellaneous Tasks
+### 🚜 Refactor
 
-- *(release)* Bump to 0.16.8
-# Changelog
-
-All notable changes to the Pi Deep Research Extension will be documented in this file.
-
-## [0.16.2] — 2026-06-30
-
-### 🐛 Bug Fixes
-
-- *(session)* draftReport recovery now uses dedicated session entry — eliminates fragile assistant-message extraction
-- *(session)* doSaving accepts agentResponse fallback when draft was stripped by persistence
-- *(settings)* normalizeSearchProviders — array format and field casing now validated at SettingsContext seam
-- *(index)* prefilter log uses generateRunId() for consistent naming with research logs
-
-## [0.16.1] — 2026-06-30
-
-### 🚀 Features
-
-- *(search)* Distribute queries round-robin across multiple engines when plan.engines > 1
-- *(telemetry)* Add profile name + parameters (breadth, depth, concurrency) to report telemetry
-- *(telemetry)* Rename telemetry label "Version" → "Pi Extension version"
-- *(prefilter)* Use generateRunId() for prefilter log filename (consistent format)
-
-### 🐛 Fixes
-
-- *(drafting)* Strip tool-call XML from extractTextContent string input — fixes 56-byte reports
-- *(reports)* Use settings.reportsDir from SettingsContext instead of hardcoded CWD path
-- *(logging)* Rename inject_sent data field type→injectType to prevent event type collision
-- *(run)* Guard against accidental re-init when agent passes plan_artifact_path on drafting call
-- *(run)* Fix deepResearchBase operator precedence bug — || bound tighter than ?:
-
-### 🏗️ Architecture
-
-- *(orchestrator)* Extract ResearchRunOrchestrator — first-call/subsequent-call branching (ADR-0014)
-- *(report)* Extract ReportAssembly module — markdown + telemetry + artifact links (ADR-0013)
-- *(state)* Extract phaseRouter pure function — phase decision decoupled from Injection (ADR-0015)
-- *(logger)* Inject logger through ResearchContext — single instance per run (ADR-0011 amended)
-- *(draft)* Guard restoreDraft behind snapshot.phase === "drafting" check
-
-### 🔧 Refactor
-
-- *(index)* Shrink index.ts from 470 to 386 lines via orchestrator + ReportAssembly extraction
-- *(index)* run_research handler: 150 → 60 lines
+- Bundle ResearchStateMachine constructor into ResearchContext object
 
 ### 📚 Documentation
 
-- *(readme)* Add tavily/yandex engines, mark all ADRs as current
-- *(context)* Add ReportAssembly, ResearchRunOrchestrator, PhaseRouter terms to CONTEXT.md
-- *(skill)* Update output section to reflect configurable paths
-- *(adr)* Fix 7 outdated ADR references (0002, 0004, 0005, 0006, 0007, 0008, 0012)
-
-### 🧪 Tests
-
-- +50 tests across 16 test files
-- New: extractTextContent, logger collision guard, research-run-orchestrator, report-assembly, phase-router, deep-research-base-path, engine-distribution, telemetry-labels
-
-### ⚙️ CI/CD
-
-- *(workflow)* Add GitHub Actions release workflow (test gate before release)
-
-## [0.16.0] — 2026-06-30
-
-### 🔧 Refactor
-
-- *(session)* Wire SessionState into index.ts + extract engine adapters
-- *(settings)* SettingsContext singleton — unified cascade env → local → global → built-in (ADR-0012)
-
-### 🐛 Fixes
-
-- *(session)* remove orphan closing braces from draft restore replacement
-
-## [0.15.0] — 2026-06-30
-
-### 🏗️ Architecture
-
-- *(settings)* SettingsContext singleton — unified cascade env → local → global → built-in (ADR-0012)
-- Wire index.ts to use SettingsContext — removes scattered loadDeepResearchSettings + loadSearchProviders
-
-### 🔧 Refactor
-
-- *(settings)* profiles, API keys, dirs all follow same priority chain
-- *(settings)* search providers now merge local → global (was global-only)
-
-### 🧪 Tests
-
-- +11 SettingsContext cascade tests
-- Fix profile-integration TEST_DIR collision
-
-## [0.14.3] — 2026-06-29
-
-### 🔧 Refactor
-
-- *(profile)* Move DEFAULT_PRESETS + resolveProfile to profile-resolver.ts (ADR-0010)
-- *(logger)* ResearchStateMachine creates logger internally, removes from ResearchContext (ADR-0011)
-
-### 🧪 Tests
-
-- +10 architecture tests for presets ownership + logger locality
-
-## [0.14.2] — 2026-06-29
-
-### 🔧 Refactor
-
-- *(session)* Wire SessionState module into index.ts — remove key constants, draft restore, appendEntry calls
-- *(search)* Extract engine adapters with createEngineSearchFn factory + per-engine modules
-
-### 📚 Docs
-
-- ADR-0008: SessionState unified persistence seam
-- ADR-0009: Engine adapters
-- CONTEXT.md: SessionState + Engine Adapter terms
-
-## [0.14.1] — 2026-06-29
-
-### 🔧 Refactor
-
-- *(state)* Bundle ResearchStateMachine constructor into ResearchContext object (6 params → 1)
-- *(state)* Create SessionState module for persistence seam (pending index.ts wiring)
-
-### 📚 Docs
-
-- ADR-0007: ResearchContext bundled constructor
-- CONTEXT.md: ResearchContext term
-
-## [0.14.0] — 2026-06-29
+- Add ADR-0007 and CONTEXT.md for ResearchContext + SessionState
+## [0.14.0] - 2026-06-29
 
 ### 🚀 Features
 
-- *(brave)* Implement Brave web search per API documentation (freshness, country, lang, extra_snippets, pagination)
-- *(queue)* Build search request queue with delay scheduling, save as JSON artifact
 - *(telemetry)* Add artifact reference links below telemetry table
-- *(telemetry)* Append telemetry in save_report when auto-save data available
-
-### 🐛 Fixes
-
-- *(telemetry)* save_report now appends telemetry from auto-save session state
-
-### 🧪 Tests
-
-- 27 new tests: Brave search (13), queue (9), artifact links (5)
-
-## [0.13.3] — 2026-06-29
-
-### 🚀 Features
-
-- *(queue)* Build search request queue with delay scheduling, save as JSON artifact for post-mortem
-
-### 🧪 Tests
-
-- 9 new tests: queue builder, round-robin, delay accumulation, save/round-trip
-
-## [0.13.2] — 2026-06-29
-
-### 🚀 Features
-
-- *(telemetry)* Add extension version row to report telemetry table (read from package.json)
-
-### 🧪 Tests
-
-- 6 new tests: telemetry version row, version reading from package.json
-
-## [0.13.1] — 2026-06-29
-
-### 🚀 Features
-
-- *(credentials)* Add SearchProviderCredentials — load API keys from settings.json (env vars win)
-- *(credentials)* Wire into prefilter checkApiKeys with fallback to process.env
-
-### 🧪 Tests
-
-- 11 new tests: credential load, get, env override, has, prefilter integration
-
-## [0.13.0] — 2026-06-27
-
-### 🚀 Features
-
-- *(profiles)* Add ProfileResolver — load, merge, and resolve profiles from settings.json
-- *(profiles)* Support defaultProfile config key to change which profile is the default
-- *(profiles)* User profiles merge with built-ins (override fields, add new presets)
-
-### 🧪 Tests
-
-- 12 new tests: settings loading, profile merge, ProfileResolver resolve/fallback/custom/listNames
-
-## [0.12.1] — 2026-06-27
-
-### 🐛 Hotfix
-
-- *(gate)* Fix appendEntry API call in confirm_research (use pi.appendEntry, not ctx.sessionManager.appendEntry)
-
-## [0.12.0] — 2026-06-27
-
-### 🚀 Features
-
-- *(gate)* Add confirm_research tool — programmatic confirmation gate before run_research
-- *(estimate)* Fix scrape estimate formula (~1.5x searches instead of 2x)
-
-### 🐛 Hotfix
-
-- *(ext)* Restore baseDir declaration accidentally removed during topicToSlug extraction
-
-## [0.11.0] — 2026-06-26
-
-### 🚀 Features
-
-- *(report)* Add reportStyle choice to prefilter plan — narrative (fixed 5-section) or subtopics (LLM discovers thematic sections)
-- *(slug)* Handle Cyrillic topics in report filenames with transliteration fallback
+- *(brave)* Implement Brave search per API documentation
 
 ### 🐛 Bug Fixes
 
-- *(report)* Deduplicate save_report and auto-save report paths via session state
-- *(draft)* Add diagnostic logging for draftReport emptiness at auto-save
+- *(telemetry)* Append telemetry in save_report when auto-save data available
+
+### ⚙️ Miscellaneous Tasks
+
+- Add GitHub Actions test workflow on push and PR
+- *(release)* Bump version to 0.14.0
+## [0.13.3] - 2026-06-29
+
+### 🚀 Features
+
+- *(queue)* Build search request queue with delay scheduling
+## [0.13.2] - 2026-06-29
+
+### 🚀 Features
+
+- *(telemetry)* Add extension version row to report telemetry
+## [0.13.1] - 2026-06-29
+
+### 🚀 Features
+
+- *(credentials)* Add SearchProviderCredentials from settings.json
+
+### 🚜 Refactor
+
+- *(profiles)* Simplify settings loading to ~/.pi/agent/settings.json only
+
+### 📚 Documentation
+
+- Add project TODO list
+- Add GitHub release workflow item to TODO
+
+### 🧪 Testing
+
+- *(profiles)* Add integration tests for settings merge and prompt resolution
+## [0.13.0] - 2026-06-29
+
+### 🚀 Features
+
+- *(profiles)* Add ProfileResolver with settings.json merging and defaultProfile
+## [0.12.1] - 2026-06-26
+
+### 💼 Other
+
+- *(gate)* Fix appendEntry API call in confirm_research
+
+### ⚙️ Miscellaneous Tasks
+
+- *(release)* Bump version to 0.12.0
+- *(release)* Bump version to 0.12.1
+## [0.12.0] - 2026-06-26
+
+### 🚀 Features
+
+- *(research)* Add confirm_research gate and fix scrape estimate
+## [0.11.1] - 2026-06-26
+
+### 💼 Other
+
+- *(ext)* Restore baseDir declaration removed during topicToSlug extraction
+
+### ⚙️ Miscellaneous Tasks
+
+- *(release)* Bump version to 0.11.1
+## [0.11.0] - 2026-06-26
+
+### 🚀 Features
+
+- *(research)* Add reportStyle choice to prefilter plan
+
+### 🐛 Bug Fixes
+
+- *(research)* Handle cyrillic topics in slug and add draftReport diagnostics
+- *(research)* Deduplicate save_report and auto-save report paths
 
 ### 📚 Documentation
 
 - *(readme)* Add reportStyle to key concepts and architecture diagram
 
-## [0.10.1] — 2026-06-26
+### ⚙️ Miscellaneous Tasks
+
+- *(release)* Bump version to 0.11.0
+## [0.10.1] - 2026-06-25
 
 ### 🐛 Bug Fixes
 
 - *(tool)* Add tavily and yandex to web_search StringEnum
+
+### ⚙️ Miscellaneous Tasks
+
+- *(release)* Bump version to 0.10.1
 ## [0.10.0] - 2026-06-25
 
 ### 🚀 Features

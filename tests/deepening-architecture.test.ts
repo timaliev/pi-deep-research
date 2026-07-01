@@ -69,28 +69,22 @@ describe("Candidate 2 — logger locality in ResearchStateMachine", () => {
     );
   });
 
-  it("ResearchContext does not include logger", async () => {
+  it("ResearchContext includes optional logger (ADR-0011)", async () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "state-machine.ts"), "utf-8");
     const ctxMatch = src.match(/interface ResearchContext[\s\S]*?\n\}/);
     assert.ok(ctxMatch, "ResearchContext interface must exist");
     const hasLogger = ctxMatch[0].includes("logger");
-    assert.ok(!hasLogger, `ResearchContext should not include logger: ${ctxMatch[0]}`);
+    assert.ok(hasLogger, `ResearchContext must include optional logger for injection`);
   });
 
-  it("index.ts does not pass logger to state machine constructor", async () => {
+  it("index.ts delegates run to ResearchRunOrchestrator, not inline state machine", async () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "index.ts"), "utf-8");
-    // ResearchStateMachine constructor should not receive logger:
-    const machineCalls = [...src.matchAll(/new ResearchStateMachine\(\{/g)];
-    assert.ok(machineCalls.length >= 1, "must instantiate ResearchStateMachine");
-    // Check each instantiation doesn't include logger:
-    const loggerInCtor = src.includes("logger:") && !src.includes("saveLogger");
-    // The only "logger:" in the source should be for prefilter, not state machine
-    const loggerLines = src.split("\n").filter((l: string) => l.includes("logger:"));
-    const machineLoggerLines = loggerLines.filter((l: string) => l.includes("ResearchStateMachine"));
-    assert.equal(machineLoggerLines.length, 0, "no logger passed to ResearchStateMachine");
+    // index.ts should use ResearchRunOrchestrator, not instantiate ResearchStateMachine directly
+    const usesOrchestrator = src.includes("ResearchRunOrchestrator") || src.includes("orchestrator.handle");
+    assert.ok(usesOrchestrator, "index.ts must use ResearchRunOrchestrator instead of inline state machine");
   });
 });
