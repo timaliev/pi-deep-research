@@ -1,31 +1,15 @@
 name: Release
 
 on:
-  push:
+  workflow_run:
+    workflows: [Test]
+    types: [completed]
     branches: [master]
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install dependencies
-        working-directory: extension
-        run: npm install
-
-      - name: Run tests
-        working-directory: extension
-        run: node --import tsx --test ../tests/*.test.ts
-
   release:
-    needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
+    if: github.event.workflow_run.conclusion == 'success'
     permissions:
       contents: write
     steps:

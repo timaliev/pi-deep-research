@@ -19,13 +19,44 @@ jobs:
         id: version
         run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
-      - name: Generate full CHANGELOG.md
+      - name: Generate changelog header (empty template)
         uses: orhun/git-cliff-action@v4
         with:
-          args: --tag v${{ steps.version.outputs.VERSION }} --output CHANGELOG.md
+          args: --bump --unreleased --strip all
+        env:
+          OUTPUT: CHANGELOG-header.md
+
+      - name: Generate changes for current release (--bump, no header)
+        uses: orhun/git-cliff-action@v4
+        with:
+          args: --bump --strip header
+        env:
+          OUTPUT: CHANGELOG-bump.md
+
+      - name: Fetch master for prior changelog
+        run: |
+          git fetch origin master
+          git checkout origin/master -- CHANGELOG.md 2>/dev/null || touch CHANGELOG-prior.md
+          # Extract all prior release entries (everything after the header)
+          if [ -f CHANGELOG.md ]; then
+            sed -n '/^## \[/,$p' CHANGELOG.md > CHANGELOG-prior.md
+          else
+            touch CHANGELOG-prior.md
+          fi
+
+      - name: Assemble full CHANGELOG.md
+        run: |
+          cat CHANGELOG-header.md > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          cat CHANGELOG-bump.md >> CHANGELOG.md
+          if [ -s CHANGELOG-prior.md ]; then
+            echo "" >> CHANGELOG.md
+            cat CHANGELOG-prior.md >> CHANGELOG.md
+          fi
 
       - name: Commit and push CHANGELOG.md
         run: |
+          git checkout ${{ github.head_ref }}
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add CHANGELOG.md
