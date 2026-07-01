@@ -106,3 +106,7 @@ _Avoid_: file source, document source, local document
 **MCP Source**:
 A Model Context Protocol server tool used during Enriched Search to pull data from external systems (e.g., JIRA, Slack, corporate wiki). Specified in `plan.sources.mcp` as server names. The agent invokes `mcp__<server>__<tool>` during the Enriched Search injection. Findings tagged `source: "mcp"` with the tool identifier as `sourceUrl`.
 _Avoid_: MCP data source, external source
+
+**PDF Export**:
+Conversion of a markdown research report to a PDF file. Available as a standalone `export_pdf` tool (always available) and as an automatic post-run step gated by `deepResearch.pdfExport` setting. Uses pandoc + weasyprint as primary method; falls back to agent-injected conversion if system tools are missing.
+_Avoid_: PDF generation, report export
