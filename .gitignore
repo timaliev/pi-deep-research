@@ -9,3 +9,6 @@ extension/node_modules/
 
 # macOS
 .DS_Store
+## Artifacts ##
+artifacts/
+logs/

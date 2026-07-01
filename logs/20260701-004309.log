@@ -1,4 +1,0 @@
-{"ts":"2026-06-30T21:43:09.761Z","runId":"20260701-004309","type":"queue_saved","depth":0,"entries":1,"engines":"duckduckgo"}
-{"ts":"2026-06-30T21:43:09.762Z","runId":"20260701-004309","type":"search_executed","query":"q1","resultCount":0,"elapsedMs":0,"depth":0}
-{"ts":"2026-06-30T21:43:09.763Z","runId":"20260701-004309","type":"phase_changed","from":"searching","to":"extracting","depth":1}
-{"ts":"2026-06-30T21:43:09.763Z","runId":"20260701-004309","type":"extraction","length":333,"depth":1}
