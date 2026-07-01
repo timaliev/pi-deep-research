@@ -1,0 +1,20 @@
+[
+  {
+    "question": "Q1",
+    "engine": "duckduckgo",
+    "scheduledDelayMs": 0,
+    "timestamp": "2026-06-30T21:43:21.785Z"
+  },
+  {
+    "question": "Q2",
+    "engine": "duckduckgo",
+    "scheduledDelayMs": 2800,
+    "timestamp": "2026-06-30T21:43:21.785Z"
+  },
+  {
+    "question": "Q3",
+    "engine": "duckduckgo",
+    "scheduledDelayMs": 5395,
+    "timestamp": "2026-06-30T21:43:21.785Z"
+  }
+]

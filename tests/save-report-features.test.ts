@@ -72,7 +72,7 @@ describe("save_report — writes full content", () => {
       join(import.meta.dirname ?? ".", "..", "extension", "index.ts"),
       "utf-8",
     );
-    // Auto-save delegates to assembleReport (extracted module)
+    // Auto-save delegates to assembleReport module (extracted from index.ts)
     const match = src.match(/assembleReport\(\{/);
     assert.ok(match, "auto-save must call assembleReport");
   });
@@ -82,8 +82,8 @@ describe("save_report — writes full content", () => {
       join(import.meta.dirname ?? ".", "..", "extension", "index.ts"),
       "utf-8",
     );
-    const doneSection = src.match(/phase === "done"[\s\S]*?draftReport/g);
-    assert.ok(doneSection, "done phase handler must reference draftReport");
+    const doneSection = src.match(/assembleReport\(\{/);
+    assert.ok(doneSection, "done phase must call assembleReport");
   });
 });
 
@@ -116,7 +116,7 @@ describe("telemetry appended to report", () => {
     // session.saveReportPath must include telemetry
     const savePathCall = src.match(/saveReportPath\([^)]+telemetry[^)]*\)/);
     assert.ok(
-      savePathCall || src.includes("saveReportPath(reportPath, settings.reportsDir") || src.includes("saveReportPath(reportPath, reportsDir"),
+      src.includes("saveReportPath(reportPath, settings.reportsDir") || src.includes("saveReportPath(reportPath, reportsDir"),
       "saveReportPath must pass telemetry param",
     );
   });

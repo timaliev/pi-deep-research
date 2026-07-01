@@ -19,6 +19,7 @@ import { SettingsContext } from "./settings-context.js";
 import { ProfileResolver } from "./profile-resolver.js";
 import { SessionState } from "./session-state.js";
 import { generateRunId } from "./ids.js";
+import { ResearchRunOrchestrator } from "./research-run-orchestrator.js";
 import { assembleReport } from "./report-assembly.js";
 
 const baseDir = dirname(fileURLToPath(import.meta.url));
@@ -323,19 +324,19 @@ Use "compare" mode to see results from each engine separately without deduplicat
       plan_artifact_path: Type.Optional(Type.String({ description: "Path to prefilter.json (first call only)" })),
     }),
     async execute(_toolCallId, params, _signal, onUpdate, ctx) {
-      // Load or initialize state
-      let snapshot: ResearchSnapshot;
+      const orchestrator = new ResearchRunOrchestrator({
+        searchFn: searchWeb,
+        scraper: new WebScraper(),
+        profilePresets: profileResolver.getPresets(),
+        artifactsDir: settings.artifactsDir,
+        searchCred,
+        appendEntry: (type, data) => pi.appendEntry(type, data),
+      });
 
+      const entries = ctx.sessionManager.getEntries();
+
+      // Confirmation gate — only for first call
       if (params.plan_artifact_path) {
-        if (!existsSync(params.plan_artifact_path)) {
-          return {
-            content: [{ type: "text", text: `Error: plan artifact not found at ${params.plan_artifact_path}` }],
-            details: { error: "artifact_not_found" },
-          };
-        }
-
-        // Confirmation gate: user must confirm before research runs
-        const entries = ctx.sessionManager.getEntries();
         const confirmed = [...entries].reverse().find((e: any) => e.customType === "deep-research:plan-confirmed");
         if (!confirmed) {
           return {
@@ -350,125 +351,37 @@ Use "compare" mode to see results from each engine separately without deduplicat
             details: { error: "plan_mismatch" },
           };
         }
-        const raw = readFileSync(params.plan_artifact_path, "utf-8");
-        const artifact: PrefilterArtifact = JSON.parse(raw);
-        snapshot = ResearchStateMachine.init(artifact.plan, profileResolver.getPresets(), artifact.runId);
-
-        const scraper = new WebScraper();
-
-        // Compute output directories from plan artifact path (stable across sessions)
-        const deepResearchBase = join(dirname(params.plan_artifact_path), "..");
-        const artifactsDir = join(deepResearchBase, "artifacts");
-        mkdirSync(artifactsDir, { recursive: true });
-        const logsDir = join(deepResearchBase, "logs");
-        const reportsDir = join(deepResearchBase, "reports");
-        mkdirSync(reportsDir, { recursive: true });
-
-        const runLogger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
-        const machine = new ResearchStateMachine({ searchFn: searchWeb, scraper, profilePresets: profileResolver.getPresets(), artifactsDir, searchCred, logger: runLogger });
-
-        // Advance to first phase (searching → extracting)
-        const result = await machine.next(snapshot, artifact.plan);
-
-        // Persist state with base directory for consistent output location
-        session.saveResearchState(result.snapshot, { plan: artifact.plan, planArtifactPath: params.plan_artifact_path, deepResearchBase });
-
-        // Inject prompt if any
-        if (result.inject) {
-          pi.sendUserMessage(result.inject, { deliverAs: "steer" });
-        }
-
-        return {
-          content: [{ type: "text", text: `## Research Started\n\nPhase: ${result.phase}\nDepth: ${result.snapshot.currentDepth}/${result.snapshot.totalDepth}\nSearch calls: ${result.snapshot.searchCalls}\n\n${result.inject ? "I've sent you a prompt to process. Respond to it, then call run_research again." : "Call run_research again to continue."}` }],
-          details: { phase: result.phase, run_id: result.snapshot.runId },
-        };
       }
 
-      // Subsequent calls: load state from session
-      const entries = ctx.sessionManager.getEntries();
-      const lastAssistant = [...entries].reverse().find(
-        (e: any) => e.message?.role === "assistant"
-      );
-      const agentResponse = lastAssistant?.message?.content as string | undefined;
-      const lastStateEntry = [...entries].reverse().find((e) => e.customType === "deep-research:state");
-      if (!lastStateEntry) {
+      const result = await orchestrator.handle({
+        planArtifactPath: params.plan_artifact_path,
+        entries: [...entries] as any[],
+      });
+
+      if (result.kind === "error") {
         return {
-          content: [{ type: "text", text: "Error: no research state found. Call run_research with a plan_artifact_path first." }],
-          details: { error: "no_state" },
+          content: [{ type: "text", text: `Error: ${result.error}` }],
+          details: result.details ?? {},
         };
-      }
-
-      const stateData = lastStateEntry.data as Record<string, unknown>;
-      snapshot = stateData as unknown as ResearchSnapshot;
-      const plan = stateData.plan as ResearchPlan;
-      const planArtifactPath = stateData.planArtifactPath as string;
-
-      // Restore draftReport: try dedicated draft entry first, fall back to agent response
-      snapshot.draftReport = session.restoreDraft(stateData, agentResponse, entries);
-      let deepResearchBase = (stateData.deepResearchBase as string) || planArtifactPath ? join(dirname(planArtifactPath), "..") : join(ctx.cwd ?? baseDir, "deep-research");
-      // Ensure it's an absolute path
-      if (!deepResearchBase.startsWith("/")) deepResearchBase = join(ctx.cwd ?? baseDir, deepResearchBase);
-      const logsDir = join(deepResearchBase, "logs");
-      const reportsDir = join(deepResearchBase, "reports");
-      const artifactsDir = join(deepResearchBase, "artifacts");
-      mkdirSync(reportsDir, { recursive: true });
-
-      if (!plan || !snapshot) {
-        return {
-          content: [{ type: "text", text: "Error: corrupted research state. Start a new research run." }],
-          details: { error: "corrupted_state" },
-        };
-      }
-
-      // Create logger for subsequent calls (same file, appends)
-      const scraper = new WebScraper();
-      const runLogger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
-      const machine = new ResearchStateMachine({ searchFn: searchWeb, scraper, profilePresets: profileResolver.getPresets(), artifactsDir, searchCred, logger: runLogger });
-      const result = await machine.next(snapshot, plan, agentResponse);
-
-      session.saveResearchState(result.snapshot, { plan, planArtifactPath, deepResearchBase });
-
-      // Persist draft text separately so doSaving can recover it reliably
-      if (result.phase === "saving" && result.snapshot.draftReport && result.snapshot.draftReport.length >= 40) {
-        session.saveDraft(result.snapshot.runId, result.snapshot.draftReport);
       }
 
       // Inject prompt if any
-      if (result.inject) {
+      if (result.kind === "in_progress" && result.inject) {
         pi.sendUserMessage(result.inject, { deliverAs: "steer" });
       }
 
       // If done, save report
-      if (result.phase === "done") {
-        const reportText = result.snapshot.draftReport ?? "";
-
-        // Guard: log if draftReport is suspiciously short despite passing doSaving validation
-        if (reportText.length < 40) {
-          runLogger.event("report_save_warning", {
-            reason: "draft_too_short",
-            draftLength: reportText.length,
-            snapshotPhase: result.snapshot.phase,
-          });
-        }
-
+      if (result.kind === "done") {
         const reportPath = assembleReport({
           snapshot: result.snapshot,
-          topic: plan.topic,
+          topic: result.plan.topic,
           reportsDir: settings.reportsDir,
-          planArtifactPath,
-          logsDir,
-          profileName: typeof plan.profile === "object" && "name" in plan.profile ? (plan.profile as any).name : undefined,
+          planArtifactPath: result.planArtifactPath,
+          logsDir: result.logsDir,
+          profileName: typeof result.plan.profile === "object" && "name" in result.plan.profile ? (result.plan.profile as any).name : undefined,
         });
 
-        // Store path so save_report writes to the same file
         session.saveReportPath(reportPath, settings.reportsDir, "", result.snapshot.runId);
-
-        runLogger.event("report_saved", {
-          path: reportPath,
-          searchCalls: result.snapshot.searchCalls,
-          scrapeCalls: result.snapshot.scrapeCalls,
-          sourcesVisited: result.snapshot.allVisitedUrls.length,
-        });
 
         return {
           content: [{ type: "text", text: `## Research Complete ✅\n\nReport saved to: ${reportPath}\n\nSearch calls: ${result.snapshot.searchCalls}\nScrape calls: ${result.snapshot.scrapeCalls}\nSources visited: ${result.snapshot.allVisitedUrls.length}` }],
@@ -477,8 +390,8 @@ Use "compare" mode to see results from each engine separately without deduplicat
       }
 
       return {
-        content: [{ type: "text", text: `## Research In Progress\n\nPhase: ${result.phase}\nDepth: ${result.snapshot.currentDepth}/${result.snapshot.totalDepth}\nSearch calls: ${result.snapshot.searchCalls}\nScrape calls: ${result.snapshot.scrapeCalls}\n\n${result.inject ? "I've sent you a prompt. Respond, then call run_research again." : "Call run_research again to continue."}` }],
-        details: { phase: result.phase, run_id: result.snapshot.runId },
+        content: [{ type: "text", text: `## Research In Progress\n\nPhase: ${result.snapshot.phase}\nDepth: ${result.snapshot.currentDepth}/${result.snapshot.totalDepth}\nSearch calls: ${result.snapshot.searchCalls}\nScrape calls: ${result.snapshot.scrapeCalls}\n\n${result.inject ? "I've sent you a prompt. Respond, then call run_research again." : "Call run_research again to continue."}` }],
+        details: { phase: result.snapshot.phase, run_id: result.snapshot.runId },
       };
     },
   });
