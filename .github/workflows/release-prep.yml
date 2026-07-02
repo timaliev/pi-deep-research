@@ -75,7 +75,6 @@ jobs:
 
       - name: Fetch prior changelog from master
         run: |
-          git fetch origin master
           git checkout origin/master -- CHANGELOG.md 2>/dev/null || true
           if [ -f CHANGELOG.md ]; then
             sed -n '/^## \[/,$p' CHANGELOG.md > CHANGELOG-prior.md
