@@ -48,6 +48,8 @@ jobs:
           VERSION=$(git-cliff --bumped-version)
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Write version to package.json
         run: |
@@ -90,7 +92,7 @@ jobs:
             echo "" >> CHANGELOG.md
             cat CHANGELOG-prior.md >> CHANGELOG.md
           fi
-          git-cliff --body="" --strip header >> CHANGELOG.md
+          git-cliff --body="" --strip header --offline >> CHANGELOG.md
           rm -f CHANGELOG-header.md CHANGELOG-bump.md CHANGELOG-prior.md
 
       - name: Create PR to master
