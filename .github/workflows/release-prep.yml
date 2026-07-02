@@ -31,14 +31,17 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install git-cliff
+        uses: taiki-e/install-action@git-cliff
+
       - uses: orhun/git-cliff-action@v4
         with:
-          args: --version
+          args: --bumped-version
 
       - name: Get version from git-cliff
         id: version
         run: |
-          VERSION=$(git cliff --bumped-version)
+          VERSION=$(git-cliff --bumped-version)
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
 
