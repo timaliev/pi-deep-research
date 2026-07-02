@@ -13,26 +13,7 @@ import type { Logger } from "./logger.js";
 import { resolveBraveApiKey, buildBraveSearchParams, parseBraveResponse } from "../brave-search.js";
 import type { SearchProviderCredentials } from "../search-providers.js";
 
-// --- Constants (from ddg-search config) ---
-const DDG_BASE_URL = "https://html.duckduckgo.com/html";
-const DDG_USER_AGENT = "Mozilla/5.0 (compatible; web-search/1.0)";
-const DEFAULT_MAX_RETRIES = 3;
-const DEFAULT_BASE_DELAY_MS = 1000;
-const DEFAULT_MAX_DELAY_MS = 30_000;
-const BACKOFF_MULTIPLIER = 2.0;
-const JITTER_MS = 500;
-
-// --- Rate limit indicators in HTML ---
-const RATE_LIMIT_INDICATORS = [
-  "captcha",
-  "rate limit",
-  "too many requests",
-  "blocked",
-  "automated",
-  "bots use duckduckgo",
-  "challenge",
-  "anomaly",
-];
+export const DDG_USER_AGENT = "Mozilla/5.0 (compatible; web-search/1.0)";
 
 // --- Search result type ---
 export interface WebSearchResult {
@@ -120,7 +101,7 @@ function fetchUrlWithMethod(
   });
 }
 
-function postForm(
+export function postForm(
   urlStr: string,
   formData: Record<string, string>,
   opts?: { headers?: Record<string, string>; timeout?: number },
@@ -136,34 +117,13 @@ function fetchUrl(
 }
 
 // --- Sleep helper ---
-function sleep(ms: number): Promise<void> {
+export function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// --- Exponential backoff with jitter ---
-function calcDelay(attempt: number, baseDelay: number, maxDelay: number): number {
-  let delay = baseDelay * Math.pow(BACKOFF_MULTIPLIER, attempt);
-  if (delay > maxDelay) delay = maxDelay;
-  delay += Math.random() * JITTER_MS;
-  return Math.floor(delay);
-}
-
-// --- DuckDuckGo HTML endpoint search ---
-
-/** Check if HTML response indicates rate limiting or CAPTCHA */
-function isRateLimited(status: number, body: string): boolean {
-  if (status === 202 || status === 429 || status >= 500) return true;
-
-  const lowerBody = body.toLowerCase();
-  for (const indicator of RATE_LIMIT_INDICATORS) {
-    if (lowerBody.includes(indicator)) return true;
-  }
-
-  return false;
-}
-
-/** Decode HTML entities */
-function decodeHtmlEntities(text: string): string {
+// --- Brave Search API (optional - needs BRAVE_API_KEY env var or settings) ---
+/** Decode HTML entities (shared by engine parsers) */
+export function decodeHtmlEntities(text: string): string {
   return text
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
@@ -175,108 +135,6 @@ function decodeHtmlEntities(text: string): string {
     .replace(/&#[xX]([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
 }
 
-/** Parse DDG HTML results using CSS classes .result__a, .result__snippet */
-function parseDdgHtml(body: string, maxResults: number): WebSearchResult[] {
-  const results: WebSearchResult[] = [];
-
-  const linkRegex =
-    /<a[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
-  const snippetRegex =
-    /<[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/[^>]+>/gi;
-
-  const links: Array<{ href: string; title: string }> = [];
-  const snippets: string[] = [];
-
-  let linkMatch;
-  while ((linkMatch = linkRegex.exec(body)) !== null) {
-    links.push({
-      href: linkMatch[1],
-      title: decodeHtmlEntities(
-        linkMatch[2].replace(/<[^>]*>/g, "").trim(),
-      ),
-    });
-  }
-
-  let snipMatch;
-  while ((snipMatch = snippetRegex.exec(body)) !== null) {
-    snippets.push(
-      decodeHtmlEntities(snipMatch[1].replace(/<[^>]*>/g, "").trim()),
-    );
-  }
-
-  for (let i = 0; i < links.length && results.length < maxResults; i++) {
-    const { href, title } = links[i];
-
-    let cleanUrl = href;
-    const uddgMatch = href.match(/uddg=([^&]+)/);
-    if (uddgMatch) {
-      try {
-        cleanUrl = decodeURIComponent(uddgMatch[1]);
-      } catch {
-        cleanUrl = href;
-      }
-    }
-
-    if (title && cleanUrl && !cleanUrl.includes("duckduckgo.com/l/")) {
-      results.push({
-        title,
-        url: cleanUrl,
-        snippet: snippets[i] ?? "",
-        engine: "duckduckgo",
-      });
-    }
-  }
-
-  return results;
-}
-
-/** Search DuckDuckGo with retry + exponential backoff + pre-request stagger */
-export async function searchDuckDuckGo(
-  query: string,
-  maxResults: number,
-  maxRetries: number = DEFAULT_MAX_RETRIES,
-  baseDelay: number = DEFAULT_BASE_DELAY_MS,
-  maxDelay: number = DEFAULT_MAX_DELAY_MS,
-): Promise<WebSearchResult[]> {
-  // Stagger concurrent DDG requests: random pre-delay BEFORE touching engineLastCall
-  const preStaggerMs = Math.random() * 2000;
-  engineLastCall["duckduckgo"] = Date.now() + preStaggerMs;
-  await sleep(preStaggerMs);
-
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    if (attempt > 0) {
-      const delay = calcDelay(attempt - 1, baseDelay, maxDelay);
-      await sleep(delay);
-    }
-
-    try {
-      const { status, body } = await postForm(
-        DDG_BASE_URL,
-        { q: query },
-        {
-          timeout: 15_000,
-          headers: { "User-Agent": DDG_USER_AGENT },
-        },
-      );
-
-      if (isRateLimited(status, body)) {
-        if (attempt < maxRetries) continue;
-        throw new Error(
-          `DuckDuckGo rate-limited after ${maxRetries + 1} attempts`,
-        );
-      }
-
-      return parseDdgHtml(body, maxResults);
-    } catch (err: any) {
-      if (attempt < maxRetries) continue;
-      throw err;
-    }
-  }
-
-  return [];
-}
-
-// --- Brave Search API (optional - needs BRAVE_API_KEY env var or settings) ---
 export async function searchBrave(
   query: string,
   maxResults: number,
@@ -606,7 +464,7 @@ function deduplicateByUrl(results: WebSearchResult[]): WebSearchResult[] {
 }
 
 // --- Per-engine rate limiter ---
-const engineLastCall: Record<string, number> = {};
+export const engineLastCall: Record<string, number> = {};
 const ENGINE_MIN_DELAY: Record<string, number> = {
   duckduckgo: 2500,
   searxng: 2000,
