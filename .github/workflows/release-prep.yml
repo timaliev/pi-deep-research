@@ -4,6 +4,14 @@ on:
   push:
     branches: [release]
 
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -23,9 +31,6 @@ jobs:
     needs: test
     if: success()
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -86,6 +91,14 @@ jobs:
             echo "" >> CHANGELOG.md
             cat CHANGELOG-prior.md >> CHANGELOG.md
           fi
+
+      - name: "Upload artifacts for debug: CHANGELOG.md"
+        uses: actions/upload-artifact@v7
+        id: artifact-upload
+        with:
+          name: CHANGELOG-${{ env.NEW_VERSION_TAG }}.md
+          path: CHANGELOG.md
+          if-no-files-found: error
 
       - name: Create PR to master
         uses: peter-evans/create-pull-request@v8
