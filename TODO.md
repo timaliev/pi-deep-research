@@ -34,3 +34,22 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 - TODO: implement `export_pdf` tool — shell-out to pandoc+weasyprint, pre-flight checks (`which pandoc`, `which weasyprint`, `which mermaid-filter`), fallback to agent injection if tools missing.
 - TODO: add `deepResearch.pdfExport` boolean setting (default `false`) to `SettingsContext`.
 - TODO: implement auto-PDF export in `ResearchRunOrchestrator` — after `done` phase, check `pdfExport` setting, invoke conversion on report path.
+
+### Known bugs (diagnosed 2026-07-02)
+
+- TODO: **B1 (Medium)** — `research-run-orchestrator.ts:133` uses local `extractText()` which does NOT strip `<tool_calls>` XML blocks from agent response. The canonical `extractTextContent()` in `state-machine.ts` does strip them. Fix: replace `extractText` with `extractTextContent` import in orchestrator's `handleSubsequentCall` draft recovery path.
+- TODO: **B2 (Low)** — `search/web-search.ts:331` creates `const parsedUrl = new URL(TAVILY_API_URL)` inside `tavilyPostRequest` but never uses it. Remove unused variable.
+
+### Dead code (diagnosed 2026-07-02)
+
+- TODO: **D1** — `state-machine.ts:454` `buildDraftingPrompt()` export marked `@deprecated`. Zero production callers. Safe to remove.
+- TODO: **D2** — `search-providers.ts:7` `loadSearchProviders()` export. Zero production callers. `SettingsContext` handles provider loading now. Safe to remove or mark `@deprecated`.
+- TODO: **D3** — `profile-resolver.ts:57` `loadDeepResearchSettings()` export. Zero production callers. `SettingsContext` handles settings loading now. Safe to remove or mark `@deprecated`.
+
+### Code smells (low priority, diagnosed 2026-07-02)
+
+- TODO: **S1** — `index.ts:145,162` `writeFileSync` imported twice via dynamic `await import("node:fs")` instead of module-level import. Consolidate into top-level import.
+- TODO: **S2** — `index.ts:175-176` Module-level mutable `_prefilterManager` / `_prefilterRunId`. State bleeds if agent starts new research plan before finalizing previous one. Consider scoping by topic hash.
+- TODO: **S3** — `index.ts:131,153` `reportsDir` declared 3 times (module-level + twice inside `save_report` execute). Shadowing is confusing but harmless.
+- TODO: **S4** — `profile-resolver.ts:15` `resolveProfile()` marked `@deprecated` but actively used by `state-machine.ts` and `prefilter.ts` as legitimate fallback. Fix deprecation message or remove annotation.
+- TODO: **S5** — `web-search.ts` ~600 lines. Engine implementations still live in this file while adapters re-export via `engines/*.ts`. Intentional per ADR-0009 but worth tracking for future extraction.
