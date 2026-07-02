@@ -112,6 +112,7 @@ commit_parsers = [
     { message = "^tests", group = "<!-- 4 --> Tests" },
     { body = ".*security", group = "Security" },
     { message = "^chore\\(version\\):", skip = true },
+    { message = "^chore\\(release\\):", skip = true },
     { message = "^chore\\(wip\\):", skip = true },
     { message = "^chore", group = "<!-- 8 --> Miscellaneous Chores" },
     { message = "^Merge pull request", skip = true },
