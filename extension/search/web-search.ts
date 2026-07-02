@@ -10,7 +10,6 @@
 import { request as httpsRequest } from "node:https";
 import { request as httpRequest } from "node:http";
 import type { Logger } from "./logger.js";
-import { resolveBraveApiKey, buildBraveSearchParams, parseBraveResponse } from "../brave-search.js";
 import type { SearchProviderCredentials } from "../search-providers.js";
 
 export const DDG_USER_AGENT = "Mozilla/5.0 (compatible; web-search/1.0)";
@@ -109,7 +108,7 @@ export function postForm(
   return fetchUrlWithMethod("POST", urlStr, formData, opts);
 }
 
-function fetchUrl(
+export function fetchUrl(
   urlStr: string,
   opts?: { headers?: Record<string, string>; timeout?: number },
 ): Promise<FetchResult> {
@@ -133,29 +132,6 @@ export function decodeHtmlEntities(text: string): string {
     .replace(/&#x2F;/gi, "/")
     .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
     .replace(/&#[xX]([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
-}
-
-export async function searchBrave(
-  query: string,
-  maxResults: number,
-  cred?: SearchProviderCredentials,
-): Promise<WebSearchResult[]> {
-  const apiKey = resolveBraveApiKey(cred);
-  if (!apiKey) return [];
-
-  const { url } = buildBraveSearchParams(query, maxResults, {});
-  const { status, body } = await fetchUrl(url, {
-    timeout: 15_000,
-    headers: {
-      Accept: "application/json",
-      "Accept-Encoding": "identity",
-      "X-Subscription-Token": apiKey,
-      "User-Agent": DDG_USER_AGENT,
-    },
-  });
-
-  if (status !== 200) return [];
-  return parseBraveResponse(body, maxResults);
 }
 
 // --- Tavily Search API ---
