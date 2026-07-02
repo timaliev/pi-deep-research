@@ -7,8 +7,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const SEARCH_CODE_PATH = join(import.meta.dirname ?? ".", "..", "extension", "search", "web-search.ts");
+const SEARCH_CODE_PATH = join(import.meta.dirname ?? ".", "..", "extension", "search", "engines", "duckduckgo.ts");
+const WEB_SEARCH_PATH = join(import.meta.dirname ?? ".", "..", "extension", "search", "web-search.ts");
 const searchCode = readFileSync(SEARCH_CODE_PATH, "utf-8");
+const webSearchCode = readFileSync(WEB_SEARCH_PATH, "utf-8");
 
 describe("DDG search stagger", () => {
   it("engineLastCall is updated BEFORE HTTP request, not after", () => {
@@ -47,7 +49,7 @@ describe("DDG search stagger", () => {
   });
 
   it("DDG min delay between requests is >= 2000ms", () => {
-    const match = searchCode.match(/duckduckgo["']?\s*:\s*(\d+)/);
+    const match = webSearchCode.match(/duckduckgo["']?\s*:\s*(\d+)/);
     assert.ok(match, "Must have DDG min delay configured");
     assert.ok(
       Number(match[1]) >= 2000,
@@ -57,7 +59,7 @@ describe("DDG search stagger", () => {
 
   it("waitIfNeeded is called BEFORE the HTTP request in searchWeb loop", () => {
     // In searchWeb's engine loop, waitIfNeeded must be called before the HTTP call
-    const searchWebMatch = searchCode.match(/export async function searchWeb[\s\S]*?^export/m);
+    const searchWebMatch = webSearchCode.match(/export async function searchWeb[\s\S]*?^export/m);
     assert.ok(searchWebMatch, "searchWeb function must exist");
     const fnBody = searchWebMatch[0];
     

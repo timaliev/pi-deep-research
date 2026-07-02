@@ -10,29 +10,9 @@
 import { request as httpsRequest } from "node:https";
 import { request as httpRequest } from "node:http";
 import type { Logger } from "./logger.js";
-import { resolveBraveApiKey, buildBraveSearchParams, parseBraveResponse } from "../brave-search.js";
 import type { SearchProviderCredentials } from "../search-providers.js";
 
-// --- Constants (from ddg-search config) ---
-const DDG_BASE_URL = "https://html.duckduckgo.com/html";
-const DDG_USER_AGENT = "Mozilla/5.0 (compatible; web-search/1.0)";
-const DEFAULT_MAX_RETRIES = 3;
-const DEFAULT_BASE_DELAY_MS = 1000;
-const DEFAULT_MAX_DELAY_MS = 30_000;
-const BACKOFF_MULTIPLIER = 2.0;
-const JITTER_MS = 500;
-
-// --- Rate limit indicators in HTML ---
-const RATE_LIMIT_INDICATORS = [
-  "captcha",
-  "rate limit",
-  "too many requests",
-  "blocked",
-  "automated",
-  "bots use duckduckgo",
-  "challenge",
-  "anomaly",
-];
+export const DDG_USER_AGENT = "Mozilla/5.0 (compatible; web-search/1.0)";
 
 // --- Search result type ---
 export interface WebSearchResult {
@@ -120,7 +100,7 @@ function fetchUrlWithMethod(
   });
 }
 
-function postForm(
+export function postForm(
   urlStr: string,
   formData: Record<string, string>,
   opts?: { headers?: Record<string, string>; timeout?: number },
@@ -128,7 +108,7 @@ function postForm(
   return fetchUrlWithMethod("POST", urlStr, formData, opts);
 }
 
-function fetchUrl(
+export function fetchUrl(
   urlStr: string,
   opts?: { headers?: Record<string, string>; timeout?: number },
 ): Promise<FetchResult> {
@@ -136,34 +116,13 @@ function fetchUrl(
 }
 
 // --- Sleep helper ---
-function sleep(ms: number): Promise<void> {
+export function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// --- Exponential backoff with jitter ---
-function calcDelay(attempt: number, baseDelay: number, maxDelay: number): number {
-  let delay = baseDelay * Math.pow(BACKOFF_MULTIPLIER, attempt);
-  if (delay > maxDelay) delay = maxDelay;
-  delay += Math.random() * JITTER_MS;
-  return Math.floor(delay);
-}
-
-// --- DuckDuckGo HTML endpoint search ---
-
-/** Check if HTML response indicates rate limiting or CAPTCHA */
-function isRateLimited(status: number, body: string): boolean {
-  if (status === 202 || status === 429 || status >= 500) return true;
-
-  const lowerBody = body.toLowerCase();
-  for (const indicator of RATE_LIMIT_INDICATORS) {
-    if (lowerBody.includes(indicator)) return true;
-  }
-
-  return false;
-}
-
-/** Decode HTML entities */
-function decodeHtmlEntities(text: string): string {
+// --- Brave Search API (optional - needs BRAVE_API_KEY env var or settings) ---
+/** Decode HTML entities (shared by engine parsers) */
+export function decodeHtmlEntities(text: string): string {
   return text
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
@@ -173,419 +132,6 @@ function decodeHtmlEntities(text: string): string {
     .replace(/&#x2F;/gi, "/")
     .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
     .replace(/&#[xX]([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
-}
-
-/** Parse DDG HTML results using CSS classes .result__a, .result__snippet */
-function parseDdgHtml(body: string, maxResults: number): WebSearchResult[] {
-  const results: WebSearchResult[] = [];
-
-  const linkRegex =
-    /<a[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
-  const snippetRegex =
-    /<[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/[^>]+>/gi;
-
-  const links: Array<{ href: string; title: string }> = [];
-  const snippets: string[] = [];
-
-  let linkMatch;
-  while ((linkMatch = linkRegex.exec(body)) !== null) {
-    links.push({
-      href: linkMatch[1],
-      title: decodeHtmlEntities(
-        linkMatch[2].replace(/<[^>]*>/g, "").trim(),
-      ),
-    });
-  }
-
-  let snipMatch;
-  while ((snipMatch = snippetRegex.exec(body)) !== null) {
-    snippets.push(
-      decodeHtmlEntities(snipMatch[1].replace(/<[^>]*>/g, "").trim()),
-    );
-  }
-
-  for (let i = 0; i < links.length && results.length < maxResults; i++) {
-    const { href, title } = links[i];
-
-    let cleanUrl = href;
-    const uddgMatch = href.match(/uddg=([^&]+)/);
-    if (uddgMatch) {
-      try {
-        cleanUrl = decodeURIComponent(uddgMatch[1]);
-      } catch {
-        cleanUrl = href;
-      }
-    }
-
-    if (title && cleanUrl && !cleanUrl.includes("duckduckgo.com/l/")) {
-      results.push({
-        title,
-        url: cleanUrl,
-        snippet: snippets[i] ?? "",
-        engine: "duckduckgo",
-      });
-    }
-  }
-
-  return results;
-}
-
-/** Search DuckDuckGo with retry + exponential backoff + pre-request stagger */
-export async function searchDuckDuckGo(
-  query: string,
-  maxResults: number,
-  maxRetries: number = DEFAULT_MAX_RETRIES,
-  baseDelay: number = DEFAULT_BASE_DELAY_MS,
-  maxDelay: number = DEFAULT_MAX_DELAY_MS,
-): Promise<WebSearchResult[]> {
-  // Stagger concurrent DDG requests: random pre-delay BEFORE touching engineLastCall
-  const preStaggerMs = Math.random() * 2000;
-  engineLastCall["duckduckgo"] = Date.now() + preStaggerMs;
-  await sleep(preStaggerMs);
-
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    if (attempt > 0) {
-      const delay = calcDelay(attempt - 1, baseDelay, maxDelay);
-      await sleep(delay);
-    }
-
-    try {
-      const { status, body } = await postForm(
-        DDG_BASE_URL,
-        { q: query },
-        {
-          timeout: 15_000,
-          headers: { "User-Agent": DDG_USER_AGENT },
-        },
-      );
-
-      if (isRateLimited(status, body)) {
-        if (attempt < maxRetries) continue;
-        throw new Error(
-          `DuckDuckGo rate-limited after ${maxRetries + 1} attempts`,
-        );
-      }
-
-      return parseDdgHtml(body, maxResults);
-    } catch (err: any) {
-      if (attempt < maxRetries) continue;
-      throw err;
-    }
-  }
-
-  return [];
-}
-
-// --- Brave Search API (optional - needs BRAVE_API_KEY env var or settings) ---
-export async function searchBrave(
-  query: string,
-  maxResults: number,
-  cred?: SearchProviderCredentials,
-): Promise<WebSearchResult[]> {
-  const apiKey = resolveBraveApiKey(cred);
-  if (!apiKey) return [];
-
-  const { url } = buildBraveSearchParams(query, maxResults, {});
-  const { status, body } = await fetchUrl(url, {
-    timeout: 15_000,
-    headers: {
-      Accept: "application/json",
-      "Accept-Encoding": "identity",
-      "X-Subscription-Token": apiKey,
-      "User-Agent": DDG_USER_AGENT,
-    },
-  });
-
-  if (status !== 200) return [];
-  return parseBraveResponse(body, maxResults);
-}
-
-// --- Tavily Search API ---
-const TAVILY_API_URL = "https://api.tavily.com/search";
-
-export async function searchTavily(
-  query: string,
-  maxResults: number,
-): Promise<WebSearchResult[]> {
-  const apiKey = process.env.TAVILY_API_KEY;
-  if (!apiKey) return [];
-  return await tavilyPostRequest(apiKey, query, maxResults);
-}
-
-async function tavilyPostRequest(
-  apiKey: string,
-  query: string,
-  maxResults: number,
-): Promise<WebSearchResult[]> {
-  const body = JSON.stringify({
-    api_key: apiKey,
-    query,
-    search_depth: "basic",
-    max_results: maxResults,
-    include_answer: false,
-    include_raw_content: false,
-    include_images: false,
-  });
-
-  return new Promise((resolve) => {
-    const parsedUrl = new URL(TAVILY_API_URL);
-    const req = httpsRequest(
-      TAVILY_API_URL,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Content-Length": String(Buffer.byteLength(body)),
-          "User-Agent": DDG_USER_AGENT,
-        },
-        timeout: 20_000,
-      },
-      (res) => {
-        const chunks: Buffer[] = [];
-        res.on("data", (chunk: Buffer) => chunks.push(chunk));
-        res.on("end", () => {
-          try {
-            const data = JSON.parse(Buffer.concat(chunks).toString("utf-8"));
-            const results = (data.results ?? []).slice(0, maxResults);
-            resolve(
-              results.map((r: any) => ({
-                title: r.title ?? "",
-                url: r.url ?? "",
-                snippet: r.content ?? r.snippet ?? "",
-                engine: "tavily",
-              })),
-            );
-          } catch {
-            resolve([]);
-          }
-        });
-      },
-    );
-    req.on("timeout", () => { req.destroy(); resolve([]); });
-    req.on("error", () => resolve([]));
-    req.write(body);
-    req.end();
-  });
-}
-
-// --- Yandex Search API ---
-const YANDEX_SEARCH_URL = "https://searchapi.api.cloud.yandex.net/v2/web/searchAsync";
-const YANDEX_OPERATION_URL = "https://operation.api.cloud.yandex.net/operations/";
-const YANDEX_IAM_URL = "https://iam.api.cloud.yandex.net/iam/v1/tokens";
-
-interface YandexIamToken {
-  iamToken: string;
-  expiresAt: string;
-}
-
-let yandexIamCache: YandexIamToken | null = null;
-
-async function yandexGetIamToken(oauthToken: string): Promise<string> {
-  if (yandexIamCache && new Date(yandexIamCache.expiresAt).getTime() > Date.now() + 60_000) {
-    return yandexIamCache.iamToken;
-  }
-
-  return new Promise((resolve, reject) => {
-    const body = JSON.stringify({ yandexPassportOauthToken: oauthToken });
-    const req = httpsRequest(
-      YANDEX_IAM_URL,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Content-Length": String(Buffer.byteLength(body)),
-        },
-        timeout: 10_000,
-      },
-      (res) => {
-        const chunks: Buffer[] = [];
-        res.on("data", (c: Buffer) => chunks.push(c));
-        res.on("end", () => {
-          try {
-            const data = JSON.parse(Buffer.concat(chunks).toString("utf-8"));
-            yandexIamCache = { iamToken: data.iamToken, expiresAt: data.expiresAt };
-            resolve(data.iamToken);
-          } catch {
-            reject(new Error("Failed to get Yandex IAM token"));
-          }
-        });
-      },
-    );
-    req.on("timeout", () => { req.destroy(); reject(new Error("IAM token timeout")); });
-    req.on("error", reject);
-    req.write(body);
-    req.end();
-  });
-}
-
-async function yandexSearchSubmit(
-  iamToken: string,
-  folderId: string,
-  query: string,
-  maxResults: number,
-): Promise<string> {
-  const body = JSON.stringify({
-    query: { searchType: "SEARCH_TYPE_COM", queryText: query, page: 0 },
-    groupSpec: { groupsOnPage: maxResults },
-    region: "225",
-    l10N: "en",
-    folderId,
-    responseFormat: "FORMAT_XML",
-  });
-
-  return new Promise((resolve, reject) => {
-    const req = httpsRequest(
-      YANDEX_SEARCH_URL,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${iamToken}`,
-          "Content-Type": "application/json",
-          "Content-Length": String(Buffer.byteLength(body)),
-        },
-        timeout: 10_000,
-      },
-      (res) => {
-        const chunks: Buffer[] = [];
-        res.on("data", (c: Buffer) => chunks.push(c));
-        res.on("end", () => {
-          try {
-            const data = JSON.parse(Buffer.concat(chunks).toString("utf-8"));
-            resolve(data.id);
-          } catch {
-            reject(new Error("Failed to submit Yandex search"));
-          }
-        });
-      },
-    );
-    req.on("timeout", () => { req.destroy(); reject(new Error("Search submit timeout")); });
-    req.on("error", reject);
-    req.write(body);
-    req.end();
-  });
-}
-
-async function yandexPollOperation(iamToken: string, operationId: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const req = httpsRequest(
-      `${YANDEX_OPERATION_URL}${operationId}`,
-      {
-        method: "GET",
-        headers: { Authorization: `Bearer ${iamToken}` },
-        timeout: 30_000,
-      },
-      (res) => {
-        const chunks: Buffer[] = [];
-        res.on("data", (c: Buffer) => chunks.push(c));
-        res.on("end", () => {
-          try {
-            const data = JSON.parse(Buffer.concat(chunks).toString("utf-8"));
-            if (!data.done) {
-              resolve("");
-              return;
-            }
-            const rawData = data.response?.rawData;
-            if (!rawData) {
-              reject(new Error("No rawData in response"));
-              return;
-            }
-            resolve(Buffer.from(rawData, "base64").toString("utf-8"));
-          } catch {
-            reject(new Error("Failed to poll operation"));
-          }
-        });
-      },
-    );
-    req.on("timeout", () => { req.destroy(); reject(new Error("Poll timeout")); });
-    req.on("error", reject);
-    req.end();
-  });
-}
-
-function parseYandexXml(xml: string, maxResults: number): WebSearchResult[] {
-  const results: WebSearchResult[] = [];
-  const groupRegex = /<group[\s\S]*?<\/group>/g;
-  const urlRegex = /<url>([^<]+)<\/url>/;
-  const titleRegex = /<title>([^<]+)<\/title>/;
-  const headlineRegex = /<headline>([^<]+)<\/headline>/;
-
-  let match;
-  while ((match = groupRegex.exec(xml)) !== null && results.length < maxResults) {
-    const groupXml = match[0];
-    const urlM = groupXml.match(urlRegex);
-    const titleM = groupXml.match(titleRegex);
-    const headlineM = groupXml.match(headlineRegex);
-
-    if (urlM) {
-      results.push({
-        title: decodeHtmlEntities(titleM?.[1] ?? headlineM?.[1] ?? ""),
-        url: urlM[1],
-        snippet: decodeHtmlEntities(headlineM?.[1] ?? ""),
-        engine: "yandex",
-      });
-    }
-  }
-  return results;
-}
-
-export async function searchYandex(
-  query: string,
-  maxResults: number,
-): Promise<WebSearchResult[]> {
-  const oauthToken = process.env.YANDEX_OAUTH_TOKEN;
-  const folderId = process.env.YANDEX_FOLDER_ID;
-  if (!oauthToken || !folderId) return [];
-
-  try {
-    const iamToken = await yandexGetIamToken(oauthToken);
-    const operationId = await yandexSearchSubmit(iamToken, folderId, query, maxResults);
-
-    for (let i = 0; i < 10; i++) {
-      await sleep(1000 + i * 500);
-      const xml = await yandexPollOperation(iamToken, operationId);
-      if (xml) return parseYandexXml(xml, maxResults);
-    }
-    return [];
-  } catch {
-    return [];
-  }
-}
-
-// --- SearXNG public instances ---
-const SEARXNG_INSTANCES = ["https://searx.be", "https://search.sapti.me"];
-
-export async function searchSearXNG(
-  query: string,
-  maxResults: number,
-  instanceIndex: number = 0,
-): Promise<WebSearchResult[]> {
-  if (instanceIndex >= SEARXNG_INSTANCES.length) return [];
-
-  const base = SEARXNG_INSTANCES[instanceIndex];
-  try {
-    const url = `${base}/search?q=${encodeURIComponent(query)}&format=json&categories=general`;
-    const { status, body } = await fetchUrl(url, {
-      timeout: 12_000,
-      headers: {
-        Accept: "application/json",
-        "User-Agent": DDG_USER_AGENT,
-      },
-    });
-
-    if (status !== 200) {
-      return searchSearXNG(query, maxResults, instanceIndex + 1);
-    }
-
-    const data = JSON.parse(body);
-    return (data.results ?? []).slice(0, maxResults).map((r: any) => ({
-      title: r.title ?? "",
-      url: r.url ?? "",
-      snippet: r.content ?? r.snippet ?? "",
-      engine: "searxng",
-    }));
-  } catch {
-    return searchSearXNG(query, maxResults, instanceIndex + 1);
-  }
 }
 
 // --- Deduplication ---
@@ -606,7 +152,7 @@ function deduplicateByUrl(results: WebSearchResult[]): WebSearchResult[] {
 }
 
 // --- Per-engine rate limiter ---
-const engineLastCall: Record<string, number> = {};
+export const engineLastCall: Record<string, number> = {};
 const ENGINE_MIN_DELAY: Record<string, number> = {
   duckduckgo: 2500,
   searxng: 2000,
