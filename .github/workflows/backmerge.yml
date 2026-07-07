@@ -12,46 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Get release tag from workflow run
-        id: release
-        run: |
-          TAG=$(gh api "repos/${{ github.repository }}/releases/latest" --jq '.tag_name')
-          echo "TAG=$TAG" >> $GITHUB_OUTPUT
-          echo "Release tag: $TAG"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create backmerge PR and enable auto-merge
-        run: |
-          PR_URL=$(gh pr create \
-            --repo ${{ github.repository }} \
-            --base develop \
-            --head master \
-            --title "chore(release): merge release ${{ steps.release.outputs.TAG }} back to develop" \
-            --body "Backmerge to develop after ${{ steps.release.outputs.TAG }} release" \
-            --label "automated,backmerge" 2>&1)
-
-          if echo "$PR_URL" | grep -q 'already exists'; then
-            echo "PR already exists: $PR_URL"
-          elif echo "$PR_URL" | grep -q '^https://'; then
-            echo "PR created: $PR_URL"
-          else
-            echo "ERROR: Failed to create PR: $PR_URL"
-            exit 1
-          fi
-
-          sleep 10
-
-          PR_NUMBER=$(echo "$PR_URL" | grep -oP '\d+$' || echo '')
-
-          if [ -n "$PR_NUMBER" ]; then
-            gh pr merge "$PR_NUMBER" --auto --merge --repo ${{ github.repository }}
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Fast-forward develop to master
+        run: git push origin master:develop
