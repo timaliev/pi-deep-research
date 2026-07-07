@@ -138,7 +138,7 @@ describe("telemetry appended to report", () => {
 // ─── Feature 4: Brave API key from settings.json ──────────────
 describe("Brave API key from settings.json", () => {
   it("resolveBraveApiKey checks process.env first", async () => {
-    const { resolveBraveApiKey } = await import("../extension/brave-search.js");
+    const { resolveBraveApiKey } = await import("../extension/search/engines/brave.js");
     const key = resolveBraveApiKey(undefined);
     // When no env var set, falls back to undefined
     assert.equal(key, process.env.BRAVE_API_KEY ?? undefined);
