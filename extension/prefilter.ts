@@ -227,8 +227,9 @@ export class PrefilterManager {
     }
 
     const prof = p.profile as Record<string, unknown>;
-    if (!prof.name || !["default","fast","deep","custom"].includes(prof.name as string)) {
-      return "profile.name must be default, fast, deep, or custom";
+    const validNames = [...this.profileResolver.listNames(), "custom"];
+    if (!prof.name || !validNames.includes(prof.name as string)) {
+      return `profile.name must be one of: ${validNames.join(", ")}`;
     }
     if (prof.name === "custom") {
       if (typeof prof.breadth !== "number" || (prof.breadth as number) < 1) return "Custom profile must include 'breadth' >= 1";
