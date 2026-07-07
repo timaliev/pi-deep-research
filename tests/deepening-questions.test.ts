@@ -1,3 +1,4 @@
+import { ProfileResolver } from "../extension/profile-resolver.js";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { ResearchStateMachine } from "../extension/state-machine.js";
@@ -23,7 +24,7 @@ function mockScraper(): Scraper { return { async scrape(url: string) { return { 
 describe("ResearchStateMachine — plan questions and deepening", () => {
   it("uses plan.researchQuestions for first search iteration", async () => {
     const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper() });
-    let s = ResearchStateMachine.init(PLAN);
+    let s = ResearchStateMachine.init(PLAN, new ProfileResolver({}, "default"));
     s = (await machine.next(s, PLAN)).snapshot; // searching → extracting
     // First iteration used plan.researchQuestions — we verify by checking the extract prompt
     // (we can't directly observe the search queries, but the inject references the extraction results)
@@ -33,7 +34,7 @@ describe("ResearchStateMachine — plan questions and deepening", () => {
 
   it("questioning phase extracts agent's follow-up questions for next search", async () => {
     const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper() });
-    let s = ResearchStateMachine.init(PLAN);
+    let s = ResearchStateMachine.init(PLAN, new ProfileResolver({}, "default"));
     s = (await machine.next(s, PLAN)).snapshot; // searching → extracting (depth 1)
     s = (await machine.next(s, PLAN)).snapshot; // extracting → questioning
 
@@ -50,7 +51,7 @@ describe("ResearchStateMachine — plan questions and deepening", () => {
 
   it("falls back to plan.researchQuestions when agent response has no extractable questions", async () => {
     const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper() });
-    let s = ResearchStateMachine.init(PLAN);
+    let s = ResearchStateMachine.init(PLAN, new ProfileResolver({}, "default"));
     s = (await machine.next(s, PLAN)).snapshot; // depth 1
     s = (await machine.next(s, PLAN)).snapshot; // → questioning
 
@@ -62,7 +63,7 @@ describe("ResearchStateMachine — plan questions and deepening", () => {
 
   it("falls back to plan.researchQuestions when agentResponse is undefined", async () => {
     const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper() });
-    let s = ResearchStateMachine.init(PLAN);
+    let s = ResearchStateMachine.init(PLAN, new ProfileResolver({}, "default"));
     s = (await machine.next(s, PLAN)).snapshot; // depth 1
     s = (await machine.next(s, PLAN)).snapshot; // → questioning
     s = (await machine.next(s, PLAN)).snapshot; // questioning → searching → extracting (no agentResponse)

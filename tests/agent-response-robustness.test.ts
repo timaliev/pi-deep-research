@@ -1,3 +1,4 @@
+import { ProfileResolver } from "../extension/profile-resolver.js";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { ResearchStateMachine } from "../extension/state-machine.js";
@@ -19,7 +20,7 @@ function mockScraper(): Scraper { return { async scrape(url: string) { return { 
 describe("ResearchStateMachine — agentResponse robustness", () => {
   it("extractQuestions handles string input", async () => {
     const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper() });
-    let s = ResearchStateMachine.init(PLAN);
+    let s = ResearchStateMachine.init(PLAN, new ProfileResolver({}, "default"));
     s = (await machine.next(s, PLAN)).snapshot;
     s = (await machine.next(s, PLAN)).snapshot; // → questioning
     s = (await machine.next(s, PLAN, "1. Question one?\n2. Question two?")).snapshot;
@@ -28,7 +29,7 @@ describe("ResearchStateMachine — agentResponse robustness", () => {
 
   it("extractQuestions handles array input (content blocks)", async () => {
     const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper() });
-    let s = ResearchStateMachine.init(PLAN);
+    let s = ResearchStateMachine.init(PLAN, new ProfileResolver({}, "default"));
     s = (await machine.next(s, PLAN)).snapshot;
     s = (await machine.next(s, PLAN)).snapshot;
     // AgentMessage.content can be an array of text blocks
@@ -38,7 +39,7 @@ describe("ResearchStateMachine — agentResponse robustness", () => {
 
   it("extractQuestions handles undefined agentResponse", async () => {
     const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper() });
-    let s = ResearchStateMachine.init(PLAN);
+    let s = ResearchStateMachine.init(PLAN, new ProfileResolver({}, "default"));
     s = (await machine.next(s, PLAN)).snapshot;
     s = (await machine.next(s, PLAN)).snapshot;
     s = (await machine.next(s, PLAN, undefined)).snapshot;

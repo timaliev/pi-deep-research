@@ -329,7 +329,7 @@ Use "compare" mode to see results from each engine separately without deduplicat
       const orchestrator = new ResearchRunOrchestrator({
         searchFn: searchWeb,
         scraper: new WebScraper(),
-        profilePresets: profileResolver.getPresets(),
+        profileResolver: profileResolver,
         artifactsDir: settings.artifactsDir,
         searchCred,
         appendEntry: (type, data) => pi.appendEntry(type, data),

@@ -28,18 +28,21 @@ describe("Candidate 1 — DEFAULT_PRESETS + resolveProfile → profile-resolver"
     assert.equal(result.depth, 5);
   });
 
-  it("state-machine no longer owns DEFAULT_PRESETS — imports from profile-resolver", async () => {
-    // state-machine imports DEFAULT_PRESETS from profile-resolver, doesn't export it
+  it("state-machine uses ProfileResolver instead of raw presets", async () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "state-machine.ts"), "utf-8");
     assert.ok(
-      src.includes(`from "./profile-resolver.js"`),
-      "state-machine must import from profile-resolver",
+      src.includes("profileResolver: ProfileResolver"),
+      "state-machine must use ProfileResolver",
+    );
+    assert.ok(
+      !src.includes("profilePresets"),
+      "state-machine must not use raw profilePresets",
     );
   });
 
-  it("state-machine no longer exports resolveProfile", async () => {
+  it("state-machine no longer exports resolveProfile or DEFAULT_PRESETS", async () => {
     const sm = await import("../extension/state-machine.js");
     const exports = Object.keys(sm);
     assert.ok(!exports.includes("resolveProfile"), "resolveProfile should not be exported from state-machine");

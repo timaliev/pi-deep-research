@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import { buildSearchQueue, saveQueue } from "./search-queue.js";
 import type { SearchProviderCredentials } from "./search-providers.js";
 import { createReportStyle } from "./report-styles.js";
-import { DEFAULT_PRESETS, resolveProfile } from "./profile-resolver.js";
+import type { ProfileResolver } from "./profile-resolver.js";
 import { JsonlLogger } from "./logger.js";
 
 /** Parameters controlling research depth and breadth. */
@@ -87,7 +87,7 @@ class ConcurrencySemaphore {
 export interface ResearchContext {
   searchFn: typeof SearchWebFn;
   scraper: Scraper;
-  profilePresets?: Record<string, ResearchProfile>;
+  profileResolver: ProfileResolver;
   artifactsDir?: string;
   searchCred?: SearchProviderCredentials;
   /** Optional logger — when provided, the machine uses it instead of creating one lazily. */
@@ -97,7 +97,7 @@ export interface ResearchContext {
 export class ResearchStateMachine {
   private readonly searchFn: typeof SearchWebFn;
   private readonly scraper: Scraper;
-  private readonly profilePresets?: Record<string, ResearchProfile>;
+  private readonly profileResolver: ProfileResolver;
   private logger?: Logger;
   private readonly artifactsDir?: string;
   private readonly searchCred?: SearchProviderCredentials;
@@ -105,14 +105,14 @@ export class ResearchStateMachine {
   constructor(ctx: ResearchContext) {
     this.searchFn = ctx.searchFn;
     this.scraper = ctx.scraper;
-    this.profilePresets = ctx.profilePresets;
+    this.profileResolver = ctx.profileResolver;
     this.artifactsDir = ctx.artifactsDir ?? defaultArtifactsDir();
     this.searchCred = ctx.searchCred;
     this.logger = ctx.logger;
   }
 
-  static init(plan: ResearchPlan, presets?: Record<string, ResearchProfile>, runId?: string): ResearchSnapshot {
-    const profile = resolveProfile(plan.profile, presets);
+  static init(plan: ResearchPlan, resolver: ProfileResolver, runId?: string): ResearchSnapshot {
+    const profile = resolver.resolve(plan.profile);
     return {
       phase: "searching",
       runId: runId ?? generateRunId(),
@@ -138,7 +138,7 @@ export class ResearchStateMachine {
       this.logger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
     }
     if (!snapshot.profile) {
-      snapshot.profile = resolveProfile(plan.profile, this.profilePresets);
+      snapshot.profile = this.profileResolver.resolve(plan.profile);
       snapshot.totalDepth = snapshot.profile.depth;
     }
     switch (snapshot.phase) {

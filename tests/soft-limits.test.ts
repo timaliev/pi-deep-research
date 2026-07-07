@@ -1,5 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { ProfileResolver } from "../extension/profile-resolver.js";
 import { ResearchStateMachine } from "../extension/state-machine.js";
 import type { ResearchPlan } from "../extension/prefilter.js";
 import type { WebSearchResult } from "../extension/search/web-search.js";
@@ -19,8 +20,9 @@ function mockScraper(): Scraper { return { async scrape(url: string) { return { 
 describe("ResearchStateMachine soft limits", () => {
   it("stops deepening when maxSearchCalls reached", async () => {
     const plan: ResearchPlan = { ...MOCK_PLAN, profile: { name: "custom", breadth: 3, depth: 3, concurrency: 3 } };
-    const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper(), profilePresets: { custom: { breadth: 3, depth: 3, concurrency: 3, maxSearchCalls: 5 } } });
-    let s = ResearchStateMachine.init(plan, { custom: { breadth: 3, depth: 3, concurrency: 3, maxSearchCalls: 5 } });
+    const resolver = new ProfileResolver({ custom: { breadth: 3, depth: 3, concurrency: 3, maxSearchCalls: 5 } }, "default");
+    const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper(), profileResolver: resolver });
+    let s = ResearchStateMachine.init(plan, resolver);
     s = (await machine.next(s, plan)).snapshot; assert.equal(s.searchCalls, 3);
     s = (await machine.next(s, plan)).snapshot;
     s = (await machine.next(s, plan)).snapshot;
@@ -33,8 +35,9 @@ describe("ResearchStateMachine soft limits", () => {
   it("does not trigger when limits are 0", async () => {
     const plan: ResearchPlan = { ...MOCK_PLAN, profile: { name: "custom", breadth: 3, depth: 3, concurrency: 3 } };
     const presets = { custom: { breadth: 3, depth: 3, concurrency: 3 } };
-    const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper(), profilePresets: presets });
-    let s = ResearchStateMachine.init(plan, presets);
+    const resolver = new ProfileResolver(presets, "default");
+    const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper(), profileResolver: resolver });
+    let s = ResearchStateMachine.init(plan, resolver);
     for (let i = 0; i < 3; i++) s = (await machine.next(s, plan)).snapshot;
     assert.equal(s.softLimitTriggered, false);
   });

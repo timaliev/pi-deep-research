@@ -1,7 +1,7 @@
 import { readFileSync, existsSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { ResearchStateMachine } from "./state-machine.js";
-import type { ResearchSnapshot, ResearchProfile } from "./state-machine.js";
+import type { ResearchSnapshot } from "./state-machine.js";
 import { extractTextContent } from "./state-machine.js";
 import type { ResearchPlan, PrefilterArtifact } from "./prefilter.js";
 import type { searchWeb as SearchWebFn } from "./search/web-search.js";
@@ -13,7 +13,7 @@ import { ProfileResolver } from "./profile-resolver.js";
 export interface OrchestratorDeps {
   searchFn: typeof SearchWebFn;
   scraper: Scraper;
-  profilePresets?: Record<string, ResearchProfile>;
+  profileResolver: ProfileResolver;
   artifactsDir?: string;
   searchCred?: SearchProviderCredentials;
   /** For state persistence. Called with customType and data. */
@@ -36,7 +36,6 @@ const STATE_KEY = "deep-research:state";
 export class ResearchRunOrchestrator {
   private readonly searchFn: typeof SearchWebFn;
   private readonly scraper: Scraper;
-  private readonly profilePresets?: Record<string, ResearchProfile>;
   private readonly artifactsDir?: string;
   private readonly searchCred?: SearchProviderCredentials;
   private readonly appendEntry?: (customType: string, data?: unknown) => void;
@@ -45,11 +44,10 @@ export class ResearchRunOrchestrator {
   constructor(deps: OrchestratorDeps) {
     this.searchFn = deps.searchFn;
     this.scraper = deps.scraper;
-    this.profilePresets = deps.profilePresets;
     this.artifactsDir = deps.artifactsDir;
     this.searchCred = deps.searchCred;
     this.appendEntry = deps.appendEntry;
-    this.profileResolver = new ProfileResolver({}, "default", deps.profilePresets);
+    this.profileResolver = deps.profileResolver;
   }
 
   async handle(params: OrchestratorParams): Promise<OrchestratorResult> {
@@ -72,7 +70,7 @@ export class ResearchRunOrchestrator {
 
     const raw = readFileSync(planArtifactPath, "utf-8");
     const artifact: PrefilterArtifact = JSON.parse(raw);
-    const snapshot = ResearchStateMachine.init(artifact.plan, this.profileResolver.getPresets());
+    const snapshot = ResearchStateMachine.init(artifact.plan, this.profileResolver);
 
     const deepResearchBase = join(dirname(planArtifactPath), "..");
     const artifactsDir = join(deepResearchBase, "artifacts");
@@ -85,7 +83,7 @@ export class ResearchRunOrchestrator {
     const machine = new ResearchStateMachine({
       searchFn: this.searchFn,
       scraper: this.scraper,
-      profilePresets: this.profilePresets,
+      profileResolver: this.profileResolver,
       artifactsDir,
       searchCred: this.searchCred,
       logger: runLogger,
@@ -150,7 +148,7 @@ export class ResearchRunOrchestrator {
     const machine = new ResearchStateMachine({
       searchFn: this.searchFn,
       scraper: this.scraper,
-      profilePresets: this.profilePresets,
+      profileResolver: this.profileResolver,
       artifactsDir,
       searchCred: this.searchCred,
     });
