@@ -65,7 +65,11 @@ export class ResearchRunOrchestrator {
     // Guard: if research already in progress, continue existing run
     const existingState = [...entries].reverse().find((e) => e.customType === STATE_KEY);
     if (existingState) {
-      return this.handleSubsequentCall(entries);
+      const existingPlanPath = (existingState.data as Record<string, unknown>)?.planArtifactPath as string | undefined;
+      if (existingPlanPath === planArtifactPath) {
+        return this.handleSubsequentCall(entries);
+      }
+      // Different plan — start fresh, fall through
     }
 
     const raw = readFileSync(planArtifactPath, "utf-8");

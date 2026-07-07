@@ -81,6 +81,78 @@ describe("ResearchRunOrchestrator", () => {
     }
   });
 
+  it("new plan with different planArtifactPath starts fresh, does not resume old run", async () => {
+    const tmpDir = join(tmpdir(), `orch-newplan-${Date.now()}`);
+    mkdirSync(tmpDir, { recursive: true });
+    const artifactsDir = join(tmpDir, "artifacts");
+    mkdirSync(artifactsDir, { recursive: true });
+
+    // Plan A — already completed
+    const planPathA = join(artifactsDir, "prefilter-a.json");
+    writeFileSync(planPathA, JSON.stringify({
+      version: 1, runId: "run-a", createdAt: new Date().toISOString(),
+      inputTopic: "Plan A",
+      plan: { topic: "Plan A", goal: "A", researchQuestions: ["QA"],
+        engines: ["duckduckgo"], profile: { name: "default" },
+        scope: { include: "", exclude: "" },
+        estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" } },
+    }));
+
+    // Plan B — new, different plan
+    const planPathB = join(artifactsDir, "prefilter-b.json");
+    writeFileSync(planPathB, JSON.stringify({
+      version: 1, runId: "run-b", createdAt: new Date().toISOString(),
+      inputTopic: "Plan B",
+      plan: { topic: "Plan B", goal: "B", researchQuestions: ["QB"],
+        engines: ["duckduckgo", "brave"], profile: { name: "deep" },
+        scope: { include: "", exclude: "" },
+        estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" } },
+    }));
+
+    try {
+      const { ResearchRunOrchestrator } = await import("../extension/research-run-orchestrator.js");
+      const STATE_KEY = "deep-research:state";
+      const mockResults = [{ title: "T", url: "https://a.com", snippet: "s", engine: "ddg" }];
+      const orch = new ResearchRunOrchestrator({
+        searchFn: async () => mockResults,
+        profileResolver: defaultResolver,
+        scraper: { scrape: async (url: string) => ({ url, title: url, content: "mock" }) },
+        artifactsDir,
+        appendEntry: () => {},
+      });
+
+      // Simulate: plan A was completed earlier, state stored in session
+      const entriesWithOldState = [{
+        customType: STATE_KEY,
+        data: {
+          runId: "run-a", phase: "done", currentDepth: 2, totalDepth: 2,
+          searchCalls: 10, scrapeCalls: 5,
+          plan: { topic: "Plan A", goal: "A", researchQuestions: ["QA"],
+            engines: ["duckduckgo"], profile: { name: "default" },
+            scope: { include: "", exclude: "" },
+            estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" } },
+          planArtifactPath: planPathA,
+          deepResearchBase: tmpDir,
+          draftReport: "Old report content for plan A with enough text to pass threshold.",
+        },
+      }];
+
+      // Now: user calls run_research with NEW plan B
+      const result = await orch.handle({
+        planArtifactPath: planPathB,
+        entries: entriesWithOldState,
+      });
+
+      // MUST start fresh, not return done from old plan
+      assert.equal(result.kind, "in_progress", "should start new run, not return done");
+      assert.notEqual(result.snapshot.runId, "run-a", "must have new runId, not old run-a");
+      assert.equal(result.snapshot.phase, "extracting", "must be in extracting phase for new run");
+      assert.equal(result.snapshot.currentDepth, 1, "must start at depth 1");
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   it("draft recovery strips tool-call XML from agent response", async () => {
     const tmpDir = join(tmpdir(), `orch-draft-${Date.now()}`);
     mkdirSync(tmpDir, { recursive: true });

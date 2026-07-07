@@ -31,11 +31,41 @@ export class WebScraper implements Scraper {
       );
     }
 
-    const html = await response.text();
+    // Determine encoding: prefer Content-Type charset, fall back to meta tag detection
+    const contentType = response.headers.get("Content-Type") ?? "";
+    const headerCharset = /charset\s*=\s*([^\s;]+)/i.exec(contentType)?.[1];
+
+    let html: string;
+    if (headerCharset) {
+      // Server specified charset — use it
+      html = await response.text();
+    } else {
+      // No charset header — read raw bytes, detect encoding from <meta> tag
+      const bodyBytes = new Uint8Array(await response.arrayBuffer());
+      // Try UTF-8 first to extract meta tag
+      const utf8Preview = new TextDecoder("utf-8", { fatal: false }).decode(bodyBytes.slice(0, 4096));
+      const metaCharset = this.detectMetaCharset(utf8Preview);
+      if (metaCharset && metaCharset !== "utf-8") {
+        try {
+          html = new TextDecoder(metaCharset).decode(bodyBytes);
+        } catch {
+          html = new TextDecoder("utf-8").decode(bodyBytes);
+        }
+      } else {
+        html = new TextDecoder("utf-8").decode(bodyBytes);
+      }
+    }
+
     const title = this.extractTitle(html);
     const content = this.extractContent(html);
 
     return { url, title, content };
+  }
+
+  /** Extract charset from HTML <meta> tag. Returns undefined if not found. */
+  private detectMetaCharset(html: string): string | undefined {
+    const match = /<meta[^>]+charset\s*=\s*["']?([^"'\s>]+)/i.exec(html);
+    return match?.[1]?.toLowerCase();
   }
 
   private extractTitle(html: string): string {

@@ -19,12 +19,35 @@ export function createSaveReportTool(settings: SettingsContext) {
       const reportPathEntry = [...entries].reverse().find((e: any) => e.customType === "deep-research:report-path");
 
       // Prefer path pre-computed by run_research auto-save
+      // Only reuse if the stored path was generated from the same topic
       let path: string;
-      if (reportPathEntry?.data?.path && typeof reportPathEntry.data.path === "string") {
-        path = reportPathEntry.data.path;
-        const telemetry = (reportPathEntry.data as any).telemetry as string | undefined;
-        if (telemetry && !params.markdown.includes("## Research Telemetry")) {
-          const reportWithTelemetry = `${params.markdown}\n\n${telemetry}\n`;
+      const storedRunId = (reportPathEntry?.data as any)?.runId as string | undefined;
+      const storedPath = reportPathEntry?.data?.path as string | undefined;
+      const storedTelemetry = (reportPathEntry?.data as any)?.telemetry as string | undefined;
+
+      if (storedPath && typeof storedPath === "string" && storedRunId) {
+        // Check if stored path matches what we'd generate for this topic
+        const expectedPath = resolveReportPath(params.topic, settings.reportsDir, storedRunId);
+        if (storedPath === expectedPath) {
+          path = storedPath;
+          if (storedTelemetry && !params.markdown.includes("## Research Telemetry")) {
+            const reportWithTelemetry = `${params.markdown}\n\n${storedTelemetry}\n`;
+            writeFileSync(path, reportWithTelemetry, "utf-8");
+            return {
+              content: [{ type: "text", text: `Report saved (with telemetry): ${path}` }],
+              details: { report_path: path },
+            };
+          }
+        } else {
+          // Stale path from different run — generate fresh path
+          path = resolveReportPath(params.topic, settings.reportsDir);
+          mkdirSync(settings.reportsDir, { recursive: true });
+        }
+      } else if (storedPath && typeof storedPath === "string") {
+        // Legacy: no runId in entry — keep backward compat but write fresh content
+        path = storedPath;
+        if (storedTelemetry && !params.markdown.includes("## Research Telemetry")) {
+          const reportWithTelemetry = `${params.markdown}\n\n${storedTelemetry}\n`;
           writeFileSync(path, reportWithTelemetry, "utf-8");
           return {
             content: [{ type: "text", text: `Report saved (with telemetry): ${path}` }],
@@ -32,8 +55,7 @@ export function createSaveReportTool(settings: SettingsContext) {
           };
         }
       } else {
-        const runId = (reportPathEntry?.data as any)?.runId as string | undefined;
-        path = resolveReportPath(params.topic, settings.reportsDir, runId);
+        path = resolveReportPath(params.topic, settings.reportsDir);
         mkdirSync(settings.reportsDir, { recursive: true });
       }
 

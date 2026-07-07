@@ -53,6 +53,8 @@ export function createPlanResearchTool(
       if (existingRunId && _prefilterManagers.has(existingRunId)) {
         manager = _prefilterManagers.get(existingRunId)!;
       } else {
+        // New prefilter session — clear stale managers from previous runs
+        _prefilterManagers.clear();
         const runId = generateRunId();
         const logger = new JsonlLogger(runId, join(logsDir, `${runId}-prefilter.log`));
         manager = new PrefilterManager(searchWeb, scraper, artifactsDir, logger, profileResolver, searchCred, runId);
