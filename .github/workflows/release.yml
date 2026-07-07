@@ -89,31 +89,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create backmerge PR and enable auto-merge
-        run: |
-          PR_URL=$(gh pr create \
-            --repo ${{ github.repository }} \
-            --base develop \
-            --head master \
-            --title "chore(release): merge release ${{ steps.version.outputs.VERSION_TAG }} back to develop" \
-            --body "Backmerge to develop after ${{ steps.version.outputs.VERSION_TAG }} release" \
-            --label "automated,backmerge" 2>&1)
-   
-          if echo "$PR_URL" | grep -q 'already exists'; then
-            echo "PR already exists: $PR_URL"
-          elif echo "$PR_URL" | grep -q '^https://'; then
-            echo "PR created: $PR_URL"
-          else
-            echo "ERROR: Failed to create PR: $PR_URL"
-            exit 1
-          fi
-          # Wait for internal GitHub processes to finish
-          sleep 10
-          # Extract PR number from URL
-          PR_NUMBER=$(echo "$PR_URL" | grep -oP '\d+$' || echo '')
-   
-          if [ -n "$PR_NUMBER" ]; then
-            gh pr merge "$PR_NUMBER" --auto --merge --repo ${{ github.repository }}
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
