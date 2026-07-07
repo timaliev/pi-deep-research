@@ -2,7 +2,7 @@ import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { loadDeepResearchSettings } from "../extension/profile-resolver.js";
+import { SettingsContext } from "../extension/settings-context.js";
 import { ProfileResolver } from "../extension/profile-resolver.js";
 import { PrefilterManager } from "../extension/prefilter.js";
 import type { WebSearchResult } from "../extension/search/web-search.js";
@@ -30,10 +30,14 @@ const MOCK_RESULTS: WebSearchResult[] = [
 const MOCK_PAGES = new Map<string, ScrapedPage>();
 MOCK_PAGES.set("https://a.com", { url: "https://a.com", title: "A", content: "..." });
 
-// ─── Slice 1: loadDeepResearchSettings merge ─────────────────────
+// ─── Slice 1: SettingsContext merge ─────────────────────
 
-describe("loadDeepResearchSettings global + local merge", () => {
-  beforeEach(() => { mkdirSync(TEST_HOME, { recursive: true }); mkdirSync(TEST_CWD, { recursive: true }); });
+describe("SettingsContext global + local merge", () => {
+  beforeEach(() => {
+    mkdirSync(TEST_HOME, { recursive: true });
+    mkdirSync(TEST_CWD, { recursive: true });
+    (SettingsContext as any)._reset();
+  });
   afterEach(() => { if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true }); });
 
   it("merges global and local, local wins on conflict", () => {
@@ -52,11 +56,11 @@ describe("loadDeepResearchSettings global + local merge", () => {
       },
     }), "utf-8");
 
-    const settings = loadDeepResearchSettings(TEST_CWD, TEST_HOME);
+    const ctx = SettingsContext.init({ cwd: TEST_CWD, homeAgentDir: TEST_HOME });
 
-    assert.equal(settings.defaultProfile, "exhaustive", "local defaultProfile wins");
+    assert.equal(ctx.defaultProfile, "exhaustive", "local defaultProfile wins");
 
-    const resolver = new ProfileResolver(settings.profiles ?? {}, settings.defaultProfile);
+    const resolver = new ProfileResolver({}, ctx.defaultProfile, ctx.profiles);
     const deep = resolver.resolve({ name: "deep" });
 
     assert.equal(deep.breadth, 10, "local deep.breadth=10 overrides global=8");
@@ -75,9 +79,9 @@ describe("loadDeepResearchSettings global + local merge", () => {
       },
     }), "utf-8");
 
-    const settings = loadDeepResearchSettings(join(TEST_DIR, "no-project"), TEST_HOME);
+    const ctx = SettingsContext.init({ cwd: join(TEST_DIR, "no-project"), homeAgentDir: TEST_HOME });
 
-    const resolver = new ProfileResolver(settings.profiles ?? {}, settings.defaultProfile);
+    const resolver = new ProfileResolver({}, ctx.defaultProfile, ctx.profiles);
     assert.equal(resolver.resolve({ name: "deep" }).breadth, 7);
     assert.equal(resolver.resolve({ name: "default" }).breadth, 4, "built-in untouched");
   });

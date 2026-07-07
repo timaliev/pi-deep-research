@@ -1,3 +1,4 @@
+import { ProfileResolver } from "../extension/profile-resolver.js";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { ResearchStateMachine } from "../extension/state-machine.js";
@@ -25,7 +26,7 @@ describe("ResearchContext — bundled constructor", () => {
       searchFn: mockSearch,
       scraper: mockScraper,
     });
-    const snap = ResearchStateMachine.init(mockPlan);
+    const snap = ResearchStateMachine.init(mockPlan, new ProfileResolver({}, "default"));
     assert.equal(snap.phase, "searching");
   });
 
@@ -34,7 +35,7 @@ describe("ResearchContext — bundled constructor", () => {
       searchFn: mockSearch,
       scraper: mockScraper,
     });
-    const snap = ResearchStateMachine.init(mockPlan);
+    const snap = ResearchStateMachine.init(mockPlan, new ProfileResolver({}, "default"));
     const result = await machine.next(snap, mockPlan);
     // Should not throw — optional deps gracefully absent
     assert.ok(result.phase === "extracting" || result.phase === "drafting");
@@ -47,15 +48,16 @@ describe("ResearchContext — bundled constructor", () => {
     };
     const cred = new SearchProviderCredentials({ brave: { apiKey: "k" } });
 
+    const resolver = new ProfileResolver(presets, "default");
     const machine = new ResearchStateMachine({
       searchFn: mockSearch,
       scraper: mockScraper,
-      profilePresets: presets,
+      profileResolver: resolver,
       logger: undefined,
       artifactsDir: "/tmp/artifacts",
       searchCred: cred,
     });
-    const snap = ResearchStateMachine.init(mockPlan, presets);
-    assert.equal(snap.profile?.breadth, 4, "init uses presets");
+    const snap = ResearchStateMachine.init(mockPlan, resolver);
+    assert.equal(snap.profile?.breadth, 4, "init uses resolver");
   });
 });

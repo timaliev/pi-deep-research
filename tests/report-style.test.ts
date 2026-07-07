@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { PrefilterManager } from "../extension/prefilter.js";
-import { buildDraftingPrompt } from "../extension/state-machine.js";
+import { createReportStyle } from "../extension/report-styles.js";
 import type { ResearchPlan, ResearchPlanProfile } from "../extension/prefilter.js";
 import type { Finding } from "../extension/state-machine.js";
 import type { WebSearchResult } from "../extension/search/web-search.js";
@@ -112,7 +112,7 @@ const MOCK_FINDINGS: Finding[] = [
 describe("buildDraftingPrompt with reportStyle", () => {
   it("narrative style produces 5-section template (current behavior)", () => {
     const plan = validPlan({ reportStyle: "narrative" });
-    const prompt = buildDraftingPrompt(plan, MOCK_FINDINGS);
+    const prompt = createReportStyle(plan.reportStyle ?? "narrative").buildDraftingPrompt(plan, MOCK_FINDINGS);
 
     assert.ok(prompt.includes("Introduction"), "must include Introduction section");
     assert.ok(prompt.includes("Findings"), "must include Findings section");
@@ -123,7 +123,7 @@ describe("buildDraftingPrompt with reportStyle", () => {
 
   it("subtopics style does NOT contain fixed 5-section template", () => {
     const plan = validPlan({ reportStyle: "subtopics" });
-    const prompt = buildDraftingPrompt(plan, MOCK_FINDINGS);
+    const prompt = createReportStyle(plan.reportStyle ?? "narrative").buildDraftingPrompt(plan, MOCK_FINDINGS);
 
     // Must NOT have the rigid 5-section numbered list
     assert.ok(!prompt.includes("1. **Introduction**"), "subtopics must not list numbered sections");
@@ -133,7 +133,7 @@ describe("buildDraftingPrompt with reportStyle", () => {
 
   it("subtopics style instructs LLM to generate thematic sections", () => {
     const plan = validPlan({ reportStyle: "subtopics" });
-    const prompt = buildDraftingPrompt(plan, MOCK_FINDINGS);
+    const prompt = createReportStyle(plan.reportStyle ?? "narrative").buildDraftingPrompt(plan, MOCK_FINDINGS);
 
     assert.ok(
       prompt.includes("thematic") || prompt.includes("subtopic") || prompt.includes("sections") ||
@@ -144,7 +144,7 @@ describe("buildDraftingPrompt with reportStyle", () => {
 
   it("subtopics style includes findings in the prompt", () => {
     const plan = validPlan({ reportStyle: "subtopics" });
-    const prompt = buildDraftingPrompt(plan, MOCK_FINDINGS);
+    const prompt = createReportStyle(plan.reportStyle ?? "narrative").buildDraftingPrompt(plan, MOCK_FINDINGS);
 
     assert.ok(prompt.includes("Finding one"), "must include finding text");
     assert.ok(prompt.includes("https://a.com"), "must include finding source");
@@ -152,7 +152,7 @@ describe("buildDraftingPrompt with reportStyle", () => {
 
   it("missing reportStyle falls back to narrative (backward compat)", () => {
     const plan = validPlan(); // no reportStyle
-    const prompt = buildDraftingPrompt(plan, MOCK_FINDINGS);
+    const prompt = createReportStyle("narrative").buildDraftingPrompt(plan, MOCK_FINDINGS);
 
     assert.ok(prompt.includes("Introduction"), "must default to narrative");
     assert.ok(prompt.includes("Recommendations"), "must default to narrative");

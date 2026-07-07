@@ -1,3 +1,4 @@
+import { ProfileResolver } from "../extension/profile-resolver.js";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { ResearchStateMachine } from "../extension/state-machine.js";
@@ -31,7 +32,7 @@ describe("credentials passed to searchWeb from state machine", () => {
     });
 
     const machine = new ResearchStateMachine({ searchFn: mockSearch, scraper: mockScraper, searchCred: cred });
-    const snapshot = ResearchStateMachine.init(MOCK_PLAN);
+    const snapshot = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
 
     await machine.next(snapshot, MOCK_PLAN);
 
@@ -52,7 +53,7 @@ describe("credentials passed to searchWeb from state machine", () => {
     };
 
     const machine = new ResearchStateMachine({ searchFn: mockSearch, scraper: mockScraper });
-    const snapshot = ResearchStateMachine.init(MOCK_PLAN);
+    const snapshot = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
 
     await machine.next(snapshot, MOCK_PLAN);
 

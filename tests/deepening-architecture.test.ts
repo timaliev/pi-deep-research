@@ -28,18 +28,21 @@ describe("Candidate 1 — DEFAULT_PRESETS + resolveProfile → profile-resolver"
     assert.equal(result.depth, 5);
   });
 
-  it("state-machine no longer owns DEFAULT_PRESETS — imports from profile-resolver", async () => {
-    // state-machine imports DEFAULT_PRESETS from profile-resolver, doesn't export it
+  it("state-machine uses ProfileResolver instead of raw presets", async () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "state-machine.ts"), "utf-8");
     assert.ok(
-      src.includes(`from "./profile-resolver.js"`),
-      "state-machine must import from profile-resolver",
+      src.includes("profileResolver: ProfileResolver"),
+      "state-machine must use ProfileResolver",
+    );
+    assert.ok(
+      !src.includes("profilePresets"),
+      "state-machine must not use raw profilePresets",
     );
   });
 
-  it("state-machine no longer exports resolveProfile", async () => {
+  it("state-machine no longer exports resolveProfile or DEFAULT_PRESETS", async () => {
     const sm = await import("../extension/state-machine.js");
     const exports = Object.keys(sm);
     assert.ok(!exports.includes("resolveProfile"), "resolveProfile should not be exported from state-machine");
@@ -79,12 +82,14 @@ describe("Candidate 2 — logger locality in ResearchStateMachine", () => {
     assert.ok(hasLogger, `ResearchContext must include optional logger for injection`);
   });
 
-  it("index.ts delegates run to ResearchRunOrchestrator, not inline state machine", async () => {
+  it("run_research uses tool factory and orchestrator, not inline state machine", async () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
-    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "index.ts"), "utf-8");
-    // index.ts should use ResearchRunOrchestrator, not instantiate ResearchStateMachine directly
-    const usesOrchestrator = src.includes("ResearchRunOrchestrator") || src.includes("orchestrator.handle");
-    assert.ok(usesOrchestrator, "index.ts must use ResearchRunOrchestrator instead of inline state machine");
+    const srcIdx = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "index.ts"), "utf-8");
+    const srcTool = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "run-research.ts"), "utf-8");
+    // index.ts delegates to createRunResearchTool
+    assert.ok(srcIdx.includes("createRunResearchTool"), "index.ts must use tool factory");
+    // tools/run-research.ts uses ResearchRunOrchestrator
+    assert.ok(srcTool.includes("ResearchRunOrchestrator"), "run-research tool must use orchestrator");
   });
 });

@@ -55,6 +55,21 @@ rm -rf ~/.pi/agent/git/github.com/timaliev/pi-deep-research  # delete clone
 
 ## Configuration
 
+Configuration can be done in three ways — use any combination that suits your workflow:
+
+1. **Built-in defaults** — works out of the box with no configuration. DuckDuckGo search is enabled by default, profile defaults to `"default"`, and outputs go to `<cwd>/deep-research/`.
+2. **`settings.json`** — add a `deepResearch` key to `~/.pi/agent/settings.json` to override profiles, set API keys, or change output directories.
+3. **Environment variables** — set search engine API keys and path overrides as env vars (see [Environment Variables](#environment-variables)). Env vars take highest priority.
+
+### Settings cascade
+
+```
+env vars  →  .pi/settings.json  →  ~/.pi/agent/settings.json  →  built-in defaults
+(highest)                                                       (lowest)
+```
+
+### Settings in `settings.json`
+
 Add a `deepResearch` key to `~/.pi/agent/settings.json`:
 
 ```json
@@ -73,7 +88,7 @@ Add a `deepResearch` key to `~/.pi/agent/settings.json`:
 
 User profiles **merge** with built-in presets (`default`/`fast`/`deep`). You only need to specify what you want to change or add.
 
-### `profiles`
+#### `profiles`
 
 Override or extend built-in presets. Partial overrides are merged — missing fields keep built-in values.
 
@@ -102,7 +117,7 @@ Override or extend built-in presets. Partial overrides are merged — missing fi
 
 During `plan_research`, the agent can reference any named preset or use `"custom"` with inline `breadth`/`depth`/`concurrency`.
 
-### `defaultProfile`
+#### `defaultProfile`
 
 Which profile name is the default (shown in prompts, used when agent doesn't specify). Defaults to `"default"`.
 
@@ -110,9 +125,9 @@ Which profile name is the default (shown in prompts, used when agent doesn't spe
 "defaultProfile": "deep"
 ```
 
-### `searchProviders`
+#### `searchProviders`
 
-API keys for search engines. Alternative to environment variables (env vars still win).
+API keys for search engines. Alternative to environment variables — see [Environment Variables](#environment-variables). Env vars win over `settings.json` when both are set.
 
 ```json
 "searchProviders": {
@@ -123,15 +138,62 @@ API keys for search engines. Alternative to environment variables (env vars stil
 ```
 
 Keys per engine:
-- `brave`: `apiKey` (or `BRAVE_API_KEY` env)
-- `tavily`: `apiKey` (or `TAVILY_API_KEY` env)
-- `yandex`: `oauthToken`, `folderId` (or `YANDEX_OAUTH_TOKEN`/`YANDEX_FOLDER_ID` env)
+- `brave`: `apiKey`
+- `tavily`: `apiKey`
+- `yandex`: `oauthToken`, `folderId`
 
-### `artifactsDir` / `reportsDir`
+#### `artifactsDir` / `reportsDir`
 
 Override default output paths. Defaults resolve to `<cwd>/deep-research/artifacts` and `<cwd>/deep-research/reports`. Use relative paths (resolved against `cwd`) or absolute paths.
 
 Logs (`<runId>.log` JSONL trace) always write to `<deep-research-base>/logs/` — derived from `artifactsDir/../logs`. No separate `logsDir` setting.
+
+### Environment Variables
+
+All settings can be configured via environment variables. Env vars take priority over `settings.json` values.
+
+#### Paths & Profile
+
+| Variable | Default | Description |
+|---|---|---|
+| `DEEP_RESEARCH_REPORTS_DIR` | `<cwd>/deep-research/reports` | Report output directory |
+| `DEEP_RESEARCH_ARTIFACTS_DIR` | `<cwd>/deep-research/artifacts` | Artifact output directory |
+| `DEEP_RESEARCH_DEFAULT_PROFILE` | `default` | Default research profile name |
+
+#### Search Engine API Keys
+
+| Variable | Engine | Description |
+|---|---|---|
+| `BRAVE_API_KEY` | Brave | Brave Search API key |
+| `TAVILY_API_KEY` | Tavily | Tavily Search API key |
+| `YANDEX_OAUTH_TOKEN` | Yandex | Yandex OAuth token |
+| `YANDEX_FOLDER_ID` | Yandex | Yandex folder/catalog ID |
+
+API keys can also be set in `settings.json` under `deepResearch.searchProviders` (see [Configuration](#configuration)). Env vars win when both are present.
+
+### SearXNG Configuration
+
+SearXNG is a privacy-respecting metasearch engine. The extension queries **public instances** with automatic failover — no configuration required.
+
+**Using a self-hosted SearXNG instance:**
+
+1. Edit `extension/search/engines/searxng.ts`
+2. Replace or extend the `SEARXNG_INSTANCES` array:
+
+```ts
+const SEARXNG_INSTANCES = [
+  "https://your-instance.example.com",  // your instance first
+  "https://searx.be",                    // fallback public instances
+  "https://search.sapti.me",
+];
+```
+
+The adapter tries instances in order. If one fails (non-200 or network error), it falls through to the next.
+
+**Self-hosted JSON API requirements:**
+- Endpoint: `GET /search?q=<query>&format=json&categories=general`
+- Response must include `{ results: [{ title, url, content }] }`
+- JSON format must be enabled (`search.formats` includes `json` in `settings.yml`)
 
 ## Architecture
 
@@ -183,16 +245,20 @@ extension/
 ├── report-styles.ts            Report style templates (narrative, subtopics)
 ├── research-run-orchestrator.ts Pre/post-run hooks (plan confirmation, mind map, PDF)
 ├── search-queue.ts             Controlled concurrency queue
-├── brave-search.ts             Brave web search (user-facing tool)
 └── search/
     ├── web-search.ts           Multi-engine search (dispatch + retry/backoff)
     └── engines/
         ├── duckduckgo.ts       DuckDuckGo (free, zero-config)
-        ├── brave.ts            Brave Search API
+        ├── brave.ts            Brave Search API adapter
         ├── searxng.ts          SearXNG public instances
         ├── tavily.ts           Tavily Search API
         ├── yandex.ts           Yandex Search API
         └── utils.ts            Rate-limit wait helper
+
+tools/
+├── save-report.ts             Save report tool (path resolution, telemetry)
+├── plan-research.ts           Three-step prefilter tool (manager scoped per plan)
+└── run-research.ts            Research run tool (orchestrator + confirmation gate)
 
 tests/                          Unit + integration tests (tsx runner, 45 files)
 
@@ -222,36 +288,14 @@ Built-in `searchWeb()` function (multi-engine, retry with exponential backoff):
 | Engine | API Key | Quality | Notes |
 |---|---|---|---|
 | `duckduckgo` | none | Good | Free, zero-config, always available |
-| `brave` | `BRAVE_API_KEY` env | Better | Higher quality results, generous free tier |
+| `brave` | required | Better | Higher quality results, generous free tier |
 | `searxng` | none | Variable | Public instances with automatic failover |
-| `tavily` | `TAVILY_API_KEY` env | Best | AI-optimized, extracts clean content |
-| `yandex` | `YANDEX_OAUTH_TOKEN` + `YANDEX_FOLDER_ID` env | Good | Russian/global coverage |
+| `tavily` | required | Best | AI-optimized, extracts clean content |
+| `yandex` | required | Good | Russian/global coverage |
 
 All search calls — user-facing `web_search` tool and pipeline — use the same function with rate-limit backoff and result deduplication.
 
-### SearXNG Configuration
-
-SearXNG is a privacy-respecting metasearch engine. The extension queries **public instances** with automatic failover — no configuration required.
-
-**Using a self-hosted SearXNG instance:**
-
-1. Edit `extension/search/engines/searxng.ts`
-2. Replace or extend the `SEARXNG_INSTANCES` array:
-
-```ts
-const SEARXNG_INSTANCES = [
-  "https://your-instance.example.com",  // your instance first
-  "https://searx.be",                    // fallback public instances
-  "https://search.sapti.me",
-];
-```
-
-The adapter tries instances in order. If one fails (non-200 or network error), it falls through to the next.
-
-**Self-hosted JSON API requirements:**
-- Endpoint: `GET /search?q=<query>&format=json&categories=general`
-- Response must include `{ results: [{ title, url, content }] }`
-- JSON format must be enabled (`search.formats` includes `json` in `settings.yml`)
+See [Environment Variables](#environment-variables) for API key configuration.
 
 ## Development
 
@@ -259,7 +303,7 @@ The adapter tries instances in order. If one fails (non-200 or network error), i
 # Run tests
 cd extension && node --import tsx --test ../tests/*.test.ts
 
-# 332 tests across 45 files covering:
+# 275 tests across 45 files covering:
 # - PrefilterManager (three-step, validation, API key checks, engine status)
 # - ResearchStateMachine (full cycle, concurrency, soft limits, deepening)
 # - Engine adapters (DDG, Brave, SearXNG, Tavily, Yandex — per-engine tests)
@@ -272,6 +316,7 @@ cd extension && node --import tsx --test ../tests/*.test.ts
 # - SessionState (persistence, draft restore)
 # - SettingsContext (cascade, path resolution)
 # - SearchQueue (concurrency control)
+# - Tool handlers (save_report, plan_research, run_research extraction)
 # - Telemetry (markdown table generation, version)
 # - Integration (end-to-end research run)
 ```
@@ -284,7 +329,7 @@ cd extension && node --import tsx --test ../tests/*.test.ts
 
 | ADR | Status | Topic |
 |---|---|---|
-| [0001](docs/adr/0001-state-machine-orchestration.md) | accepted | State machine + agent injections |
+| [0001](docs/adr/0001-state-machine-orchestration.md) | accepted | State machine phases + agent injection prompts |
 | [0002](docs/adr/0002-pluggable-search-backends.md) | superseded | Pluggable backends → unified multi-engine |
 | [0003](docs/adr/0003-plan-driven-parameters.md) | accepted | Engines/profile negotiated in prefilter |
 | [0004](docs/adr/0004-profile-resolution-from-settings.md) | accepted | Profile resolution from user settings |
@@ -293,7 +338,7 @@ cd extension && node --import tsx --test ../tests/*.test.ts
 | [0007](docs/adr/0007-research-context-bundle.md) | accepted | ResearchContext bundled constructor |
 | [0008](docs/adr/0008-session-state-module.md) | accepted | SessionState unified persistence seam |
 | [0009](docs/adr/0009-engine-adapters.md) | accepted | Per-engine search adapters |
-| [0010](docs/adr/0010-presets-ownership.md) | accepted | DEFAULT_PRESETS + resolveProfile ownership |
+| [0010](docs/adr/0010-presets-ownership.md) | superseded | Presets ownership — superseded by ProfileResolver (C2) |
 | [0011](docs/adr/0011-logger-locality.md) | accepted | Logger locality — state machine owns log |
 | [0012](docs/adr/0012-settings-context-cascade.md) | accepted | SettingsContext unified settings cascade |
 | [0013](docs/adr/0013-mind-map-and-mcp-sources.md) | proposed | Mind map, MCP/local sources, repo link |

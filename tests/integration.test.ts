@@ -1,3 +1,4 @@
+import { ProfileResolver } from "../extension/profile-resolver.js";
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, rmSync, readFileSync } from "node:fs";
@@ -80,7 +81,7 @@ describe("Integration: full research pipeline", () => {
     const plan: ResearchPlan = planResult.plan!;
 
     const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper() });
-    let snapshot = ResearchStateMachine.init(plan);
+    let snapshot = ResearchStateMachine.init(plan, new ProfileResolver({}, "default"));
 
     assert.equal(snapshot.phase, "searching");
     let r = await machine.next(snapshot, plan);
@@ -118,7 +119,7 @@ describe("Integration: full research pipeline", () => {
       scope: { include: "", exclude: "" },
       estimatedCost: { searchCalls: 1, scrapeCalls: 1, description: "" },
     };
-    const snapshot = ResearchStateMachine.init(plan);
+    const snapshot = ResearchStateMachine.init(plan, new ProfileResolver({}, "default"));
     const machine = new ResearchStateMachine({ searchFn: mockSearchFn([]), scraper: mockScraper() });
 
     // Advance to drafting
@@ -152,7 +153,7 @@ describe("Integration: full research pipeline", () => {
     const plan: ResearchPlan = r3.plan!;
 
     const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper() });
-    let snapshot = ResearchStateMachine.init(plan);
+    let snapshot = ResearchStateMachine.init(plan, new ProfileResolver({}, "default"));
 
     let totalInjectCount = 0;
     for (let i = 0; i < 10; i++) {

@@ -1,8 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { resolveBraveApiKey, buildBraveSearchParams, parseBraveResponse } from "../extension/brave-search.js";
-import type { BraveSearchOptions } from "../extension/brave-search.js";
-import type { WebSearchResult } from "../extension/brave-search.js";
+import { resolveBraveApiKey, buildBraveSearchParams, parseBraveResponse } from "../extension/search/engines/brave.js";
 import type { SearchProviderCredentials } from "../extension/search-providers.js";
 
 describe("searchBrave credentials", () => {

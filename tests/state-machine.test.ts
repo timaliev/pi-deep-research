@@ -1,3 +1,4 @@
+import { ProfileResolver } from "../extension/profile-resolver.js";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { ResearchStateMachine } from "../extension/state-machine.js";
@@ -33,7 +34,7 @@ function mockScraper(): Scraper {
 describe("ResearchStateMachine", () => {
   it("completes full cycle depth=2", async () => {
     const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper() });
-    let s = ResearchStateMachine.init(MOCK_PLAN);
+    let s = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
     assert.equal(s.phase, "searching");
 
     let r = await machine.next(s, MOCK_PLAN); assert.equal(r.phase, "extracting"); s = r.snapshot;
@@ -55,7 +56,7 @@ describe("ResearchStateMachine", () => {
 
   it("accumulates search calls across iterations", async () => {
     const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper() });
-    let s = ResearchStateMachine.init(MOCK_PLAN);
+    let s = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
     let r = await machine.next(s, MOCK_PLAN);
     const after = r.snapshot.searchCalls;
     assert.ok(after >= 2);
@@ -66,7 +67,7 @@ describe("ResearchStateMachine", () => {
 
   it("generates inject prompts at each phase", async () => {
     const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper() });
-    const s = ResearchStateMachine.init(MOCK_PLAN);
+    const s = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
     let r = await machine.next(s, MOCK_PLAN); assert.ok(r.inject!.includes("Extraction"));
     r = await machine.next(r.snapshot, MOCK_PLAN); assert.ok(r.inject!.includes("Deepening"));
     r = await machine.next(r.snapshot, MOCK_PLAN); assert.ok(r.inject!.includes("Extraction"));
@@ -78,7 +79,7 @@ describe("ResearchStateMachine", () => {
     // use depth=1 plan
     const depth1Plan: ResearchPlan = { ...MOCK_PLAN, profile: { name: "fast" } };
     const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper() });
-    let s = ResearchStateMachine.init(depth1Plan);
+    let s = ResearchStateMachine.init(depth1Plan, new ProfileResolver({}, "default"));
     s = (await machine.next(s, depth1Plan)).snapshot;
     s = (await machine.next(s, depth1Plan)).snapshot;
     s = (await machine.next(s, depth1Plan, "# Research Report\n\nThis is a comprehensive detailed research report with all findings.")).snapshot;
@@ -91,7 +92,7 @@ describe("ResearchStateMachine", () => {
   it("skips questioning when depth reached", async () => {
     const depth1Plan: ResearchPlan = { ...MOCK_PLAN, profile: { name: "fast" } };
     const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper() });
-    let s = ResearchStateMachine.init(depth1Plan);
+    let s = ResearchStateMachine.init(depth1Plan, new ProfileResolver({}, "default"));
     s = (await machine.next(s, depth1Plan)).snapshot;
     assert.equal(s.phase, "extracting");
     const r = await machine.next(s, depth1Plan);
@@ -100,12 +101,12 @@ describe("ResearchStateMachine", () => {
 
   it("uses provided runId instead of generating a new one", () => {
     const sharedRunId = "shared-run-123";
-    const s = ResearchStateMachine.init(MOCK_PLAN, undefined, sharedRunId);
+    const s = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"), sharedRunId);
     assert.equal(s.runId, sharedRunId, "must use the provided runId");
   });
 
   it("generates valid runId when none provided", () => {
-    const s = ResearchStateMachine.init(MOCK_PLAN);
+    const s = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
     assert.match(s.runId, /^\d{8}-\d{6}$/, "must be YYYYMMDD-HHmmss format");
   });
 });

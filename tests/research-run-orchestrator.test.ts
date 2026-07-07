@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import { readFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { ProfileResolver } from "../extension/profile-resolver.js";
+
+const defaultResolver = new ProfileResolver({}, "default");
 
 describe("ResearchRunOrchestrator", () => {
   it("module exports ResearchRunOrchestrator class", async () => {
@@ -14,6 +17,7 @@ describe("ResearchRunOrchestrator", () => {
     const { ResearchRunOrchestrator } = await import("../extension/research-run-orchestrator.js");
     const orch = new ResearchRunOrchestrator({
       searchFn: async () => [],
+      profileResolver: defaultResolver,
       scraper: { scrape: async () => ({ url: "", title: "", content: "" }) },
     });
     assert.ok(orch, "orchestrator must instantiate");
@@ -24,6 +28,7 @@ describe("ResearchRunOrchestrator", () => {
     const { ResearchRunOrchestrator } = await import("../extension/research-run-orchestrator.js");
     const orch = new ResearchRunOrchestrator({
       searchFn: async () => [],
+      profileResolver: defaultResolver,
       scraper: { scrape: async () => ({ url: "", title: "", content: "" }) },
     });
     const result = await orch.handle({ entries: [] });
@@ -57,7 +62,8 @@ describe("ResearchRunOrchestrator", () => {
       const mockResults = [{ title: "T", url: "https://a.com", snippet: "s", engine: "ddg" }];
       const orch = new ResearchRunOrchestrator({
         searchFn: async () => mockResults,
-        scraper: { scrape: async (url: string) => ({ url, title: url, content: "mock" }) },
+        profileResolver: defaultResolver,
+      scraper: { scrape: async (url: string) => ({ url, title: url, content: "mock" }) },
         artifactsDir,
         appendEntry: () => {},
       });
@@ -104,7 +110,8 @@ describe("ResearchRunOrchestrator", () => {
       const mockResults = [{ title: "T", url: "https://a.com", snippet: "s", engine: "ddg" }];
       const orch = new ResearchRunOrchestrator({
         searchFn: async () => mockResults,
-        scraper: { scrape: async (url: string) => ({ url, title: url, content: "mock content" }) },
+        profileResolver: defaultResolver,
+      scraper: { scrape: async (url: string) => ({ url, title: url, content: "mock content" }) },
         artifactsDir,
         appendEntry: () => {},
       });

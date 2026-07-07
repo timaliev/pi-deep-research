@@ -1,3 +1,4 @@
+import { ProfileResolver } from "../extension/profile-resolver.js";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { ResearchStateMachine } from "../extension/state-machine.js";
@@ -29,7 +30,7 @@ describe("ResearchStateMachine concurrency", () => {
   it("completes parallel searches faster than sequential", async () => {
     const plan: ResearchPlan = { ...MOCK_PLAN, profile: { name: "custom", breadth: 4, depth: 1, concurrency: 4 } };
     const machine = new ResearchStateMachine({ searchFn: slowSearchFn(50), scraper: slowScraper(5) });
-    const snapshot = ResearchStateMachine.init(plan);
+    const snapshot = ResearchStateMachine.init(plan, new ProfileResolver({}, "default"));
     const start = performance.now();
     const r = await machine.next(snapshot, plan);
     assert.equal(r.snapshot.searchCalls, 4);
@@ -39,7 +40,7 @@ describe("ResearchStateMachine concurrency", () => {
   it("completes full cycle with concurrent searches", async () => {
     const plan: ResearchPlan = { ...MOCK_PLAN, profile: { name: "custom", breadth: 3, depth: 1, concurrency: 3 } };
     const machine = new ResearchStateMachine({ searchFn: slowSearchFn(10), scraper: slowScraper(5) });
-    let s = ResearchStateMachine.init(plan);
+    let s = ResearchStateMachine.init(plan, new ProfileResolver({}, "default"));
     s = (await machine.next(s, plan)).snapshot; assert.equal(s.phase, "extracting");
     s = (await machine.next(s, plan)).snapshot; assert.equal(s.phase, "drafting");
     s = (await machine.next(s, plan, "# Research Report\n\nThis is a comprehensive research report with detailed analysis and findings from multiple sources.")).snapshot; assert.equal(s.phase, "saving");

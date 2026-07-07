@@ -1,3 +1,4 @@
+import { ProfileResolver } from "../extension/profile-resolver.js";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { ResearchStateMachine, buildTelemetrySection } from "../extension/state-machine.js";
@@ -12,7 +13,7 @@ const MOCK_PLAN: ResearchPlan = {
 
 describe("Telemetry", () => {
   it("buildTelemetrySection includes all key metrics", () => {
-    const snapshot = ResearchStateMachine.init(MOCK_PLAN);
+    const snapshot = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
     snapshot.searchCalls = 8; snapshot.scrapeCalls = 6;
     snapshot.allVisitedUrls = ["a", "b", "c"]; snapshot.currentDepth = 2; snapshot.softLimitTriggered = false;
     const section = buildTelemetrySection(snapshot);
@@ -23,13 +24,13 @@ describe("Telemetry", () => {
   });
 
   it("shows soft limit triggered as yes", () => {
-    const snapshot = ResearchStateMachine.init(MOCK_PLAN);
+    const snapshot = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
     snapshot.softLimitTriggered = true;
     assert.ok(buildTelemetrySection(snapshot).includes("yes"));
   });
 
   it("is valid markdown table format", () => {
-    const snapshot = ResearchStateMachine.init(MOCK_PLAN);
+    const snapshot = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
     const section = buildTelemetrySection(snapshot);
     assert.ok(section.includes("| Metric | Value |"));
     assert.ok(section.includes("| --- |"));
@@ -37,7 +38,7 @@ describe("Telemetry", () => {
   });
 
   it("includes profile name and parameters when profileName is passed", () => {
-    const snapshot = ResearchStateMachine.init(MOCK_PLAN);
+    const snapshot = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
     snapshot.profile = { breadth: 6, depth: 3, concurrency: 4 };
     const section = buildTelemetrySection(snapshot, undefined, undefined, "deep");
     assert.ok(section.includes("| Profile | deep |"), "must show profile name");
@@ -47,7 +48,7 @@ describe("Telemetry", () => {
   });
 
   it("shows optional max limits when set", () => {
-    const snapshot = ResearchStateMachine.init(MOCK_PLAN);
+    const snapshot = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
     snapshot.profile = { breadth: 4, depth: 2, concurrency: 4, maxSearchCalls: 100, maxElapsedSeconds: 300 };
     const section = buildTelemetrySection(snapshot, undefined, undefined, "exhaustive");
     assert.ok(section.includes("| Max search calls | 100 |"), "must show max search calls");
@@ -55,7 +56,7 @@ describe("Telemetry", () => {
   });
 
   it("omits max limits when not set", () => {
-    const snapshot = ResearchStateMachine.init(MOCK_PLAN);
+    const snapshot = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
     snapshot.profile = { breadth: 4, depth: 2, concurrency: 4 };
     const section = buildTelemetrySection(snapshot, undefined, undefined, "default");
     assert.ok(!section.includes("Max search calls"), "must not show max search calls when unset");
@@ -63,26 +64,26 @@ describe("Telemetry", () => {
   });
 
   it("uses Pi Extension version label instead of Version", () => {
-    const snapshot = ResearchStateMachine.init(MOCK_PLAN);
+    const snapshot = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
     const section = buildTelemetrySection(snapshot, "0.16.2");
     assert.ok(section.includes("| Pi Extension version |"), "must use Pi Extension version label");
     assert.ok(!section.includes("| Version |"), "must not use bare Version label");
   });
 
   it("omits profile section when no profileName passed (backward compat)", () => {
-    const snapshot = ResearchStateMachine.init(MOCK_PLAN);
+    const snapshot = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
     const section = buildTelemetrySection(snapshot);
     assert.ok(!section.includes("| Profile |"), "must not show Profile when profileName is undefined");
   });
 
   it("includes reportStyle when passed", () => {
-    const snapshot = ResearchStateMachine.init(MOCK_PLAN);
+    const snapshot = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
     const section = buildTelemetrySection(snapshot, undefined, undefined, undefined, "subtopics");
     assert.ok(section.includes("| Report style | subtopics |"), "must show report style");
   });
 
   it("omits reportStyle when not passed", () => {
-    const snapshot = ResearchStateMachine.init(MOCK_PLAN);
+    const snapshot = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
     const section = buildTelemetrySection(snapshot);
     assert.ok(!section.includes("Report style"), "must not show Report style when undefined");
   });

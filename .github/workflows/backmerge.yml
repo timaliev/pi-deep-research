@@ -1,0 +1,21 @@
+name: Backmerge to Develop
+
+on:
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
+    branches: [master]
+
+jobs:
+  backmerge:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fast-forward develop to master
+        run: git push origin master:develop

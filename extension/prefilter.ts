@@ -4,8 +4,7 @@ import type { searchWeb as SearchWebFn } from "./search/web-search.js";
 import type { WebSearchResult } from "./search/web-search.js";
 import type { SearchEngine } from "./search/web-search.js";
 import type { Scraper, ScrapedPage } from "./scraper.js";
-import type { ProfileResolver } from "./profile-resolver.js";
-import { DEFAULT_PRESETS, resolveProfile } from "./profile-resolver.js";
+import { ProfileResolver } from "./profile-resolver.js";
 import type { SearchProviderCredentials } from "./search-providers.js";
 
 export interface ResearchPlanProfile {
@@ -93,7 +92,7 @@ export class PrefilterManager {
     this.scraper = scraper;
     this.artifactsDir = artifactsDir;
     this.logger = logger;
-    this.profileResolver = profileResolver;
+    this.profileResolver = profileResolver ?? new ProfileResolver({}, "default");
     this.searchCred = searchCred;
     this.sharedRunId = sharedRunId;
   }
@@ -253,13 +252,9 @@ export class PrefilterManager {
   }
 
   private buildParamsPrompt(topic: string): string {
-    const presets = this.profileResolver
-      ? Object.entries(this.profileResolver.getPresets())
-          .map(([name, p]) => `  ${name}: breadth=${p.breadth}, depth=${p.depth}, concurrency=${p.concurrency}`)
-          .join("\n")
-      : Object.entries(DEFAULT_PRESETS)
-          .map(([name, p]) => `  ${name}: breadth=${p.breadth}, depth=${p.depth}, concurrency=${p.concurrency}`)
-          .join("\n");
+    const presets = Object.entries(this.profileResolver.getPresets())
+        .map(([name, p]) => `  ${name}: breadth=${p.breadth}, depth=${p.depth}, concurrency=${p.concurrency}`)
+        .join("\n");
     const defaultName = this.profileResolver?.defaultProfileName ?? "default";
 
     // Check which engines have API keys configured
@@ -289,12 +284,8 @@ export class PrefilterManager {
     topic: string, engines: SearchEngine[], profile: ResearchPlanProfile,
     searchResults: WebSearchResult[], scrapedContent: ScrapedPage[],
   ): string {
-    const resolved = this.profileResolver
-      ? this.profileResolver.resolve(profile)
-      : resolveProfile(profile);
-    const profileNames = this.profileResolver
-      ? this.profileResolver.listNames().join("/")
-      : "default/fast/deep";
+    const resolved = this.profileResolver.resolve(profile);
+    const profileNames = this.profileResolver.listNames().join("/");
     let p = `## Research Planning\n\nTopic: ${topic}\nEngines: [${engines.join(", ")}]\nProfile: ${profile.name} (breadth=${resolved.breadth}, depth=${resolved.depth}, concurrency=${resolved.concurrency})\n\nYou may change the profile in the plan JSON — use any named preset (${profileNames}) or custom with breadth/depth/concurrency. Pick the profile that best fits this research.\n\n### Preliminary Search\n\n`;
     for (const r of searchResults) p += `- [${r.title}](${r.url}): ${r.snippet}\n`;
     if (scrapedContent.length > 0) {
