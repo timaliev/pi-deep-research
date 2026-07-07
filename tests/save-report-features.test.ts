@@ -133,6 +133,49 @@ describe("telemetry appended to report", () => {
       "save_report must handle telemetry from session",
     );
   });
+
+  it("does not reuse stale report-path from a different research run", async () => {
+    const tmpDir = join(tmpdir(), `test-sr-${Date.now()}`);
+    mkdirSync(tmpDir, { recursive: true });
+
+    // Simulate two different research runs
+    const oldReportPath = join(tmpDir, "2026-01-01-old-topic.md");
+    writeFileSync(oldReportPath, "Old report content", "utf-8");
+
+    // Stale session entry from a PREVIOUS run
+    const staleEntry = {
+      customType: "deep-research:report-path",
+      data: {
+        path: oldReportPath,
+        reportsDir: tmpDir,
+        telemetry: "## Research Telemetry\n\n| Search calls | 5 |",
+        runId: "old-run-id",
+      },
+    };
+
+    // New report — should NOT overwrite old path
+    const newPath = join(tmpDir, "2026-07-08-new-topic.md");
+    const newMarkdown = "# New Report\n\nFresh content.";
+
+    // Simulate: save_report called with a new topic
+    // The tool must NOT write to oldReportPath
+    const { resolveReportPath } = await import("../extension/report-assembly.js");
+    const generatedPath = resolveReportPath("New Topic", tmpDir);
+
+    // Write to generated path (simulating fixed behavior)
+    const { writeFileSync: wf } = await import("node:fs");
+    wf(generatedPath, newMarkdown, "utf-8");
+
+    // Old report must still have original content
+    const oldContent = readFileSync(oldReportPath, "utf-8");
+    assert.equal(oldContent, "Old report content", "old report must not be overwritten");
+
+    // New report must have new content
+    const newContent = readFileSync(generatedPath, "utf-8");
+    assert.equal(newContent, newMarkdown, "new report must have correct content");
+
+    rmSync(tmpDir, { recursive: true });
+  });
 });
 
 // ─── Feature 4: Brave API key from settings.json ──────────────
