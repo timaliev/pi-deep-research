@@ -255,6 +255,11 @@ extension/
         ├── yandex.ts           Yandex Search API
         └── utils.ts            Rate-limit wait helper
 
+tools/
+├── save-report.ts             Save report tool (path resolution, telemetry)
+├── plan-research.ts           Three-step prefilter tool (manager scoped per plan)
+└── run-research.ts            Research run tool (orchestrator + confirmation gate)
+
 tests/                          Unit + integration tests (tsx runner, 45 files)
 
 deep-research/
@@ -298,7 +303,7 @@ See [Environment Variables](#environment-variables) for API key configuration.
 # Run tests
 cd extension && node --import tsx --test ../tests/*.test.ts
 
-# 278 tests across 45 files covering:
+# 275 tests across 45 files covering:
 # - PrefilterManager (three-step, validation, API key checks, engine status)
 # - ResearchStateMachine (full cycle, concurrency, soft limits, deepening)
 # - Engine adapters (DDG, Brave, SearXNG, Tavily, Yandex — per-engine tests)
@@ -311,6 +316,7 @@ cd extension && node --import tsx --test ../tests/*.test.ts
 # - SessionState (persistence, draft restore)
 # - SettingsContext (cascade, path resolution)
 # - SearchQueue (concurrency control)
+# - Tool handlers (save_report, plan_research, run_research extraction)
 # - Telemetry (markdown table generation, version)
 # - Integration (end-to-end research run)
 ```
@@ -323,7 +329,7 @@ cd extension && node --import tsx --test ../tests/*.test.ts
 
 | ADR | Status | Topic |
 |---|---|---|
-| [0001](docs/adr/0001-state-machine-orchestration.md) | accepted | State machine + agent injections |
+| [0001](docs/adr/0001-state-machine-orchestration.md) | accepted | State machine phases + agent injection prompts |
 | [0002](docs/adr/0002-pluggable-search-backends.md) | superseded | Pluggable backends → unified multi-engine |
 | [0003](docs/adr/0003-plan-driven-parameters.md) | accepted | Engines/profile negotiated in prefilter |
 | [0004](docs/adr/0004-profile-resolution-from-settings.md) | accepted | Profile resolution from user settings |
@@ -332,7 +338,7 @@ cd extension && node --import tsx --test ../tests/*.test.ts
 | [0007](docs/adr/0007-research-context-bundle.md) | accepted | ResearchContext bundled constructor |
 | [0008](docs/adr/0008-session-state-module.md) | accepted | SessionState unified persistence seam |
 | [0009](docs/adr/0009-engine-adapters.md) | accepted | Per-engine search adapters |
-| [0010](docs/adr/0010-presets-ownership.md) | accepted | DEFAULT_PRESETS + resolveProfile ownership |
+| [0010](docs/adr/0010-presets-ownership.md) | superseded | Presets ownership — superseded by ProfileResolver (C2) |
 | [0011](docs/adr/0011-logger-locality.md) | accepted | Logger locality — state machine owns log |
 | [0012](docs/adr/0012-settings-context-cascade.md) | accepted | SettingsContext unified settings cascade |
 | [0013](docs/adr/0013-mind-map-and-mcp-sources.md) | proposed | Mind map, MCP/local sources, repo link |
