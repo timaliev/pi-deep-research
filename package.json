@@ -1,6 +1,6 @@
 {
   "name": "pi-deep-research",
-  "version": "v0.17.2",
+  "version": "0.17.3",
   "description": "Autonomous deep web research extension for Pi coding agent",
   "private": true,
   "repository": {

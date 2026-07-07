@@ -45,9 +45,11 @@ jobs:
       - name: Get version from git-cliff
         id: version
         run: |
-          VERSION=$(git-cliff --bumped-version)
+          VERSION=$(git-cliff --bumped-version | sed -E 's/^v//')
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "VERSION_TAG=v$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
+          echo "Version tag: $VERSION_TAG"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -105,7 +107,7 @@ jobs:
       - name: Create or update PR release → master
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_TITLE: Release ${{ steps.version.outputs.VERSION }} release → master
+          PR_TITLE: Release ${{ steps.version.outputs.VERSION_TAG }} release → master
           PR_BODY: |
             ## Merge release branch into master
 
