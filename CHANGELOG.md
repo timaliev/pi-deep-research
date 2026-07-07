@@ -13,12 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 
-## [0.17.2](https://github.com/timaliev/pi-deep-research/compare/v0.17.1..v0.17.2) - 2026-07-02
+## [0.17.2](https://github.com/timaliev/pi-deep-research/compare/v0.17.1..v0.17.2) - 2026-07-07
 
 ### Bug Fixes
 
 - **(ci)** add GITHUB_TOKEN env and offline flag to git-cliff steps - ([93daaff](https://github.com/timaliev/pi-deep-research/commit/93daaffbca0f7e09fd26ec44fdb1ccb7a350f611)) - Tim Aliev
 - **(ci)** Remove unnecessary git fetch in release prep workflow - ([abdc473](https://github.com/timaliev/pi-deep-research/commit/abdc4734e5537eeed92d96986e28c32a5dd3cbbb)) - Tim Aliev
+- **(ci)** replace create-pull-request action with gh CLI - ([4d6010b](https://github.com/timaliev/pi-deep-research/commit/4d6010b4864e4646ce1ffdbb501fc240b918ce00)) - Tim Aliev
 - **(orchestrator)** replace local extractText with canonical extractTextContent - ([271c683](https://github.com/timaliev/pi-deep-research/commit/271c683050f46df3aa93a912545bca15d2376b4c)) - Tim Aliev
 - install git-cliff as a dependency in release workflow - ([c8f62f9](https://github.com/timaliev/pi-deep-research/commit/c8f62f971b5c08a539edc351f122335960f4f56f)) - Tim Aliev
 - fix(ci): move permissions to workflow level and add changelog artifact
