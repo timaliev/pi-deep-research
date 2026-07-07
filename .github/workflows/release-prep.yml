@@ -94,17 +94,19 @@ jobs:
           git-cliff --body="" --strip header --offline >> CHANGELOG.md
           rm -f CHANGELOG-header.md CHANGELOG-bump.md CHANGELOG-prior.md
 
-      - name: Create PR to master
-        uses: peter-evans/create-pull-request@v8
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: |
-            chore(release): prepare release from release branch, bump to ${{ steps.version.outputs.VERSION }} [skip ci]
-          branch: release
-          base: master
-          title: |
-            Release ${{ steps.version.outputs.VERSION }} release → master
-          body: |
+      - name: Commit changelog and version
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md package.json
+          git commit -m "chore(release): prepare release, bump to ${{ steps.version.outputs.VERSION }} [skip ci]" || true
+          git push origin release
+
+      - name: Create or update PR release → master
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_TITLE: Release ${{ steps.version.outputs.VERSION }} release → master
+          PR_BODY: |
             ## Merge release branch into master
 
             This PR merges the `release` branch into `master` for production deployment.
@@ -119,9 +121,17 @@ jobs:
             - [ ] Version bumped
 
             ---
-            Automated changes by [create-pull-request](https://github.com/peter-evans/create-pull-request) GitHub action
-          labels: |
-            release
-            automated
-          draft: false
-          delete-branch: false
+            Automated changes by GitHub Actions (with `gh pr create ...`)
+        run: |
+          EXISTING=$(gh pr list --head release --base master --state open --json number --jq '.[0].number')
+          if [ -n "$EXISTING" ]; then
+            echo "PR #$EXISTING already exists, updating title + body..."
+            gh pr edit "$EXISTING" --title "$PR_TITLE" --body "$PR_BODY"
+          else
+            gh pr create \
+              --base master \
+              --head release \
+              --title "$PR_TITLE" \
+              --body "$PR_BODY" \
+              --label "release,automated"
+          fi
