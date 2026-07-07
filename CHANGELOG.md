@@ -24,16 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - update README file structure, search engines, test count, and ADR references - ([f8ffa56](https://github.com/timaliev/pi-deep-research/commit/f8ffa56f26f3a2048c79bb146f55e375bdc09659)) - Tim Aliev
 
-## [0.17.3](https://github.com/timaliev/pi-deep-research/compare/v0.17.2..v0.17.3) - 2026-07-07
-
-### Bug Fixes
-
-- **(ci)** replace create-pull-request action with manual commit and gh pr create - ([eee8cf3](https://github.com/timaliev/pi-deep-research/commit/eee8cf312da8f47defbd90076d21e03408db4d70)) - Tim Aliev
-
-### Documentation
-
-- update README file structure, search engines, test count, and ADR references - ([f8ffa56](https://github.com/timaliev/pi-deep-research/commit/f8ffa56f26f3a2048c79bb146f55e375bdc09659)) - Tim Aliev
-
 ## [0.17.2](https://github.com/timaliev/pi-deep-research/compare/v0.17.1..v0.17.2) - 2026-07-07
 
 ### Bug Fixes
