@@ -73,7 +73,8 @@ jobs:
       - name: Generate release notes (latest only)
         uses: orhun/git-cliff-action@v4
         with:
-          args: --latest --strip header --tag-pattern="^v\\d+\\.\\d+\\.\\d+$" --config github
+          config: github
+          args: --latest --strip header --tag-pattern="^v\\d+\\.\\d+\\.\\d+$"
         env:
           OUTPUT: CHANGELOG-latest.md
 
