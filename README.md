@@ -258,7 +258,7 @@ The adapter tries instances in order. If one fails (non-200 or network error), i
 # Run tests
 cd extension && node --import tsx --test ../tests/*.test.ts
 
-# 332 tests across 45 files covering:
+# 278 tests across 45 files covering:
 # - PrefilterManager (three-step, validation, API key checks, engine status)
 # - ResearchStateMachine (full cycle, concurrency, soft limits, deepening)
 # - Engine adapters (DDG, Brave, SearXNG, Tavily, Yandex — per-engine tests)
