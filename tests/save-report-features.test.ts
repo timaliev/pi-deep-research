@@ -156,26 +156,4 @@ describe("Brave API key from settings.json", () => {
       assert.equal(key, "settings-key-123", "settings value when no env");
     }
   });
-
-  it("loadSearchProviders reads deepResearch.searchProviders", async () => {
-    const { loadSearchProviders } = await import("../extension/search-providers.js");
-    const tmpDir = join(tmpdir(), `test-brave-creds-${Date.now()}`);
-    mkdirSync(tmpDir, { recursive: true });
-    const settingsPath = join(tmpDir, "settings.json");
-    writeFileSync(
-      settingsPath,
-      JSON.stringify({
-        deepResearch: {
-          searchProviders: {
-            brave: { apiKey: "bsa-123" },
-          },
-        },
-      }),
-    );
-
-    const providers = loadSearchProviders(settingsPath);
-    assert.equal(providers.brave?.apiKey, "bsa-123");
-
-    rmSync(tmpDir, { recursive: true });
-  });
 });

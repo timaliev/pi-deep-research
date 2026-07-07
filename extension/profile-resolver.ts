@@ -1,6 +1,3 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import { homedir } from "node:os";
 import type { ResearchProfile } from "./state-machine.js";
 import type { ResearchPlanProfile } from "./prefilter.js";
 
@@ -29,44 +26,6 @@ export function resolveProfile(
     concurrency: planProfile.concurrency ?? preset?.concurrency ?? 4,
     maxSearchCalls: preset?.maxSearchCalls,
     maxElapsedSeconds: preset?.maxElapsedSeconds,
-  };
-}
-
-/** Shape of deepResearch section in settings.json. */
-export interface DeepResearchSettings {
-  profiles?: Record<string, Partial<ResearchProfile> & { breadth?: number; depth?: number; concurrency?: number; maxSearchCalls?: number; maxElapsedSeconds?: number }>;
-  defaultProfile?: string;
-  artifactsDir?: string;
-  reportsDir?: string;
-}
-
-const HOME_AGENT_DIR = join(homedir(), ".pi", "agent");
-const CWD_PI_DIR = ".pi";
-
-function readJsonFile(path: string): Record<string, unknown> | null {
-  try {
-    if (!existsSync(path)) return null;
-    const raw = readFileSync(path, "utf-8");
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-
-/** Load deepResearch settings, merging global + project-local. */
-export function loadDeepResearchSettings(cwd?: string, agentDir?: string): DeepResearchSettings {
-  const homeAgentDir = agentDir ?? HOME_AGENT_DIR;
-  const global = readJsonFile(join(homeAgentDir, "settings.json"));
-  const local = cwd ? readJsonFile(join(cwd, CWD_PI_DIR, "settings.json")) : null;
-
-  const globalDr = (global?.deepResearch ?? {}) as DeepResearchSettings;
-  const localDr = (local?.deepResearch ?? {}) as DeepResearchSettings;
-
-  return {
-    profiles: { ...globalDr.profiles, ...localDr.profiles },
-    defaultProfile: localDr.defaultProfile ?? globalDr.defaultProfile,
-    artifactsDir: localDr.artifactsDir ?? globalDr.artifactsDir,
-    reportsDir: localDr.reportsDir ?? globalDr.reportsDir,
   };
 }
 

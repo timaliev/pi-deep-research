@@ -451,7 +451,3 @@ export function readExtensionVersion(pkgPath?: string): string | undefined {
     return undefined;
   }
 }
-/** @deprecated Use createReportStyle instead. */
-export function buildDraftingPrompt(plan: ResearchPlan, findings: Finding[]): string {
-  return createReportStyle(plan.reportStyle ?? "narrative").buildDraftingPrompt(plan, findings);
-}
