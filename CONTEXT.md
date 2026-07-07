@@ -82,3 +82,31 @@ _Avoid_: analytics, metrics, usage report
 **Research Log**:
 A JSONL trace file recording every discrete event during a Research Run and its Prefilter phase: phase transitions, search calls, scrape calls, errors, injection prompts sent, soft limit triggers, deepening decisions, and artifact saves. Saved as `<runId>.log` in `./deep-research/logs/`. Complements Telemetry (aggregate) with a step-by-step audit trail. One log per Prefilter run (<runId>-prefilter.log), one per Research Run (<runId>.log).
 _Avoid_: debug log, trace, audit log
+
+**Mind Map**:
+A Mermaid `graph TD` diagram visualizing research findings as a topic tree. Generated at the end of a Research Run (when `deepResearch.mindMap` setting is `true`) or on-demand via the standalone `mind_map` tool. Appended to the report as a `## Mind Map` section containing a ` ```mermaid ` block. Renders in GitHub, VS Code, and any Mermaid-aware viewer.
+_Avoid_: diagram, concept map, knowledge graph
+
+**Mapping Phase**:
+An optional post-research step gated by the Research Run Orchestrator (not the state machine). After the state machine returns `done`, the orchestrator checks `deepResearch.mindMap`; if enabled, injects a prompt asking the agent to generate a Mind Map from findings, captures the response, and appends it to the report. The state machine is unaware of this phase.
+_Avoid_: mind-map generation, diagram phase
+
+**Enriched Search**:
+An extension of the `searching` phase where, after synchronous web search completes, the state machine injects a prompt asking the agent to supplement results using Local Sources (grep, find, read) and MCP Sources (mcp__* tools). The agent's raw text response is passed as unstructured context to the extraction phase. Gated by `plan.sources` presence.
+_Avoid_: supplemental search, extended search
+
+**Source Type**:
+A label on each Finding indicating its provenance: `"web"` (from search engines), `"local"` (from project files via grep/read), or `"mcp"` (from MCP server tools). Assigned by the state machine during extraction based on which source section the finding originated from. Used in Telemetry to break down source counts.
+_Avoid_: finding source, origin type
+
+**Local Source**:
+A project file or directory searched during Enriched Search using `grep`, `find`, and `read` tools. Specified in `plan.sources.local.paths`. Findings from local sources are tagged `source: "local"` with the file path as `sourceUrl`.
+_Avoid_: file source, document source, local document
+
+**MCP Source**:
+A Model Context Protocol server tool used during Enriched Search to pull data from external systems (e.g., JIRA, Slack, corporate wiki). Specified in `plan.sources.mcp` as server names. The agent invokes `mcp__<server>__<tool>` during the Enriched Search injection. Findings tagged `source: "mcp"` with the tool identifier as `sourceUrl`.
+_Avoid_: MCP data source, external source
+
+**PDF Export**:
+Conversion of a markdown research report to a PDF file. Available as a standalone `export_pdf` tool (always available) and as an automatic post-run step gated by `deepResearch.pdfExport` setting. Uses pandoc + weasyprint as primary method; falls back to agent-injected conversion if system tools are missing.
+_Avoid_: PDF generation, report export

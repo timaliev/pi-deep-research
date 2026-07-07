@@ -2,6 +2,7 @@ import { readFileSync, existsSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { ResearchStateMachine } from "./state-machine.js";
 import type { ResearchSnapshot, ResearchProfile } from "./state-machine.js";
+import { extractTextContent } from "./state-machine.js";
 import type { ResearchPlan, PrefilterArtifact } from "./prefilter.js";
 import type { searchWeb as SearchWebFn } from "./search/web-search.js";
 import type { Scraper } from "./scraper.js";
@@ -130,7 +131,7 @@ export class ResearchRunOrchestrator {
     if (snapshot.phase === "drafting") {
       const draftReady = stateData.draftReady as boolean | undefined;
       if (draftReady) {
-        const text = extractText(agentResponse);
+        const text = extractTextContent(agentResponse);
         if (text && text.length >= 40) {
           snapshot.draftReport = text;
         }
@@ -183,16 +184,4 @@ export class ResearchRunOrchestrator {
       deepResearchBase,
     };
   }
-}
-
-function extractText(agentResponse?: unknown): string {
-  if (!agentResponse) return "";
-  if (typeof agentResponse === "string") return agentResponse;
-  if (Array.isArray(agentResponse)) {
-    return (agentResponse as any[])
-      .filter((b: any) => b.type === "text" && b.text)
-      .map((b: any) => b.text)
-      .join("\n");
-  }
-  return "";
 }

@@ -4,6 +4,17 @@ on:
   push:
     branches: [release]
 
+# Don't forget also permissions on repository level:
+# - Go to https://github.com/YOUR_ORG/YOUR_REPO/settings/actions
+# - Check "Allow GitHub Actions to create and approve pull requests" (will be grayed out until org-level is enabled)
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -23,24 +34,22 @@ jobs:
     needs: test
     if: success()
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: orhun/git-cliff-action@v4
-        with:
-          args: --version
+      - name: Install git-cliff
+        uses: taiki-e/install-action@git-cliff
 
       - name: Get version from git-cliff
         id: version
         run: |
-          VERSION=$(git cliff --bumped-version)
+          VERSION=$(git-cliff --bumped-version)
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Write version to package.json
         run: |
@@ -66,7 +75,6 @@ jobs:
 
       - name: Fetch prior changelog from master
         run: |
-          git fetch origin master
           git checkout origin/master -- CHANGELOG.md 2>/dev/null || true
           if [ -f CHANGELOG.md ]; then
             sed -n '/^## \[/,$p' CHANGELOG.md > CHANGELOG-prior.md
@@ -83,18 +91,22 @@ jobs:
             echo "" >> CHANGELOG.md
             cat CHANGELOG-prior.md >> CHANGELOG.md
           fi
+          git-cliff --body="" --strip header --offline >> CHANGELOG.md
+          rm -f CHANGELOG-header.md CHANGELOG-bump.md CHANGELOG-prior.md
 
-      - name: Create PR to master
-        uses: peter-evans/create-pull-request@v8
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: |
-            chore(release): prepare release from release branch, bump to ${{ steps.version.outputs.VERSION }} [skip ci]
-          branch: release
-          base: master
-          title: |
-            Release ${{ steps.version.outputs.VERSION }} release → master
-          body: |
+      - name: Commit changelog and version
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md package.json
+          git commit -m "chore(release): prepare release, bump to ${{ steps.version.outputs.VERSION }} [skip ci]" || true
+          git push origin release
+
+      - name: Create or update PR release → master
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_TITLE: Release ${{ steps.version.outputs.VERSION }} release → master
+          PR_BODY: |
             ## Merge release branch into master
 
             This PR merges the `release` branch into `master` for production deployment.
@@ -109,9 +121,17 @@ jobs:
             - [ ] Version bumped
 
             ---
-            Automated changes by [create-pull-request](https://github.com/peter-evans/create-pull-request) GitHub action
-          labels: |
-            release
-            automated
-          draft: false
-          delete-branch: false
+            Automated changes by GitHub Actions (with `gh pr create ...`)
+        run: |
+          EXISTING=$(gh pr list --head release --base master --state open --json number --jq '.[0].number')
+          if [ -n "$EXISTING" ]; then
+            echo "PR #$EXISTING already exists, updating title + body..."
+            gh pr edit "$EXISTING" --title "$PR_TITLE" --body "$PR_BODY"
+          else
+            gh pr create \
+              --base master \
+              --head release \
+              --title "$PR_TITLE" \
+              --body "$PR_BODY" \
+              --label "release,automated"
+          fi

@@ -10,6 +10,10 @@ const webSearchCode = readFileSync(
   join(import.meta.dirname ?? ".", "..", "extension", "search", "web-search.ts"),
   "utf-8"
 );
+const yandexCode = readFileSync(
+  join(import.meta.dirname ?? ".", "..", "extension", "search", "engines", "yandex.ts"),
+  "utf-8"
+);
 
 describe("Yandex search integration", () => {
   it("SearchEngine type includes yandex", () => {
@@ -23,32 +27,32 @@ describe("Yandex search integration", () => {
 
   it("searchYandex function exists with credential check", () => {
     assert.ok(
-      webSearchCode.includes("searchYandex"),
-      "searchYandex function must exist"
+      yandexCode.includes("searchYandex"),
+      "searchYandex function must exist in yandex adapter"
     );
     assert.ok(
-      webSearchCode.includes("YANDEX_FOLDER_ID") || webSearchCode.includes("YANDEX_OAUTH_TOKEN"),
+      yandexCode.includes("YANDEX_FOLDER_ID") || yandexCode.includes("YANDEX_OAUTH_TOKEN"),
       "Must check Yandex credentials"
     );
   });
 
   it("yandex uses POST to searchapi API endpoint", () => {
     assert.ok(
-      webSearchCode.includes("searchapi.api.cloud.yandex.net"),
+      yandexCode.includes("searchapi.api.cloud.yandex.net"),
       "Must call Yandex search API endpoint"
     );
   });
 
   it("yandex polls operation status after submit", () => {
     assert.ok(
-      webSearchCode.includes("operation") || webSearchCode.includes("done"),
+      yandexCode.includes("operation") || yandexCode.includes("done"),
       "Must poll operation status"
     );
   });
 
   it("yandex parses XML results to WebSearchResult", () => {
     assert.ok(
-      webSearchCode.includes("xml") || webSearchCode.includes("XML") || webSearchCode.includes("rawData"),
+      yandexCode.includes("xml") || yandexCode.includes("XML") || yandexCode.includes("rawData"),
       "Must handle XML results via rawData/base64"
     );
   });
