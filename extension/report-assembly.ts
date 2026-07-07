@@ -4,6 +4,20 @@ import { topicToSlug } from "./slug.js";
 import { buildTelemetrySection, readExtensionVersion } from "./state-machine.js";
 import type { ResearchSnapshot } from "./state-machine.js";
 
+/** Compute canonical report path from topic and directory. */
+export function resolveReportPath(
+  topic: string,
+  reportsDir: string,
+  runId?: string,
+): string {
+  const date = new Date().toISOString().slice(0, 10);
+  const slug = topicToSlug(topic);
+  const filename = runId
+    ? `${runId}-${slug}.md`
+    : `${date}-${slug}.md`;
+  return join(reportsDir, filename);
+}
+
 export interface ReportAssemblyParams {
   snapshot: ResearchSnapshot;
   topic: string;
@@ -23,11 +37,9 @@ export function assembleReport(params: ReportAssemblyParams): string {
 
   mkdirSync(reportsDir, { recursive: true });
 
+  const reportPath = resolveReportPath(topic, reportsDir);
+
   const reportText = snapshot.draftReport ?? "";
-  const date = new Date().toISOString().slice(0, 10);
-  const slug = topicToSlug(topic);
-  const filename = `${date}-${slug}.md`;
-  const reportPath = join(reportsDir, filename);
 
   const ver = extensionVersion ?? readExtensionVersion();
   const telemetry = buildTelemetrySection(snapshot, ver, [

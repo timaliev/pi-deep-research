@@ -2,7 +2,7 @@ import { Type } from "typebox";
 import { StringEnum } from "@earendil-works/pi-ai";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
@@ -14,13 +14,12 @@ import { PrefilterManager } from "./prefilter.js";
 import { ResearchStateMachine, buildTelemetrySection, readExtensionVersion } from "./state-machine.js";
 import type { ResearchPlan, PrefilterArtifact, ResearchPlanProfile } from "./prefilter.js";
 import type { ResearchSnapshot } from "./state-machine.js";
-import { topicToSlug } from "./slug.js";
 import { SettingsContext } from "./settings-context.js";
 import { ProfileResolver } from "./profile-resolver.js";
 import { SessionState } from "./session-state.js";
 import { generateRunId } from "./ids.js";
 import { ResearchRunOrchestrator } from "./research-run-orchestrator.js";
-import { assembleReport } from "./report-assembly.js";
+import { assembleReport, resolveReportPath } from "./report-assembly.js";
 
 const baseDir = dirname(fileURLToPath(import.meta.url));
 
@@ -130,21 +129,18 @@ Use "compare" mode to see results from each engine separately without deduplicat
       markdown: Type.String({ description: "Report content in markdown" }),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-      const reportsDir = settings.reportsDir;
-      mkdirSync(reportsDir, { recursive: true });
+      mkdirSync(settings.reportsDir, { recursive: true });
 
-      // Prefer path pre-computed by run_research auto-save (dedup with plan.topic slug)
-      const date = new Date().toISOString().slice(0, 10);
-      let path: string;
       const entries = ctx.sessionManager.getEntries();
       const reportPathEntry = [...entries].reverse().find((e: any) => e.customType === "deep-research:report-path");
+
+      // Prefer path pre-computed by run_research auto-save
+      let path: string;
       if (reportPathEntry?.data?.path && typeof reportPathEntry.data.path === "string") {
         path = reportPathEntry.data.path;
-        // Append telemetry from auto-save if available and not already present
         const telemetry = (reportPathEntry.data as any).telemetry as string | undefined;
         if (telemetry && !params.markdown.includes("## Research Telemetry")) {
           const reportWithTelemetry = `${params.markdown}\n\n${telemetry}\n`;
-          const { writeFileSync } = await import("node:fs");
           writeFileSync(path, reportWithTelemetry, "utf-8");
           return {
             content: [{ type: "text", text: `Report saved (with telemetry): ${path}` }],
@@ -152,16 +148,11 @@ Use "compare" mode to see results from each engine separately without deduplicat
           };
         }
       } else {
-        const reportsDir = (reportPathEntry?.data as any)?.reportsDir as string | undefined
-          ?? settings.reportsDir;
-        mkdirSync(reportsDir, { recursive: true });
-        const slug = topicToSlug(params.topic);
-        const runId = (reportPathEntry?.data as any)?.runId as string | undefined ?? date;
-        const filename = `${runId}-${slug}.md`;
-        path = join(reportsDir, filename);
+        const runId = (reportPathEntry?.data as any)?.runId as string | undefined;
+        path = resolveReportPath(params.topic, settings.reportsDir, runId);
+        mkdirSync(settings.reportsDir, { recursive: true });
       }
 
-      const { writeFileSync } = await import("node:fs");
       writeFileSync(path, params.markdown, "utf-8");
 
       return {

@@ -23,7 +23,7 @@ describe("save_report → reportsDir", () => {
     // mkdirSync must precede writeFileSync for reportsDir
     const saveReportSection = src.match(/name: "save_report"[\s\S]*?^\s*},/m);
     assert.ok(saveReportSection, "save_report section must exist");
-    const mkdirIndex = saveReportSection[0].indexOf("mkdirSync(reportsDir");
+    const mkdirIndex = saveReportSection[0].indexOf("mkdirSync(settings.reportsDir");
     const writeIndex = saveReportSection[0].indexOf("writeFileSync");
     assert.ok(
       mkdirIndex >= 0 && writeIndex > mkdirIndex,
