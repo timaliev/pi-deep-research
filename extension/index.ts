@@ -28,7 +28,9 @@ const rootDir = join(baseDir, "..");
 
 export default function (pi: ExtensionAPI) {
   // Load unified settings
-  const settings = SettingsContext.init({ cwd: baseDir });
+  // Use process.cwd() (project dir), not baseDir (extension dir),
+  // so default report/artifact paths resolve to ./deep-research/ in the user's project.
+  const settings = SettingsContext.init({ cwd: process.cwd() });
   const profileResolver = new ProfileResolver({}, settings.defaultProfile, settings.profiles);
   const reportsDir = settings.reportsDir;
   const artifactsDir = settings.artifactsDir;

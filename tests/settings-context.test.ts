@@ -60,8 +60,9 @@ describe("SettingsContext — unified settings cascade", () => {
     const { SettingsContext } = await import("../extension/settings-context.js");
     const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
 
-    assert.ok(ctx.reportsDir.includes("deep-research"));
-    assert.ok(ctx.artifactsDir.includes("deep-research"));
+    // Default dirs must be rooted at the caller's cwd, not the extension directory
+    assert.equal(ctx.reportsDir, join(tmpCwd, "deep-research", "reports"));
+    assert.equal(ctx.artifactsDir, join(tmpCwd, "deep-research", "artifacts"));
     assert.equal(ctx.defaultProfile, "default");
     assert.ok(ctx.profiles.default.breadth === 4);
     assert.ok(ctx.profiles.fast.breadth === 2);
