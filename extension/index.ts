@@ -163,10 +163,9 @@ Use "compare" mode to see results from each engine separately without deduplicat
   });
 
   // === TOOL: plan_research ===
-  // Persist PrefilterManager across execute() calls so withParams results
-  // survive into finalize (each execute() invocation creates a fresh closure)
-  let _prefilterManager: PrefilterManager | null = null;
-  let _prefilterRunId = "";
+  // Persist PrefilterManager per research plan so concurrent plans don't clash.
+  // Keyed by runId, stored in session for cross-call lookup.
+  const _prefilterManagers = new Map<string, PrefilterManager>();
 
   pi.registerTool({
     name: "plan_research",
@@ -185,13 +184,21 @@ Use "compare" mode to see results from each engine separately without deduplicat
       const scraper = new WebScraper();
       const logsDir = join(artifactsDir, "..", "logs");
 
-      // Reuse manager across calls so withParams results survive into finalize
-      if (!_prefilterManager) {
-        _prefilterRunId = generateRunId();
-        const logger = new JsonlLogger(_prefilterRunId, join(logsDir, `${_prefilterRunId}-prefilter.log`));
-        _prefilterManager = new PrefilterManager(searchWeb, scraper, artifactsDir, logger, profileResolver, searchCred, _prefilterRunId);
+      // Find or create manager: look up runId from session state for steps 2/3
+      const entries = ctx.sessionManager.getEntries();
+      const prefilterEntry = [...entries].reverse().find((e: any) => e.customType === "deep-research:prefilter-run");
+      const existingRunId = prefilterEntry?.data?.runId as string | undefined;
+
+      let manager: PrefilterManager;
+      if (existingRunId && _prefilterManagers.has(existingRunId)) {
+        manager = _prefilterManagers.get(existingRunId)!;
+      } else {
+        const runId = generateRunId();
+        const logger = new JsonlLogger(runId, join(logsDir, `${runId}-prefilter.log`));
+        manager = new PrefilterManager(searchWeb, scraper, artifactsDir, logger, profileResolver, searchCred, runId);
+        _prefilterManagers.set(runId, manager);
+        pi.appendEntry("deep-research:prefilter-run", { runId, topic: params.topic });
       }
-      const manager = _prefilterManager;
 
       // Step 1: topic only → negotiate params
       if (!params.params_json && !params.plan_json) {
@@ -242,6 +249,8 @@ Use "compare" mode to see results from each engine separately without deduplicat
           try { topic = JSON.parse(params.plan_json).topic || "unknown"; } catch { topic = "unknown"; }
         }
         const result = await manager.finalize(topic, params.plan_json);
+        // Clean up manager — plan is complete, no more calls needed
+        _prefilterManagers.delete(result.runId);
         return {
           content: [{ type: "text", text: result.phase === "plan_ready"
             ? `## Research Plan Ready ✅\n\nPlan saved to: ${result.planArtifactPath}\n\n**Topic:** ${result.plan?.topic}\n**Engines:** ${result.plan?.engines.join(", ")}\n**Profile:** ${result.plan?.profile.name}\n**Questions:** ${result.plan?.researchQuestions.length}\n\nNext: show user and ask for confirmation before calling run_research.`
