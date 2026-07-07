@@ -20,10 +20,11 @@ describe("buildParamsPrompt engine availability", () => {
       join(import.meta.dirname ?? ".", "..", "extension", "prefilter.ts"),
       "utf-8",
     );
-    const promptMethod = src.match(/buildParamsPrompt[\s\S]*?return `[\s\S]*?`;/);
-    assert.ok(promptMethod, "buildParamsPrompt must exist");
+    // buildParamsPrompt must reference buildEngineStatus in its body
+    const methodBody = src.match(/buildParamsPrompt[\s\S]*?private buildEngineStatus/);
+    assert.ok(methodBody, "buildParamsPrompt must exist before buildEngineStatus");
     assert.ok(
-      promptMethod![0].includes("buildEngineStatus"),
+      methodBody![0].includes("buildEngineStatus"),
       "buildParamsPrompt must call buildEngineStatus"
     );
   });

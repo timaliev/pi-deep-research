@@ -17,7 +17,7 @@ This clones the repo, installs dependencies, and links the extension via the `pi
 To pin a specific version:
 
 ```bash
-pi install git:github.com/timaliev/pi-deep-research@v0.10.1
+pi install git:github.com/timaliev/pi-deep-research@v0.18.0
 ```
 
 ### Manual
@@ -33,7 +33,7 @@ Pi discovers the extension and skill via `package.json`'s `pi.extensions` and `p
 
 ```bash
 pi update --extensions  # update all extension packages
-pi install git:github.com/timaliev/pi-deep-research@v0.10.1  # pin new version
+pi install git:github.com/timaliev/pi-deep-research@v0.18.0  # pin new version
 ```
 
 ### Uninstall
