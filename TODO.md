@@ -56,7 +56,7 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 
 ### Architecture improvements (from review 2026-07-02)
 
-- TODO: **C1 (Strong)** — Deepen the Engine Adapter seam. Move each engine's implementation (DDG, Tavily, Yandex IAM+submit+poll+parse, Brave, SearXNG) from `web-search.ts` into its `engines/*.ts` adapter. Completes ADR-0009 migration. 500+ lines move, 10 exports removed from dispatcher.
+- DONE: **C1 (Strong)** — Deepen the Engine Adapter seam. Move each engine's implementation (DDG, Tavily, Yandex IAM+submit+poll+parse, Brave, SearXNG) from `web-search.ts` into its `engines/*.ts` adapter. Completes ADR-0009 migration. 500+ lines move, 10 exports removed from dispatcher.
 - DONE: **C2 (Strong)** — Unify text extraction. Replace orchestrator's local `extractText()` with `extractTextContent()` import. Fixes bug B1 (XML leakage). One canonical text extraction module.
 - TODO: **C3 (Worth exploring)** — Consolidate report saving. Merge `save_report` tool path logic with `assembleReport`. Single save seam, two callers (auto from orchestrator, manual from tool). Eliminates duplicate path computation.
 - TODO: **C4 (Strong)** — Delete orphaned settings loaders. Remove `loadDeepResearchSettings` (profile-resolver.ts:57) and `loadSearchProviders` (search-providers.ts:7). Zero production callers since SettingsContext migration. Add `@deprecated` or delete.
