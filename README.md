@@ -168,21 +168,38 @@ user says "research topic X"
 
 ```
 extension/
-├── index.ts              Extension entry — registers tools
-├── prefilter.ts          Three-step research planning
-├── state-machine.ts      Research run state machine + profile resolution
-├── scraper.ts            Web page scraper
-├── logger.ts             JSONL research log
-├── ids.ts                Shared ID generation
+├── index.ts                    Extension entry — registers tools
+├── prefilter.ts                Three-step research planning
+├── state-machine.ts            Research run state machine
+├── scraper.ts                  Web page scraper
+├── logger.ts                   JSONL research log
+├── ids.ts                      Shared ID generation
+├── slug.ts                     Topic → filename slug
+├── profile-resolver.ts         Profile resolution with user override merging
+├── search-providers.ts         API key resolution (settings.json → env fallback)
+├── session-state.ts            Unified persistence seam
+├── settings-context.ts         Settings cascade (env → project → user → defaults)
+├── report-assembly.ts          Final report assembly with telemetry
+├── report-styles.ts            Report style templates (narrative, subtopics)
+├── research-run-orchestrator.ts Pre/post-run hooks (plan confirmation, mind map, PDF)
+├── search-queue.ts             Controlled concurrency queue
+├── brave-search.ts             Brave web search (user-facing tool)
 └── search/
-    └── web-search.ts     Multi-engine web search (DDG, Brave, SearXNG)
+    ├── web-search.ts           Multi-engine search (dispatch + retry/backoff)
+    └── engines/
+        ├── duckduckgo.ts       DuckDuckGo (free, zero-config)
+        ├── brave.ts            Brave Search API
+        ├── searxng.ts          SearXNG public instances
+        ├── tavily.ts           Tavily Search API
+        ├── yandex.ts           Yandex Search API
+        └── utils.ts            Rate-limit wait helper
 
-tests/                    Unit + integration tests (tsx runner)
+tests/                          Unit + integration tests (tsx runner, 45 files)
 
 deep-research/
-├── artifacts/            Research plans (prefilter.json)
-├── reports/              Final research reports (markdown)
-└── logs/                 Research logs (JSONL)
+├── artifacts/                  Research plans (prefilter.json)
+├── reports/                    Final research reports (markdown)
+└── logs/                       Research logs (JSONL)
 ```
 
 ## Key Concepts
@@ -202,13 +219,39 @@ deep-research/
 
 Built-in `searchWeb()` function (multi-engine, retry with exponential backoff):
 
-| Engine | API Key | Quality |
-|---|---|---|
-| `duckduckgo` | none | Good (free) |
-| `brave` | `BRAVE_API_KEY` env | Better |
-| `searxng` | none | Variable (public instances) |
+| Engine | API Key | Quality | Notes |
+|---|---|---|---|
+| `duckduckgo` | none | Good | Free, zero-config, always available |
+| `brave` | `BRAVE_API_KEY` env | Better | Higher quality results, generous free tier |
+| `searxng` | none | Variable | Public instances with automatic failover |
+| `tavily` | `TAVILY_API_KEY` env | Best | AI-optimized, extracts clean content |
+| `yandex` | `YANDEX_OAUTH_TOKEN` + `YANDEX_FOLDER_ID` env | Good | Russian/global coverage |
 
 All search calls — user-facing `web_search` tool and pipeline — use the same function with rate-limit backoff and result deduplication.
+
+### SearXNG Configuration
+
+SearXNG is a privacy-respecting metasearch engine. The extension queries **public instances** with automatic failover — no configuration required.
+
+**Using a self-hosted SearXNG instance:**
+
+1. Edit `extension/search/engines/searxng.ts`
+2. Replace or extend the `SEARXNG_INSTANCES` array:
+
+```ts
+const SEARXNG_INSTANCES = [
+  "https://your-instance.example.com",  // your instance first
+  "https://searx.be",                    // fallback public instances
+  "https://search.sapti.me",
+];
+```
+
+The adapter tries instances in order. If one fails (non-200 or network error), it falls through to the next.
+
+**Self-hosted JSON API requirements:**
+- Endpoint: `GET /search?q=<query>&format=json&categories=general`
+- Response must include `{ results: [{ title, url, content }] }`
+- JSON format must be enabled (`search.formats` includes `json` in `settings.yml`)
 
 ## Development
 
@@ -216,17 +259,42 @@ All search calls — user-facing `web_search` tool and pipeline — use the same
 # Run tests
 cd extension && node --import tsx --test ../tests/*.test.ts
 
-# 97 tests covering:
-# - PrefilterManager (three-step, validation, API key checks)
-# - ResearchStateMachine (full cycle, concurrency, soft limits)
-# - WebScraper (title/content extraction, error handling)
+# 332 tests across 45 files covering:
+# - PrefilterManager (three-step, validation, API key checks, engine status)
+# - ResearchStateMachine (full cycle, concurrency, soft limits, deepening)
+# - Engine adapters (DDG, Brave, SearXNG, Tavily, Yandex — per-engine tests)
+# - WebScraper (title/content extraction, error handling, text content)
 # - JsonlLogger (write, append, metadata)
-# - Telemetry (markdown table generation)
+# - SearchProviderCredentials (settings.json + env resolution)
+# - ProfileResolver (built-in merge, user override, validation)
+# - ResearchRunOrchestrator (plan confirmation, report assembly)
+# - Report styles (narrative, subtopics template tests)
+# - SessionState (persistence, draft restore)
+# - SettingsContext (cascade, path resolution)
+# - SearchQueue (concurrency control)
+# - Telemetry (markdown table generation, version)
+# - Integration (end-to-end research run)
 ```
 
 ## Related Documents
 
 - [CONTEXT.md](CONTEXT.md) — domain glossary
-- [docs/adr/0001-state-machine-orchestration.md](docs/adr/0001-state-machine-orchestration.md) — why state machine + injections
-- [docs/adr/0002-pluggable-search-backends.md](docs/adr/0002-pluggable-search-backends.md) — search backend evolution
-- [docs/adr/0003-plan-driven-parameters.md](docs/adr/0003-plan-driven-parameters.md) — engines/profile negotiation
+
+### Architecture Decisions (ADRs)
+
+| ADR | Status | Topic |
+|---|---|---|
+| [0001](docs/adr/0001-state-machine-orchestration.md) | accepted | State machine + agent injections |
+| [0002](docs/adr/0002-pluggable-search-backends.md) | superseded | Pluggable backends → unified multi-engine |
+| [0003](docs/adr/0003-plan-driven-parameters.md) | accepted | Engines/profile negotiated in prefilter |
+| [0004](docs/adr/0004-profile-resolution-from-settings.md) | accepted | Profile resolution from user settings |
+| [0005](docs/adr/0005-search-provider-credentials.md) | accepted | Search provider credentials from settings.json |
+| [0006](docs/adr/0006-extension-version-in-telemetry.md) | accepted | Extension version in report telemetry |
+| [0007](docs/adr/0007-research-context-bundle.md) | accepted | ResearchContext bundled constructor |
+| [0008](docs/adr/0008-session-state-module.md) | accepted | SessionState unified persistence seam |
+| [0009](docs/adr/0009-engine-adapters.md) | accepted | Per-engine search adapters |
+| [0010](docs/adr/0010-presets-ownership.md) | accepted | DEFAULT_PRESETS + resolveProfile ownership |
+| [0011](docs/adr/0011-logger-locality.md) | accepted | Logger locality — state machine owns log |
+| [0012](docs/adr/0012-settings-context-cascade.md) | accepted | SettingsContext unified settings cascade |
+| [0013](docs/adr/0013-mind-map-and-mcp-sources.md) | proposed | Mind map, MCP/local sources, repo link |
+| [0014](docs/adr/0014-pdf-export.md) | proposed | PDF export of research reports |

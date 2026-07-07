@@ -1,7 +1,7 @@
 # ADR-0014: PDF export of research reports
 
 **Date:** 2026-07-02
-**Status:** proposed
+**Status:** proposed (not implemented)
 
 ## Context
 

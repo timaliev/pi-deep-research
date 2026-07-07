@@ -1,7 +1,7 @@
 # ADR-0013: Mind-map generation, MCP/local sources, and repository link
 
 **Date:** 2026-07-02
-**Status:** proposed
+**Status:** proposed (not implemented)
 
 ## Context
 
