@@ -2,24 +2,19 @@ import { Type } from "typebox";
 import { StringEnum } from "@earendil-works/pi-ai";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
+import { existsSync, readFileSync } from "node:fs";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 import { searchWeb, multiEngineWebSearch } from "./search/web-search.js";
 import type { SearchEngine } from "./search/web-search.js";
 import { WebScraper } from "./scraper.js";
-import { JsonlLogger } from "./logger.js";
-import { PrefilterManager } from "./prefilter.js";
-import { ResearchStateMachine, buildTelemetrySection, readExtensionVersion } from "./state-machine.js";
-import type { ResearchPlan, PrefilterArtifact, ResearchPlanProfile } from "./prefilter.js";
-import type { ResearchSnapshot } from "./state-machine.js";
 import { SettingsContext } from "./settings-context.js";
 import { ProfileResolver } from "./profile-resolver.js";
 import { SessionState } from "./session-state.js";
-import { generateRunId } from "./ids.js";
-import { ResearchRunOrchestrator } from "./research-run-orchestrator.js";
-import { assembleReport, resolveReportPath } from "./report-assembly.js";
+import { createRunResearchTool } from "./tools/run-research.js";
+import { createPlanResearchTool } from "./tools/plan-research.js";
+import { createSaveReportTool } from "./tools/save-report.js";
+import type { PrefilterArtifact } from "./prefilter.js";
 
 const baseDir = dirname(fileURLToPath(import.meta.url));
 
@@ -120,148 +115,10 @@ Use "compare" mode to see results from each engine separately without deduplicat
   });
 
   // === TOOL: save_report ===
-  pi.registerTool({
-    name: "save_report",
-    label: "Save Report",
-    description: "Save the final research report as a markdown file.",
-    parameters: Type.Object({
-      topic: Type.String({ description: "Research topic (used in filename)" }),
-      markdown: Type.String({ description: "Report content in markdown" }),
-    }),
-    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-      mkdirSync(settings.reportsDir, { recursive: true });
-
-      const entries = ctx.sessionManager.getEntries();
-      const reportPathEntry = [...entries].reverse().find((e: any) => e.customType === "deep-research:report-path");
-
-      // Prefer path pre-computed by run_research auto-save
-      let path: string;
-      if (reportPathEntry?.data?.path && typeof reportPathEntry.data.path === "string") {
-        path = reportPathEntry.data.path;
-        const telemetry = (reportPathEntry.data as any).telemetry as string | undefined;
-        if (telemetry && !params.markdown.includes("## Research Telemetry")) {
-          const reportWithTelemetry = `${params.markdown}\n\n${telemetry}\n`;
-          writeFileSync(path, reportWithTelemetry, "utf-8");
-          return {
-            content: [{ type: "text", text: `Report saved (with telemetry): ${path}` }],
-            details: { report_path: path },
-          };
-        }
-      } else {
-        const runId = (reportPathEntry?.data as any)?.runId as string | undefined;
-        path = resolveReportPath(params.topic, settings.reportsDir, runId);
-        mkdirSync(settings.reportsDir, { recursive: true });
-      }
-
-      writeFileSync(path, params.markdown, "utf-8");
-
-      return {
-        content: [{ type: "text", text: `Report saved: ${path}` }],
-        details: { report_path: path },
-      };
-    },
-  });
+  pi.registerTool(createSaveReportTool(settings));
 
   // === TOOL: plan_research ===
-  // Persist PrefilterManager per research plan so concurrent plans don't clash.
-  // Keyed by runId, stored in session for cross-call lookup.
-  const _prefilterManagers = new Map<string, PrefilterManager>();
-
-  pi.registerTool({
-    name: "plan_research",
-    label: "Plan Research",
-    description:
-      "Three-step research planning. (1) Call with topic — agent proposes engines+profile. (2) Call with topic and params_json — preliminary search runs. (3) Call with topic and plan_json — save plan artifact.",
-    parameters: Type.Object({
-      topic: Type.Optional(Type.String({ description: "Research topic (optional if plan_json provided, extracted from plan)" })),
-      params_json: Type.Optional(Type.String({ description: "JSON with engines and profile (second call)" })),
-      plan_json: Type.Optional(Type.String({ description: "JSON research plan (third call)" })),
-    }),
-    async execute(_toolCallId, params, _signal, onUpdate, ctx) {
-      const artifactsDir = settings.artifactsDir;
-      mkdirSync(artifactsDir, { recursive: true });
-
-      const scraper = new WebScraper();
-      const logsDir = join(artifactsDir, "..", "logs");
-
-      // Find or create manager: look up runId from session state for steps 2/3
-      const entries = ctx.sessionManager.getEntries();
-      const prefilterEntry = [...entries].reverse().find((e: any) => e.customType === "deep-research:prefilter-run");
-      const existingRunId = prefilterEntry?.data?.runId as string | undefined;
-
-      let manager: PrefilterManager;
-      if (existingRunId && _prefilterManagers.has(existingRunId)) {
-        manager = _prefilterManagers.get(existingRunId)!;
-      } else {
-        const runId = generateRunId();
-        const logger = new JsonlLogger(runId, join(logsDir, `${runId}-prefilter.log`));
-        manager = new PrefilterManager(searchWeb, scraper, artifactsDir, logger, profileResolver, searchCred, runId);
-        _prefilterManagers.set(runId, manager);
-        pi.appendEntry("deep-research:prefilter-run", { runId, topic: params.topic });
-      }
-
-      // Step 1: topic only → negotiate params
-      if (!params.params_json && !params.plan_json) {
-        if (!params.topic) {
-          return { content: [{ type: "text", text: "Error: topic is required for the first call." }], details: { error: "missing_topic" } };
-        }
-        const result = await manager.start(params.topic);
-        if (result.inject) pi.sendUserMessage(result.inject, { deliverAs: "steer" });
-        return {
-          content: [{ type: "text", text: `## Research Planning — Phase: ${result.phase}\n\nI've sent you a prompt to choose engines and profile. Respond with JSON, then call plan_research again with params_json.` }],
-          details: { phase: result.phase, run_id: result.runId },
-        };
-      }
-
-      // Step 2: params_json provided → preliminary search
-      if (params.params_json && !params.plan_json) {
-        if (!params.topic) {
-          return { content: [{ type: "text", text: "Error: topic is required when providing params_json." }], details: { error: "missing_topic" } };
-        }
-        let engines: SearchEngine[];
-        let profile: ResearchPlanProfile;
-        try {
-          const parsed = JSON.parse(params.params_json);
-          engines = parsed.engines ?? ["duckduckgo"];
-          profile = parsed.profile ?? { name: "default" };
-        } catch {
-          return { content: [{ type: "text", text: "Error: params_json must be valid JSON." }], details: { error: "invalid_params_json" } };
-        }
-        const result = await manager.withParams(params.topic, engines, profile);
-        if (result.inject) pi.sendUserMessage(result.inject, { deliverAs: "steer" });
-        if (result.phase === "awaiting_params") {
-          return {
-            content: [{ type: "text", text: `## API Key Required\n\nSet missing env vars and retry.` }],
-            details: { phase: result.phase, run_id: result.runId },
-          };
-        }
-        return {
-          content: [{ type: "text", text: `## Research Planning — Phase: ${result.phase}\n\nPreliminary search complete. ${result.searchResults?.length ?? 0} results. I've sent a prompt to create the plan.` }],
-          details: { phase: result.phase, run_id: result.runId },
-        };
-      }
-
-      // Step 3: plan_json provided → finalize
-      if (params.plan_json) {
-        // Extract topic from plan if not passed explicitly
-        let topic = params.topic as string;
-        if (!topic) {
-          try { topic = JSON.parse(params.plan_json).topic || "unknown"; } catch { topic = "unknown"; }
-        }
-        const result = await manager.finalize(topic, params.plan_json);
-        // Clean up manager — plan is complete, no more calls needed
-        _prefilterManagers.delete(result.runId);
-        return {
-          content: [{ type: "text", text: result.phase === "plan_ready"
-            ? `## Research Plan Ready ✅\n\nPlan saved to: ${result.planArtifactPath}\n\n**Topic:** ${result.plan?.topic}\n**Engines:** ${result.plan?.engines.join(", ")}\n**Profile:** ${result.plan?.profile.name}\n**Questions:** ${result.plan?.researchQuestions.length}\n\nNext: show user and ask for confirmation before calling run_research.`
-            : `## Plan Error ❌\n\n${result.error}` }],
-          details: { phase: result.phase, plan_artifact_path: result.planArtifactPath, plan: result.plan, error: result.error },
-        };
-      }
-
-      return { content: [{ type: "text", text: "Error: unexpected state." }], details: { error: "unexpected_state" } };
-    },
-  });
+  pi.registerTool(createPlanResearchTool(pi, settings, profileResolver, searchCred));
 
   // === TOOL: estimate_research_cost ===
   pi.registerTool({
@@ -316,85 +173,5 @@ Use "compare" mode to see results from each engine separately without deduplicat
   });
 
   // === TOOL: run_research ===
-  // State machine persistence key
-  pi.registerTool({
-    name: "run_research",
-    label: "Run Research",
-    description:
-      "Execute the deep research state machine. Call repeatedly until phase='done'. Each call advances the research by one or more phases. On the first call, pass plan_artifact_path. On subsequent calls, pass nothing — the tool manages its own state.",
-    parameters: Type.Object({
-      plan_artifact_path: Type.Optional(Type.String({ description: "Path to prefilter.json (first call only)" })),
-    }),
-    async execute(_toolCallId, params, _signal, onUpdate, ctx) {
-      const orchestrator = new ResearchRunOrchestrator({
-        searchFn: searchWeb,
-        scraper: new WebScraper(),
-        profileResolver: profileResolver,
-        artifactsDir: settings.artifactsDir,
-        searchCred,
-        appendEntry: (type, data) => pi.appendEntry(type, data),
-      });
-
-      const entries = ctx.sessionManager.getEntries();
-
-      // Confirmation gate — only for first call
-      if (params.plan_artifact_path) {
-        const confirmed = [...entries].reverse().find((e: any) => e.customType === "deep-research:plan-confirmed");
-        if (!confirmed) {
-          return {
-            content: [{ type: "text", text: `## Confirmation Required ⚠️\n\nThe research plan must be confirmed by the user before running.\n\n1. Present the plan and cost estimate to the user\n2. Ask for explicit approval\n3. After approval, call confirm_research with the plan path\n4. Then call run_research` }],
-            details: { error: "plan_not_confirmed" },
-          };
-        }
-        const confirmedPath = confirmed.data?.planArtifactPath as string | undefined;
-        if (confirmedPath && confirmedPath !== params.plan_artifact_path) {
-          return {
-            content: [{ type: "text", text: `## Plan Mismatch ⚠️\n\nConfirmation is for a different plan (${confirmedPath}). Present this plan to the user and re-confirm.` }],
-            details: { error: "plan_mismatch" },
-          };
-        }
-      }
-
-      const result = await orchestrator.handle({
-        planArtifactPath: params.plan_artifact_path,
-        entries: [...entries] as any[],
-      });
-
-      if (result.kind === "error") {
-        return {
-          content: [{ type: "text", text: `Error: ${result.error}` }],
-          details: result.details ?? {},
-        };
-      }
-
-      // Inject prompt if any
-      if (result.kind === "in_progress" && result.inject) {
-        pi.sendUserMessage(result.inject, { deliverAs: "steer" });
-      }
-
-      // If done, save report
-      if (result.kind === "done") {
-        const reportPath = assembleReport({
-          snapshot: result.snapshot,
-          topic: result.plan.topic,
-          reportsDir: settings.reportsDir,
-          planArtifactPath: result.planArtifactPath,
-          logsDir: result.logsDir,
-          profileName: typeof result.plan.profile === "object" && "name" in result.plan.profile ? (result.plan.profile as any).name : undefined,
-        });
-
-        session.saveReportPath(reportPath, settings.reportsDir, "", result.snapshot.runId);
-
-        return {
-          content: [{ type: "text", text: `## Research Complete ✅\n\nReport saved to: ${reportPath}\n\nSearch calls: ${result.snapshot.searchCalls}\nScrape calls: ${result.snapshot.scrapeCalls}\nSources visited: ${result.snapshot.allVisitedUrls.length}` }],
-          details: { phase: "done", report_path: reportPath, run_id: result.snapshot.runId },
-        };
-      }
-
-      return {
-        content: [{ type: "text", text: `## Research In Progress\n\nPhase: ${result.snapshot.phase}\nDepth: ${result.snapshot.currentDepth}/${result.snapshot.totalDepth}\nSearch calls: ${result.snapshot.searchCalls}\nScrape calls: ${result.snapshot.scrapeCalls}\n\n${result.inject ? "I've sent you a prompt. Respond, then call run_research again." : "Call run_research again to continue."}` }],
-        details: { phase: result.snapshot.phase, run_id: result.snapshot.runId },
-      };
-    },
-  });
+  pi.registerTool(createRunResearchTool(pi, settings, profileResolver, searchCred, session));
 }

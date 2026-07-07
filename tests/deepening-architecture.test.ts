@@ -82,12 +82,14 @@ describe("Candidate 2 — logger locality in ResearchStateMachine", () => {
     assert.ok(hasLogger, `ResearchContext must include optional logger for injection`);
   });
 
-  it("index.ts delegates run to ResearchRunOrchestrator, not inline state machine", async () => {
+  it("run_research uses tool factory and orchestrator, not inline state machine", async () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
-    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "index.ts"), "utf-8");
-    // index.ts should use ResearchRunOrchestrator, not instantiate ResearchStateMachine directly
-    const usesOrchestrator = src.includes("ResearchRunOrchestrator") || src.includes("orchestrator.handle");
-    assert.ok(usesOrchestrator, "index.ts must use ResearchRunOrchestrator instead of inline state machine");
+    const srcIdx = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "index.ts"), "utf-8");
+    const srcTool = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "run-research.ts"), "utf-8");
+    // index.ts delegates to createRunResearchTool
+    assert.ok(srcIdx.includes("createRunResearchTool"), "index.ts must use tool factory");
+    // tools/run-research.ts uses ResearchRunOrchestrator
+    assert.ok(srcTool.includes("ResearchRunOrchestrator"), "run-research tool must use orchestrator");
   });
 });

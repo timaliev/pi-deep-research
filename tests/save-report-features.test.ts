@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 describe("save_report → reportsDir", () => {
   it("save_report tool receives reportsDir param", async () => {
     const src = readFileSync(
-      join(import.meta.dirname ?? ".", "..", "extension", "index.ts"),
+      join(import.meta.dirname ?? ".", "..", "extension", "tools/save-report.ts"),
       "utf-8",
     );
     // save_report handler must use reportsDir
@@ -17,7 +17,7 @@ describe("save_report → reportsDir", () => {
 
   it("save_report mkdirSync creates reportsDir before writing", async () => {
     const src = readFileSync(
-      join(import.meta.dirname ?? ".", "..", "extension", "index.ts"),
+      join(import.meta.dirname ?? ".", "..", "extension", "tools/save-report.ts"),
       "utf-8",
     );
     // mkdirSync must precede writeFileSync for reportsDir
@@ -69,7 +69,7 @@ describe("save_report — writes full content", () => {
 
   it("auto-save writes reportText + telemetry", async () => {
     const src = readFileSync(
-      join(import.meta.dirname ?? ".", "..", "extension", "index.ts"),
+      join(import.meta.dirname ?? ".", "..", "extension", "tools/run-research.ts"),
       "utf-8",
     );
     // Auto-save delegates to assembleReport module (extracted from index.ts)
@@ -79,7 +79,7 @@ describe("save_report — writes full content", () => {
 
   it("draftReport is saved when phase is 'done'", async () => {
     const src = readFileSync(
-      join(import.meta.dirname ?? ".", "..", "extension", "index.ts"),
+      join(import.meta.dirname ?? ".", "..", "extension", "tools/run-research.ts"),
       "utf-8",
     );
     const doneSection = src.match(/assembleReport\(\{/);
@@ -110,7 +110,7 @@ describe("telemetry appended to report", () => {
 
   it("telemetry is saved with report path in session", async () => {
     const src = readFileSync(
-      join(import.meta.dirname ?? ".", "..", "extension", "index.ts"),
+      join(import.meta.dirname ?? ".", "..", "extension", "tools/run-research.ts"),
       "utf-8",
     );
     // session.saveReportPath must include telemetry
@@ -123,7 +123,7 @@ describe("telemetry appended to report", () => {
 
   it("save_report reads telemetry from session and appends to report", async () => {
     const src = readFileSync(
-      join(import.meta.dirname ?? ".", "..", "extension", "index.ts"),
+      join(import.meta.dirname ?? ".", "..", "extension", "tools/save-report.ts"),
       "utf-8",
     );
     const saveSection = src.match(/name: "save_report"[\s\S]*?^\s*},/m);

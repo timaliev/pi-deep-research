@@ -1,0 +1,123 @@
+import { Type } from "typebox";
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
+import { searchWeb } from "../search/web-search.js";
+import type { SearchEngine } from "../search/web-search.js";
+import { WebScraper } from "../scraper.js";
+import { JsonlLogger } from "../logger.js";
+import { PrefilterManager } from "../prefilter.js";
+import type { ResearchPlanProfile } from "../prefilter.js";
+import type { ProfileResolver } from "../profile-resolver.js";
+import type { SearchProviderCredentials } from "../search-providers.js";
+import { generateRunId } from "../ids.js";
+import type { SettingsContext } from "../settings-context.js";
+
+/**
+ * Create the plan_research tool.
+ *
+ * The `_prefilterManagers` Map and `pi` (ExtensionAPI) stay in closure so
+ * the PrefilterManager survives across execute() calls for step 1→2→3
+ * while remaining scoped (not a bare module-level global).
+ */
+export function createPlanResearchTool(
+  pi: any,
+  settings: SettingsContext,
+  profileResolver: ProfileResolver,
+  searchCred: SearchProviderCredentials,
+) {
+  const _prefilterManagers = new Map<string, PrefilterManager>();
+
+  return {
+    name: "plan_research",
+    label: "Plan Research",
+    description:
+      "Three-step research planning. (1) Call with topic — agent proposes engines+profile. (2) Call with topic and params_json — preliminary search runs. (3) Call with topic and plan_json — save plan artifact.",
+    parameters: Type.Object({
+      topic: Type.Optional(Type.String({ description: "Research topic (optional if plan_json provided, extracted from plan)" })),
+      params_json: Type.Optional(Type.String({ description: "JSON with engines and profile (second call)" })),
+      plan_json: Type.Optional(Type.String({ description: "JSON research plan (third call)" })),
+    }),
+    async execute(_toolCallId: string, params: any, _signal: any, onUpdate: any, ctx: any) {
+      const artifactsDir = settings.artifactsDir;
+      mkdirSync(artifactsDir, { recursive: true });
+
+      const scraper = new WebScraper();
+      const logsDir = join(artifactsDir, "..", "logs");
+
+      // Find or create manager: look up runId from session state for steps 2/3
+      const entries = ctx.sessionManager.getEntries();
+      const prefilterEntry = [...entries].reverse().find((e: any) => e.customType === "deep-research:prefilter-run");
+      const existingRunId = prefilterEntry?.data?.runId as string | undefined;
+
+      let manager: PrefilterManager;
+      if (existingRunId && _prefilterManagers.has(existingRunId)) {
+        manager = _prefilterManagers.get(existingRunId)!;
+      } else {
+        const runId = generateRunId();
+        const logger = new JsonlLogger(runId, join(logsDir, `${runId}-prefilter.log`));
+        manager = new PrefilterManager(searchWeb, scraper, artifactsDir, logger, profileResolver, searchCred, runId);
+        _prefilterManagers.set(runId, manager);
+        pi.appendEntry("deep-research:prefilter-run", { runId, topic: params.topic });
+      }
+
+      // Step 1: topic only → negotiate params
+      if (!params.params_json && !params.plan_json) {
+        if (!params.topic) {
+          return { content: [{ type: "text", text: "Error: topic is required for the first call." }], details: { error: "missing_topic" } };
+        }
+        const result = await manager.start(params.topic);
+        if (result.inject) pi.sendUserMessage(result.inject, { deliverAs: "steer" });
+        return {
+          content: [{ type: "text", text: `## Research Planning — Phase: ${result.phase}\n\nI've sent you a prompt to choose engines and profile. Respond with JSON, then call plan_research again with params_json.` }],
+          details: { phase: result.phase, run_id: result.runId },
+        };
+      }
+
+      // Step 2: params_json provided → preliminary search
+      if (params.params_json && !params.plan_json) {
+        if (!params.topic) {
+          return { content: [{ type: "text", text: "Error: topic is required when providing params_json." }], details: { error: "missing_topic" } };
+        }
+        let engines: SearchEngine[];
+        let profile: ResearchPlanProfile;
+        try {
+          const parsed = JSON.parse(params.params_json);
+          engines = parsed.engines ?? ["duckduckgo"];
+          profile = parsed.profile ?? { name: "default" };
+        } catch {
+          return { content: [{ type: "text", text: "Error: params_json must be valid JSON." }], details: { error: "invalid_params_json" } };
+        }
+        const result = await manager.withParams(params.topic, engines, profile);
+        if (result.inject) pi.sendUserMessage(result.inject, { deliverAs: "steer" });
+        if (result.phase === "awaiting_params") {
+          return {
+            content: [{ type: "text", text: `## API Key Required\n\nSet missing env vars and retry.` }],
+            details: { phase: result.phase, run_id: result.runId },
+          };
+        }
+        return {
+          content: [{ type: "text", text: `## Research Planning — Phase: ${result.phase}\n\nPreliminary search complete. ${result.searchResults?.length ?? 0} results. I've sent a prompt to create the plan.` }],
+          details: { phase: result.phase, run_id: result.runId },
+        };
+      }
+
+      // Step 3: plan_json provided → finalize
+      if (params.plan_json) {
+        let topic = params.topic as string;
+        if (!topic) {
+          try { topic = JSON.parse(params.plan_json).topic || "unknown"; } catch { topic = "unknown"; }
+        }
+        const result = await manager.finalize(topic, params.plan_json);
+        _prefilterManagers.delete(result.runId);
+        return {
+          content: [{ type: "text", text: result.phase === "plan_ready"
+            ? `## Research Plan Ready ✅\n\nPlan saved to: ${result.planArtifactPath}\n\n**Topic:** ${result.plan?.topic}\n**Engines:** ${result.plan?.engines.join(", ")}\n**Profile:** ${result.plan?.profile.name}\n**Questions:** ${result.plan?.researchQuestions.length}\n\nNext: show user and ask for confirmation before calling run_research.`
+            : `## Plan Error ❌\n\n${result.error}` }],
+          details: { phase: result.phase, plan_artifact_path: result.planArtifactPath, plan: result.plan, error: result.error },
+        };
+      }
+
+      return { content: [{ type: "text", text: "Error: unexpected state." }], details: { error: "unexpected_state" } };
+    },
+  };
+}
