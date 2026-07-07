@@ -183,12 +183,11 @@ extension/
 ├── report-styles.ts            Report style templates (narrative, subtopics)
 ├── research-run-orchestrator.ts Pre/post-run hooks (plan confirmation, mind map, PDF)
 ├── search-queue.ts             Controlled concurrency queue
-├── brave-search.ts             Brave web search (user-facing tool)
 └── search/
     ├── web-search.ts           Multi-engine search (dispatch + retry/backoff)
     └── engines/
         ├── duckduckgo.ts       DuckDuckGo (free, zero-config)
-        ├── brave.ts            Brave Search API
+        ├── brave.ts            Brave Search API adapter
         ├── searxng.ts          SearXNG public instances
         ├── tavily.ts           Tavily Search API
         ├── yandex.ts           Yandex Search API
