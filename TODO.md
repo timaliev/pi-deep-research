@@ -48,8 +48,7 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 
 ### Code smells (low priority, diagnosed 2026-07-02)
 
-- DONE: **S1** — `writeFileSync` now top-level import in index.ts (C3).
-- TODO: **S2** — Module-level mutable `_prefilterManager` / `_prefilterRunId` in index.ts. State leaks across plans.
+- DONE: **S2** — Module-level `_prefilterManager` replaced with Map keyed by runId (C5).
 - DONE: **S3** — `reportsDir` shadowing removed in C3.
 - DONE: **S4** — `resolveProfile()` deprecation annotation cleaned up in C2.
 - DONE: **S5** — Engine implementations extracted to `engines/*.ts` adapters (C1).
@@ -60,4 +59,14 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 - DONE: **C2** — Text extraction unified with `extractTextContent()`.
 - DONE: **C3** — Report path consolidated with `resolveReportPath()`.
 - DONE: **C4** — Orphaned setting loaders deleted.
-- TODO: **C5 (Worth exploring)** — Scope PrefilterManager to Research Plan. Replace module-level mutable `_prefilterManager` / `_prefilterRunId` with session-entry-scoped state keyed by topic.
+- DONE: **C5** — PrefilterManager scoped to Map keyed by runId, concurrent plans safe.
+
+### Configurable default report style (designed 2026-07-07)
+
+- TODO: add `reportStyle` field to `SettingsContext` — cascade: env `DEEP_RESEARCH_REPORT_STYLE` → local settings.json `deepResearch.defaultReportStyle` → global settings.json → `"narrative"`.
+- TODO: add `defaultReportStyle` field to `ResearchContext` interface and `ResearchStateMachine` constructor.
+- TODO: update `state-machine.ts` fallback: `plan.reportStyle ?? this.defaultReportStyle ?? "narrative"` (4 call sites).
+- TODO: wire `settings.reportStyle` through `index.ts` → `ResearchRunOrchestrator` → `ResearchStateMachine`.
+- TODO: update `prefilter.ts` prompt — show configured default marked with `(default)`, instruct LLM to advise narrative vs subtopics based on topic complexity.
+- TODO: add `"reportStyle"` to `buildParamsPrompt` expected JSON template.
+- TODO: add tests for settings cascade, env override, state machine fallback, prefilter prompt advisory.
