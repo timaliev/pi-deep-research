@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const indexCode = readFileSync(
-  join(import.meta.dirname ?? ".", "..", "extension", "index.ts"),
+  join(import.meta.dirname ?? ".", "..", "extension", "tools", "web-search.ts"),
   "utf-8"
 );
 
