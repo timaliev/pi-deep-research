@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **(index)** extract 6 inline tool implementations to tools/ - ([151c0af](https://github.com/timaliev/pi-deep-research/commit/151c0af5800075b6869e7ef7ff3210c0a704e155)) - Tim Aliev
 - **(orchestrator)** move post-processing to orchestrator (ADR-0016) - ([594c4b5](https://github.com/timaliev/pi-deep-research/commit/594c4b58806ed8a9dfd07703e5f0f540fd944e0c)) - Tim Aliev
+- **(orchestrator)** deduplicate ResearchStateMachine construction - ([d18c530](https://github.com/timaliev/pi-deep-research/commit/d18c530c7f19cdba498d59d7fe9689fc2b9cf251)) - Tim Aliev
 
 ## [0.21.0](https://github.com/timaliev/pi-deep-research/compare/v0.20.0..v0.21.0) - 2026-07-08
 
