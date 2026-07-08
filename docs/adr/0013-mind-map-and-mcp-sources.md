@@ -1,7 +1,15 @@
 # ADR-0013: Mind-map generation, MCP/local sources, and repository link
 
 **Date:** 2026-07-02
-**Status:** proposed (not implemented)
+**Status:** partially accepted (mind-map implemented 2026-07-08; MCP/local sources, repo link, profile listing: proposed)
+
+## Implementation Notes (mind-map)
+
+Implemented in `extension/index.ts` (standalone `mind_map` tool) and `extension/tools/run-research.ts` (auto-generation).
+
+- **Standalone tool** (`mind_map`): injection-based — sends a prompt asking the agent to generate a Mermaid `graph TD` diagram. Agent responds with Mermaid block, optionally saves to `save_path`.
+- **Auto-generation**: after Research Run done, if `deepResearch.mindMap` is `true` and findings exist, injects a prompt with summarized findings (up to 30). Agent generates Mermaid block and appends it as `## Mind Map` to the report via the `edit` tool.
+- **Settings**: `deepResearch.mindMap` (boolean, default `false`), env `DEEP_RESEARCH_MIND_MAP`.
 
 ## Context
 
