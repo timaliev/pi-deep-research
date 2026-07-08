@@ -120,7 +120,9 @@ export class ResearchRunOrchestrator {
     const lastAssistant = [...entries].reverse().find(
       (e) => e.message?.role === "assistant"
     );
-    const agentResponse = lastAssistant?.message?.content as string | undefined;
+    const rawResponse = lastAssistant?.message?.content as string | undefined;
+    // Parse once — used for both draft recovery and state machine phases
+    const parsedResponse = extractTextContent(rawResponse) || undefined;
 
     const lastStateEntry = [...entries].reverse().find((e) => e.customType === STATE_KEY);
     if (!lastStateEntry) {
@@ -135,11 +137,8 @@ export class ResearchRunOrchestrator {
     // Restore draft only when entering drafting phase
     if (snapshot.phase === "drafting") {
       const draftReady = stateData.draftReady as boolean | undefined;
-      if (draftReady) {
-        const text = extractTextContent(agentResponse);
-        if (text && text.length >= 40) {
-          snapshot.draftReport = text;
-        }
+      if (draftReady && parsedResponse && parsedResponse.length >= 40) {
+        snapshot.draftReport = parsedResponse;
       }
     }
 
@@ -160,7 +159,7 @@ export class ResearchRunOrchestrator {
       searchCred: this.searchCred,
     });
 
-    const result = await machine.next(snapshot, plan, agentResponse);
+    const result = await machine.next(snapshot, plan, parsedResponse);
 
     this.saveState?.(result.snapshot, {
       plan,

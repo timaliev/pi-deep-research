@@ -141,6 +141,7 @@ export class ResearchStateMachine {
       snapshot.profile = this.profileResolver.resolve(plan.profile);
       snapshot.totalDepth = snapshot.profile.depth;
     }
+    // Agent response already parsed by orchestrator — phase handlers receive clean text or undefined
     switch (snapshot.phase) {
       case "searching":  return this.doSearching(snapshot, plan);
       case "extracting": return this.doExtracting(snapshot, plan);
@@ -302,12 +303,9 @@ export class ResearchStateMachine {
     return { phase: "drafting", snapshot: { ...snapshot, phase: "drafting" }, inject };
   }
 
-  private async doQuestioning(snapshot: ResearchSnapshot, plan: ResearchPlan, agentResponse?: unknown): Promise<ResearchStateResult> {
-    if (agentResponse) {
-      const text = typeof agentResponse === "string"
-        ? agentResponse
-        : (Array.isArray(agentResponse) ? (agentResponse as any[]).map((b: any) => b.text ?? "").join("\n") : "");
-      const questions = this.extractQuestions(text);
+  private async doQuestioning(snapshot: ResearchSnapshot, plan: ResearchPlan, parsedResponse?: string): Promise<ResearchStateResult> {
+    if (parsedResponse) {
+      const questions = this.extractQuestions(parsedResponse);
       snapshot.pendingQuestions = questions.length > 0 ? questions : plan.researchQuestions;
     } else {
       snapshot.pendingQuestions = plan.researchQuestions;
@@ -328,9 +326,9 @@ export class ResearchStateMachine {
     return questions;
   }
 
-  private doDrafting(snapshot: ResearchSnapshot, plan: ResearchPlan, agentResponse?: unknown): ResearchStateResult {
-    const reportText = extractTextContent(agentResponse);
-    this.logger?.event("drafting_extracted", { textLength: reportText.length, agentResponseType: typeof agentResponse, isArray: Array.isArray(agentResponse) });
+  private doDrafting(snapshot: ResearchSnapshot, plan: ResearchPlan, parsedResponse?: string): ResearchStateResult {
+    const reportText = parsedResponse ?? "";
+    this.logger?.event("drafting_extracted", { textLength: reportText.length, agentResponseType: "string" });
     if (!reportText || reportText.length < 40) {
       // Agent didn't produce a proper report — re-inject drafting prompt
       const inject = createReportStyle(plan.reportStyle ?? "narrative").buildDraftingPrompt(plan, snapshot.allFindings);
@@ -348,12 +346,11 @@ export class ResearchStateMachine {
     };
   }
 
-  private doSaving(snapshot: ResearchSnapshot, agentResponse?: unknown): ResearchStateResult {
+  private doSaving(snapshot: ResearchSnapshot, parsedResponse?: string): ResearchStateResult {
     let text = snapshot.draftReport ?? "";
-    // Fallback: if draft was stripped by session persistence, try re-extracting
-    // from the agent response passed directly (bypasses fragile assistant-message lookup)
-    if (text.length < 40 && agentResponse !== undefined) {
-      text = extractTextContent(agentResponse);
+    // Fallback: if draft was stripped by session persistence, re-extract from parsed response
+    if (text.length < 40 && parsedResponse !== undefined) {
+      text = parsedResponse;
     }
     if (text.length < 40) {
       this.logger?.event("saving_blocked", { reason: "empty_draft", draftLength: text.length });
