@@ -138,7 +138,7 @@ Export any research report to PDF via the `export_pdf` tool:
 export_pdf({ report_path: "deep-research/reports/my-report.md" })
 ```
 
-Optionally specify output path:
+PDF saved to same directory as the report with `.pdf` extension. Override with `output_path`:
 
 ```
 export_pdf({ report_path: "deep-research/reports/my-report.md", output_path: "exports/report.pdf" })

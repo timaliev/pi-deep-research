@@ -162,6 +162,8 @@ Auto-export research reports to PDF after each run. Defaults to `false` (opt-in)
 
 Requires `pandoc` and `weasyprint` installed on the system. If missing, falls back to agent-based conversion (browser print-to-PDF). See [PDF Export](#pdf-export) for platform setup instructions.
 
+PDF output path is always derived from the input report path (`.md` → `.pdf`, same directory). Use `export_pdf` tool's `output_path` parameter to override per-call. No separate `DEEP_RESEARCH_PDF_OUTPUT_DIR` env var.
+
 ### Environment Variables
 
 All settings can be configured via environment variables. Env vars take priority over `settings.json` values.
@@ -220,6 +222,11 @@ Agent calls `export_pdf(report_path, output_path?)` on any markdown report:
 
 ```
 export_pdf({ report_path: "deep-research/reports/my-report.md" })
+```
+
+Defaults to same directory + `.pdf` extension. Override:
+```
+export_pdf({ report_path: "my-report.md", output_path: "exports/custom.pdf" })
 ```
 
 Always available — no configuration required. Falls back to agent-based conversion if system tools are missing.
