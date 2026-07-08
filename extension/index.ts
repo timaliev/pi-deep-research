@@ -15,6 +15,7 @@ import { ResearchRunOrchestrator } from "./research-run-orchestrator.js";
 import { createRunResearchTool } from "./tools/run-research.js";
 import { createPlanResearchTool } from "./tools/plan-research.js";
 import { createSaveReportTool } from "./tools/save-report.js";
+import { convertToPdf } from "./export-pdf.js";
 import type { PrefilterArtifact } from "./prefilter.js";
 
 const baseDir = dirname(fileURLToPath(import.meta.url));
@@ -128,6 +129,57 @@ Use "compare" mode to see results from each engine separately without deduplicat
 
   // === TOOL: save_report ===
   pi.registerTool(createSaveReportTool(settings));
+
+  // === TOOL: export_pdf ===
+  pi.registerTool({
+    name: "export_pdf",
+    label: "Export PDF",
+    description:
+      "Export a research report as PDF using pandoc+weasyprint. Falls back to agent-based conversion if pandoc not installed.",
+    parameters: Type.Object({
+      report_path: Type.String({ description: "Path to the markdown report file" }),
+      output_path: Type.Optional(
+        Type.String({ description: "Output PDF path (defaults to same name + .pdf)" }),
+      ),
+    }),
+    async execute(_toolCallId, params) {
+      const reportPath = params.report_path as string;
+      const outputPath = (params.output_path as string | undefined) ?? undefined;
+
+      const result = await convertToPdf({ reportPath, outputPath });
+
+      if (result.kind === "error") {
+        return {
+          content: [{ type: "text", text: `Error: ${result.error}` }],
+          details: { error: result.error },
+        };
+      }
+
+      if (result.kind === "success") {
+        return {
+          content: [{ type: "text", text: `PDF exported (pandoc): ${result.outputPath}` }],
+          details: { pdf_path: result.outputPath, method: result.method },
+        };
+      }
+
+      // Fallback: agent-based conversion
+      pi.sendUserMessage(
+        `## PDF Export — Agent Fallback\n\n${result.error}\n\nConvert the report to PDF using available tools:\n` +
+          `- Report: ${reportPath}\n- Output: ${result.outputPath}\n\n` +
+          `Use print-to-PDF in browser, or any other available PDF tool.`,
+        { deliverAs: "steer" },
+      );
+      return {
+        content: [
+          {
+            type: "text",
+            text: `${result.error} Prompt sent for agent-based conversion. Output: ${result.outputPath}`,
+          },
+        ],
+        details: { fallback: true, missing_tools: result.error, pdf_path: result.outputPath },
+      };
+    },
+  });
 
   // === TOOL: plan_research ===
   pi.registerTool(createPlanResearchTool(pi, settings, profileResolver, searchCred));

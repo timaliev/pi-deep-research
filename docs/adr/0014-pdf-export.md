@@ -1,11 +1,31 @@
 # ADR-0014: PDF export of research reports
 
 **Date:** 2026-07-02
-**Status:** proposed (not implemented)
+**Status:** accepted ✓ (implemented 2026-07-08)
 
 ## Context
 
 Reports are currently generated as markdown files only. Users want PDF versions for sharing, archiving, and offline reading. TODO.md has tracked this as a pending item.
+
+## Implementation Notes
+
+Implemented in `extension/export-pdf.ts`. Key deviations from original proposal:
+
+- **Cross-platform `commandExists()`** instead of `which` — dispatches to `where` on Windows (`win32`), `which` on Unix.
+- **`execFileSync` with argument array** instead of `execSync` with shell string — avoids shell injection and quoting issues across platforms.
+- **`basename()`** instead of `path.split("/").pop()` for topic extraction.
+- **Output directory created upfront** (before tool checks) — guarantees dir exists for both pandoc and fallback paths.
+- Auto-export wired in `tools/run-research.ts` (not orchestrator) — tool handler has direct access to `pi.sendUserMessage` for fallback injection.
+
+## Platform Support
+
+| Platform | pandoc | weasyprint | Status |
+|----------|--------|------------|--------|
+| macOS | `brew install pandoc` | `pip install weasyprint` | ✅ tested |
+| Linux | `apt install pandoc` | `pip install weasyprint` | ✅ compatible |
+| Windows | `choco install pandoc` / `winget install pandoc` | `pip install weasyprint` (requires GTK) | ✅ code-compatible, system deps TBD |
+
+On all platforms, missing tools → graceful fallback to agent-based conversion.
 
 ## Decision
 
