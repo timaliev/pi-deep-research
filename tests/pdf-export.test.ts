@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -71,5 +71,55 @@ describe("pdfExport setting", () => {
     const { SettingsContext } = await import("../extension/settings-context.js");
     const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
     assert.equal(ctx.pdfExport, true);
+  });
+});
+
+// ─── PDF conversion: export-pdf module ──────────────────────
+describe("convertToPdf", () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = join(tmpdir(), `pdf-test-${Date.now()}-${Math.random()}`);
+    mkdirSync(tmpDir, { recursive: true });
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("returns error when report_path does not exist", async () => {
+    const { convertToPdf } = await import("../extension/export-pdf.js");
+    const result = await convertToPdf({
+      reportPath: join(tmpDir, "nonexistent.md"),
+    });
+    assert.equal(result.kind, "error");
+    assert.ok(result.error?.includes("not found"));
+  });
+
+  it("defaults output_path to .pdf when not provided", async () => {
+    const reportPath = join(tmpDir, "report.md");
+    writeFileSync(reportPath, "# Test report");
+
+    // The module checks for pandoc; when missing, falls back
+    const { convertToPdf } = await import("../extension/export-pdf.js");
+    const result = await convertToPdf({ reportPath });
+
+    // Fallback or pandoc — both must set output_path
+    assert.ok(result.outputPath, "must have output_path");
+    assert.ok(result.outputPath.endsWith(".pdf"), "output_path must end with .pdf");
+  });
+
+  it("uses explicit output_path when provided", async () => {
+    const reportPath = join(tmpDir, "report.md");
+    const explicitPdf = join(tmpDir, "custom.pdf");
+    writeFileSync(reportPath, "# Test report");
+
+    const { convertToPdf } = await import("../extension/export-pdf.js");
+    const result = await convertToPdf({
+      reportPath,
+      outputPath: explicitPdf,
+    });
+
+    assert.equal(result.outputPath, explicitPdf);
   });
 });
