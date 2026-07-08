@@ -1,6 +1,7 @@
 import { Type } from "typebox";
 import { ResearchRunOrchestrator } from "../research-run-orchestrator.js";
 import { assembleReport } from "../report-assembly.js";
+import { convertToPdf } from "../export-pdf.js";
 import type { SettingsContext } from "../settings-context.js";
 import type { SessionState } from "../session-state.js";
 
@@ -67,8 +68,26 @@ export function createRunResearchTool(
 
         session.saveReportPath(reportPath, settings.reportsDir, "", result.snapshot.runId);
 
+        let pdfInfo = "";
+
+        // Auto-export PDF if enabled
+        if (settings.pdfExport) {
+          const pdfResult = await convertToPdf({ reportPath });
+          if (pdfResult.kind === "success") {
+            pdfInfo = `\nPDF exported: ${pdfResult.outputPath}`;
+          } else if (pdfResult.kind === "fallback") {
+            pdfInfo = `\nPDF export: ${pdfResult.error} Prompt sent for agent-based conversion. Output: ${pdfResult.outputPath}`;
+            pi.sendUserMessage(
+              `## PDF Export — Agent Fallback\n\n${pdfResult.error}\n\nConvert the report to PDF using available tools:\n` +
+                `- Report: ${reportPath}\n- Output: ${pdfResult.outputPath}\n\n` +
+                `Use print-to-PDF in browser, or any other available PDF tool.`,
+              { deliverAs: "steer" },
+            );
+          }
+        }
+
         return {
-          content: [{ type: "text", text: `## Research Complete ✅\n\nReport saved to: ${reportPath}\n\nSearch calls: ${result.snapshot.searchCalls}\nScrape calls: ${result.snapshot.scrapeCalls}\nSources visited: ${result.snapshot.allVisitedUrls.length}` }],
+          content: [{ type: "text", text: `## Research Complete ✅\n\nReport saved to: ${reportPath}${pdfInfo}\n\nSearch calls: ${result.snapshot.searchCalls}\nScrape calls: ${result.snapshot.scrapeCalls}\nSources visited: ${result.snapshot.allVisitedUrls.length}` }],
           details: { phase: "done", report_path: reportPath, run_id: result.snapshot.runId },
         };
       }
