@@ -174,7 +174,7 @@ Auto-generate a Mermaid mind map diagram after each research run. Defaults to `f
 
 | Env var | Type | Default |
 |---------|------|---------|
-| `DEEP_RESEARCH_MIND_MAP` | `true`/`1` | `false` |
+| `DEEP_RESEARCH_MIND_MAP` | `true` | `false` |
 
 No system dependencies required — the agent generates the diagram using its LLM capabilities.
 
@@ -189,8 +189,8 @@ All settings can be configured via environment variables. Env vars take priority
 | `DEEP_RESEARCH_REPORTS_DIR` | `<cwd>/deep-research/reports` | Report output directory |
 | `DEEP_RESEARCH_ARTIFACTS_DIR` | `<cwd>/deep-research/artifacts` | Artifact output directory |
 | `DEEP_RESEARCH_DEFAULT_PROFILE` | `default` | Default research profile name |
-| `DEEP_RESEARCH_PDF_EXPORT` | `false` | Auto-export reports to PDF (`true`/`1`) |
-| `DEEP_RESEARCH_MIND_MAP` | `false` | Auto-generate mind map after research (`true`/`1`) |
+| `DEEP_RESEARCH_PDF_EXPORT` | `false` | Auto-export reports to PDF (`true`) |
+| `DEEP_RESEARCH_MIND_MAP` | `false` | Auto-generate mind map after research (`true`) |
 
 #### Search Engine API Keys
 
