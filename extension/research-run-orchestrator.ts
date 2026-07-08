@@ -6,7 +6,7 @@ import { extractTextContent } from "./state-machine.js";
 import type { ResearchPlan, PrefilterArtifact } from "./prefilter.js";
 import type { searchWeb as SearchWebFn } from "./search/web-search.js";
 import type { Scraper } from "./scraper.js";
-import type { SearchProviderCredentials } from "./search-providers.js";
+import type { SearchProviderCredentials } from "./settings-context.js";
 import { JsonlLogger } from "./logger.js";
 import { ProfileResolver } from "./profile-resolver.js";
 

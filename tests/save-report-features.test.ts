@@ -188,7 +188,7 @@ describe("Brave API key from settings.json", () => {
   });
 
   it("SearchProviderCredentials.get reads brave apiKey from settings", async () => {
-    const { SearchProviderCredentials } = await import("../extension/search-providers.js");
+    const { SearchProviderCredentials } = await import("../extension/settings-context.js");
     const cred = new SearchProviderCredentials({
       brave: { apiKey: "settings-key-123" },
     });

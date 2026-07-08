@@ -6,7 +6,7 @@ import { WebScraper } from "../scraper.js";
 import { PrefilterManager, PrefilterSession } from "../prefilter.js";
 import type { ResearchPlanProfile } from "../prefilter.js";
 import type { ProfileResolver } from "../profile-resolver.js";
-import type { SearchProviderCredentials } from "../search-providers.js";
+import type { SearchProviderCredentials } from "../settings-context.js";
 import type { SettingsContext } from "../settings-context.js";
 
 export function createPlanResearchTool(

@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { resolveBraveApiKey, buildBraveSearchParams, parseBraveResponse } from "../extension/search/engines/brave.js";
-import type { SearchProviderCredentials } from "../extension/search-providers.js";
+import type { SearchProviderCredentials } from "../extension/settings-context.js";
 
 describe("searchBrave credentials", () => {
   it("reads api key from SearchProviderCredentials when no env var", () => {

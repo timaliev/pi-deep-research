@@ -9,7 +9,7 @@ import { mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildSearchQueue, saveQueue } from "./search-queue.js";
-import type { SearchProviderCredentials } from "./search-providers.js";
+import type { SearchProviderCredentials } from "./settings-context.js";
 import { createReportStyle } from "./report-styles.js";
 import type { ReportStyle } from "./report-styles.js";
 import type { ProfileResolver } from "./profile-resolver.js";

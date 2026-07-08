@@ -7,7 +7,7 @@ import type { WebSearchResult } from "./search/web-search.js";
 import type { SearchEngine } from "./search/web-search.js";
 import type { Scraper, ScrapedPage } from "./scraper.js";
 import { ProfileResolver } from "./profile-resolver.js";
-import type { SearchProviderCredentials } from "./search-providers.js";
+import type { SearchProviderCredentials } from "./settings-context.js";
 
 export interface ResearchPlanProfile {
   name: "default" | "fast" | "deep" | "custom";

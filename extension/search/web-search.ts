@@ -10,7 +10,7 @@
 import { request as httpsRequest } from "node:https";
 import { request as httpRequest } from "node:http";
 import type { Logger } from "./logger.js";
-import type { SearchProviderCredentials } from "../search-providers.js";
+import type { SearchProviderCredentials } from "../settings-context.js";
 
 export const DDG_USER_AGENT = "Mozilla/5.0 (compatible; web-search/1.0)";
 
