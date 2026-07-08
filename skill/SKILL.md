@@ -130,6 +130,32 @@ Environment variables take precedence over settings.json. Example settings.json:
 
 Default paths: `./deep-research/artifacts/`, `./deep-research/reports/`. Override via `deepResearch.artifactsDir` and `deepResearch.reportsDir` in settings.json.
 
+## PDF Export
+
+Export any research report to PDF via the `export_pdf` tool:
+
+```
+export_pdf({ report_path: "deep-research/reports/my-report.md" })
+```
+
+Optionally specify output path:
+
+```
+export_pdf({ report_path: "deep-research/reports/my-report.md", output_path: "exports/report.pdf" })
+```
+
+**Auto-export:** Enable `deepResearch.pdfExport: true` in settings.json (or `DEEP_RESEARCH_PDF_EXPORT=true` env var). The report is automatically converted to PDF after each run.
+
+**System requirements for direct conversion:**
+- `pandoc` + `weasyprint` must be installed on the system
+- If missing, the agent receives a fallback prompt to convert via browser print-to-PDF
+- `mermaid-filter` (optional, `npm install -g mermaid-filter`) enables Mermaid diagram rendering in PDF
+
+**Platform setup:**
+- **macOS:** `brew install pandoc` + `pip3 install weasyprint`
+- **Linux:** `sudo apt install pandoc` + `pip install weasyprint`
+- **Windows:** `winget install pandoc` + `pip install weasyprint`
+
 ## Error Recovery
 
 - **Missing API key:** During prefilter, if you select an engine without its key configured (env var or settings.json), the tool warns you. Tell the user to set it and retry.
