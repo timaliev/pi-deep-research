@@ -1,7 +1,8 @@
 import { ProfileResolver } from "../extension/profile-resolver.js";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { ResearchStateMachine, extractTextContent } from "../extension/state-machine.js";
+import { ResearchStateMachine } from "../extension/state-machine.js";
+import { extractTextContent } from "../extension/research-run-orchestrator.js";
 import type { ResearchPlan } from "../extension/prefilter.js";
 import type { WebSearchResult } from "../extension/search/web-search.js";
 import type { Scraper } from "../extension/scraper.js";

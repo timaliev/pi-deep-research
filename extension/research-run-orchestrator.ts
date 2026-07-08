@@ -2,7 +2,6 @@ import { readFileSync, existsSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { ResearchStateMachine } from "./state-machine.js";
 import type { ResearchSnapshot } from "./state-machine.js";
-import { extractTextContent } from "./state-machine.js";
 import type { ResearchPlan, PrefilterArtifact } from "./prefilter.js";
 import type { searchWeb as SearchWebFn } from "./search/web-search.js";
 import type { Scraper } from "./scraper.js";
@@ -187,4 +186,20 @@ export class ResearchRunOrchestrator {
       deepResearchBase,
     };
   }
+}
+
+/** Extract plain text from agent response (handles string and content blocks array).
+ *  Strips <tool_calls>...</tool_calls> XML blocks from string input. */
+export function extractTextContent(agentResponse?: unknown): string {
+  if (!agentResponse) return "";
+  if (typeof agentResponse === "string") {
+    return agentResponse.replace(/<tool_calls>[\s\S]*?<\/tool_calls>/g, "").trim();
+  }
+  if (Array.isArray(agentResponse)) {
+    return (agentResponse as any[])
+      .filter((b: any) => b.type === "text" && b.text)
+      .map((b: any) => b.text)
+      .join("\n");
+  }
+  return "";
 }
