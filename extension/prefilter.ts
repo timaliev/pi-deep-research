@@ -2,6 +2,8 @@ import { generateRunId } from "./ids.js";
 import type { Logger } from "./logger.js";
 import { JsonlLogger } from "./logger.js";
 import { join } from "node:path";
+import { searchWeb } from "./search/web-search.js";
+import { WebScraper } from "./scraper.js";
 import type { searchWeb as SearchWebFn } from "./search/web-search.js";
 import type { WebSearchResult } from "./search/web-search.js";
 import type { SearchEngine } from "./search/web-search.js";
@@ -306,8 +308,6 @@ export class PrefilterSession {
   private managers = new Map<string, PrefilterManager>();
 
   constructor(
-    private readonly searchFn: typeof SearchWebFn,
-    private readonly scraper: Scraper,
     private readonly artifactsDir: string,
     private readonly profileResolver: ProfileResolver,
     private readonly searchCred?: SearchProviderCredentials,
@@ -334,7 +334,7 @@ export class PrefilterSession {
     const logsDir = join(this.artifactsDir, "..", "logs");
     const logger = new JsonlLogger(runId, join(logsDir, `${runId}-prefilter.log`));
     const manager = new PrefilterManager(
-      this.searchFn, this.scraper, this.artifactsDir,
+      searchWeb, new WebScraper(), this.artifactsDir,
       logger, this.profileResolver, this.searchCred, runId,
     );
     this.managers.set(runId, manager);

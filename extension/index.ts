@@ -32,10 +32,12 @@ export default function (pi: ExtensionAPI) {
   const searchCred = settings.credentials;
   const session = new SessionState({ appendEntry: pi.appendEntry.bind(pi) });
 
+  const scraper = new WebScraper();
+
   // Construct orchestrator once — shared across all run_research invocations
   const orchestrator = new ResearchRunOrchestrator({
     searchFn: searchWeb,
-    scraper: new WebScraper(),
+    scraper,
     profileResolver,
     artifactsDir: settings.artifactsDir,
     searchCred,
@@ -116,7 +118,6 @@ Use "compare" mode to see results from each engine separately without deduplicat
       url: Type.String({ description: "URL to scrape" }),
     }),
     async execute(_toolCallId, params) {
-      const scraper = new WebScraper();
       const page = await scraper.scrape(params.url);
       return {
         content: [{ type: "text", text: `# ${page.title}\n\n${page.content.substring(0, 5000)}` }],

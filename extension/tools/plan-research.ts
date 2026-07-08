@@ -1,8 +1,6 @@
 import { Type } from "typebox";
 import { mkdirSync } from "node:fs";
-import { searchWeb } from "../search/web-search.js";
 import type { SearchEngine } from "../search/web-search.js";
-import { WebScraper } from "../scraper.js";
 import { PrefilterManager, PrefilterSession } from "../prefilter.js";
 import type { ResearchPlanProfile } from "../prefilter.js";
 import type { ProfileResolver } from "../profile-resolver.js";
@@ -16,8 +14,7 @@ export function createPlanResearchTool(
   searchCred: SearchProviderCredentials,
 ) {
   const session = new PrefilterSession(
-    searchWeb, new WebScraper(), settings.artifactsDir,
-    profileResolver, searchCred,
+    settings.artifactsDir, profileResolver, searchCred,
   );
 
   return {
