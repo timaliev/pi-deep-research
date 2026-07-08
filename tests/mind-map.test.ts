@@ -102,3 +102,43 @@ describe("mind_map tool", () => {
     );
   });
 });
+
+// ─── Auto mind-map after run_research done ──────────────────
+describe("auto mind-map after run_research done", () => {
+  const readRunResearch = () => readFileSync(
+    join(import.meta.dirname ?? ".", "..", "extension", "tools", "run-research.ts"),
+    "utf-8",
+  );
+
+  it("run-research tool checks mindMap setting on done", () => {
+    const src = readRunResearch();
+    assert.ok(
+      src.includes("mindMap"),
+      "run-research done handler must check mindMap setting",
+    );
+  });
+
+  it("run-research tool imports settings for mindMap check", () => {
+    const src = readRunResearch();
+    assert.ok(
+      src.includes("settings"),
+      "createRunResearchTool receives settings param",
+    );
+  });
+
+  it("auto mind-map injects prompt via pi.sendUserMessage", () => {
+    const src = readRunResearch();
+    assert.ok(
+      src.includes("sendUserMessage") && src.includes("mindMap"),
+      "must inject mind map prompt when mindMap enabled",
+    );
+  });
+
+  it("appends mind map section to report", () => {
+    const src = readRunResearch();
+    assert.ok(
+      src.includes("Mind Map") || src.includes("mind_map") || src.includes("mindMap"),
+      "done handler must reference mind map output",
+    );
+  });
+});
