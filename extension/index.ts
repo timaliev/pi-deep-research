@@ -67,7 +67,7 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool(createMindMapTool(pi.sendUserMessage.bind(pi)));
 
   // === TOOL: plan_research ===
-  pi.registerTool(createPlanResearchTool(pi, settings, profileResolver, searchCred));
+  pi.registerTool(createPlanResearchTool(pi, settings, profileResolver, searchCred, scraper, searchWeb));
 
   // === TOOL: estimate_research_cost ===
   pi.registerTool(createEstimateCostTool(profileResolver));
