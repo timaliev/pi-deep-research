@@ -16,6 +16,7 @@ import { createRunResearchTool } from "./tools/run-research.js";
 import { createPlanResearchTool } from "./tools/plan-research.js";
 import { createSaveReportTool } from "./tools/save-report.js";
 import { convertToPdf } from "./export-pdf.js";
+import { buildMindMapPrompt } from "./mind-map-injector.js";
 import type { PrefilterArtifact } from "./prefilter.js";
 
 const baseDir = dirname(fileURLToPath(import.meta.url));
@@ -43,6 +44,7 @@ export default function (pi: ExtensionAPI) {
     artifactsDir: settings.artifactsDir,
     searchCred,
     saveState: (snapshot, extra) => session.saveState(snapshot, extra),
+    settings,
   });
 
   // Contribute the skill file
@@ -195,33 +197,23 @@ Use "compare" mode to see results from each engine separately without deduplicat
       ),
     }),
     async execute(_toolCallId, params) {
-      const topic = params.topic as string;
-      const content = params.content as string;
-      const savePath = (params.save_path as string | undefined) ?? undefined;
-
-      const saveHint = savePath
-        ? `\nSave the diagram block to: ${savePath}`
-        : "";
-
-      pi.sendUserMessage(
-        `## Generate Mind Map\n\n` +
-          `Create a Mermaid mind map diagram (\`graph TD\`) for this topic:\n\n` +
-          `**Topic:** ${topic}\n\n` +
-          `**Content:**\n${content.substring(0, 3000)}\n\n` +
-          `Respond with a \`\`\`mermaid\`\`\` block containing the \`graph TD\` diagram.\n` +
-          `Use short node labels. Group related concepts. Show hierarchy with arrows.${saveHint}`,
-        { deliverAs: "steer" },
+      const prompt = buildMindMapPrompt(
+        params.topic as string,
+        undefined,
+        params.content as string,
+        (params.save_path as string | undefined) ?? undefined,
       );
+      pi.sendUserMessage(prompt, { deliverAs: "steer" });
 
       return {
         content: [
           {
             type: "text",
-            text: `Mind map prompt sent. Respond with a Mermaid \`graph TD\` block for topic: ${topic}.` +
-              (savePath ? ` Save to: ${savePath}` : ""),
+            text: `Mind map prompt sent. Respond with a Mermaid \`graph TD\` block for topic: ${params.topic}.` +
+              (params.save_path ? ` Save to: ${params.save_path}` : ""),
           },
         ],
-        details: { topic, save_path: savePath },
+        details: { topic: params.topic, save_path: params.save_path },
       };
     },
   });
