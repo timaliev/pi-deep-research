@@ -8,6 +8,7 @@ import type { Scraper } from "./scraper.js";
 import type { SearchProviderCredentials } from "./settings-context.js";
 import { JsonlLogger } from "./logger.js";
 import { ProfileResolver } from "./profile-resolver.js";
+import { ResearchDraft } from "./research-draft.js";
 
 export interface StatePersistence {
   saveState(snapshot: ResearchSnapshot, extra: Record<string, unknown>): void;
@@ -133,13 +134,11 @@ export class ResearchRunOrchestrator {
     const plan = stateData.plan as ResearchPlan;
     const planArtifactPath = stateData.planArtifactPath as string;
 
-    // Restore draft only when entering drafting phase
-    if (snapshot.phase === "drafting") {
-      const draftReady = stateData.draftReady as boolean | undefined;
-      if (draftReady && parsedResponse && parsedResponse.length >= 40) {
-        snapshot.draftReport = parsedResponse;
-      }
-    }
+    // Restore draft from encoded blob — works for any phase
+    const draftEncoded = stateData.draftEncoded as string | undefined;
+    snapshot.draft = draftEncoded
+      ? ResearchDraft.decode(draftEncoded)
+      : new ResearchDraft();
 
     let deepResearchBase = (stateData.deepResearchBase as string) || join(dirname(planArtifactPath), "..");
     if (!deepResearchBase.startsWith("/")) deepResearchBase = join(process.cwd(), deepResearchBase);
