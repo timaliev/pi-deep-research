@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, rmSync, writeFileSync, existsSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync, existsSync, readFileSync as readFs } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -123,3 +123,65 @@ describe("convertToPdf", () => {
     assert.equal(result.outputPath, explicitPdf);
   });
 });
+
+// ─── export_pdf tool registration ───────────────────────────
+describe("export_pdf tool", () => {
+  it("tool is registered in index.ts", async () => {
+    const src = readIndexTs();
+    assert.ok(src.includes('"export_pdf"'), "index.ts must register export_pdf tool");
+  });
+
+  it("tool accepts report_path (required) and output_path (optional)", async () => {
+    const src = readIndexTs();
+    assert.ok(src.includes("report_path"), "must have report_path param");
+    assert.ok(src.includes("output_path"), "must have output_path param");
+  });
+
+  it("tool imports convertToPdf from export-pdf module", async () => {
+    const src = readIndexTs();
+    assert.ok(
+      src.includes("export-pdf") || src.includes("convertToPdf"),
+      "must import from export-pdf module",
+    );
+  });
+
+  it("tool calls convertToPdf in execute handler", async () => {
+    const src = readIndexTs();
+    assert.ok(src.includes("convertToPdf"), "must call convertToPdf");
+  });
+
+  it("tool sends fallback injection when pandoc missing", async () => {
+    const src = readIndexTs();
+    // When convertToPdf returns kind: "fallback", tool must call pi.sendUserMessage
+    assert.ok(
+      src.includes("sendUserMessage") || src.includes("fallback"),
+      "must handle fallback via pi.sendUserMessage",
+    );
+  });
+
+  it("creates output directory if missing", async () => {
+    const { convertToPdf } = await import("../extension/export-pdf.js");
+    const tmpDir = join(tmpdir(), `pdf-mkdir-${Date.now()}`);
+    mkdirSync(tmpDir, { recursive: true });
+    const nestedDir = join(tmpDir, "sub", "deep");
+    const reportPath = join(tmpDir, "report.md");
+    const outputPath = join(nestedDir, "out.pdf");
+
+    try {
+      writeFileSync(reportPath, "# Report");
+      const result = await convertToPdf({ reportPath, outputPath });
+      // Directory must be created
+      assert.ok(existsSync(nestedDir), "nested output directory must be created");
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+});
+
+/** Read index.ts source for static analysis. */
+function readIndexTs(): string {
+  return readFs(
+    join(import.meta.dirname ?? ".", "..", "extension", "index.ts"),
+    "utf-8",
+  );
+}

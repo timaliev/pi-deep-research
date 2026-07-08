@@ -31,6 +31,9 @@ export async function convertToPdf(params: ConvertToPdfParams): Promise<ConvertT
     };
   }
 
+  // Ensure output directory exists (regardless of method)
+  mkdirSync(dirname(outputPath), { recursive: true });
+
   // Pre-flight: check system tools
   const pandocOk = which("pandoc");
   const weasyOk = which("weasyprint");
@@ -41,8 +44,6 @@ export async function convertToPdf(params: ConvertToPdfParams): Promise<ConvertT
       const topic = extractTopic(reportPath);
       const mermaidOk = which("mermaid-filter");
       const filterArg = mermaidOk ? " --filter mermaid-filter" : "";
-
-      mkdirSync(dirname(outputPath), { recursive: true });
 
       const cmd =
         `pandoc "${reportPath}" -o "${outputPath}" --pdf-engine=weasyprint -f markdown --metadata title="Research: ${topic}"${filterArg}`;
