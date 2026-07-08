@@ -148,6 +148,22 @@ Override default output paths. Defaults resolve to `<cwd>/deep-research/artifact
 
 Logs (`<runId>.log` JSONL trace) always write to `<deep-research-base>/logs/` — derived from `artifactsDir/../logs`. No separate `logsDir` setting.
 
+#### `pdfExport`
+
+Auto-export research reports to PDF after each run. Defaults to `false` (opt-in). When enabled, the report is converted to PDF using pandoc + weasyprint after the research run completes.
+
+```json
+"pdfExport": true
+```
+
+| Env var | Type | Default |
+|---------|------|---------|
+| `DEEP_RESEARCH_PDF_EXPORT` | `true` | `false` |
+
+Requires `pandoc` and `weasyprint` installed on the system. If missing, falls back to agent-based conversion (browser print-to-PDF). See [PDF Export](#pdf-export) for platform setup instructions.
+
+PDF output path is always derived from the input report path (`.md` → `.pdf`, same directory). Use `export_pdf` tool's `output_path` parameter to override per-call. No separate `DEEP_RESEARCH_PDF_OUTPUT_DIR` env var.
+
 ### Environment Variables
 
 All settings can be configured via environment variables. Env vars take priority over `settings.json` values.
@@ -159,6 +175,7 @@ All settings can be configured via environment variables. Env vars take priority
 | `DEEP_RESEARCH_REPORTS_DIR` | `<cwd>/deep-research/reports` | Report output directory |
 | `DEEP_RESEARCH_ARTIFACTS_DIR` | `<cwd>/deep-research/artifacts` | Artifact output directory |
 | `DEEP_RESEARCH_DEFAULT_PROFILE` | `default` | Default research profile name |
+| `DEEP_RESEARCH_PDF_EXPORT` | `false` | Auto-export reports to PDF (`true`/`1`) |
 
 #### Search Engine API Keys
 
@@ -195,6 +212,54 @@ The adapter tries instances in order. If one fails (non-200 or network error), i
 - Response must include `{ results: [{ title, url, content }] }`
 - JSON format must be enabled (`search.formats` includes `json` in `settings.yml`)
 
+## PDF Export
+
+Reports can be exported to PDF via standalone tool or auto-export after each research run.
+
+### Standalone tool
+
+Agent calls `export_pdf(report_path, output_path?)` on any markdown report:
+
+```
+export_pdf({ report_path: "deep-research/reports/my-report.md" })
+```
+
+Defaults to same directory + `.pdf` extension. Override:
+```
+export_pdf({ report_path: "my-report.md", output_path: "exports/custom.pdf" })
+```
+
+Always available — no configuration required. Falls back to agent-based conversion if system tools are missing.
+
+### Auto-export
+
+Enable `deepResearch.pdfExport` in settings.json or set `DEEP_RESEARCH_PDF_EXPORT=true`. After each research run, the report is automatically converted to PDF.
+
+### Platform setup
+
+**macOS:**
+```bash
+brew install pandoc
+pip3 install weasyprint              # or: pip3 install --break-system-packages weasyprint
+npm install -g mermaid-filter        # optional: renders Mermaid diagrams in PDF
+```
+
+**Linux (Debian/Ubuntu):**
+```bash
+sudo apt install pandoc
+pip install weasyprint
+npm install -g mermaid-filter        # optional
+```
+
+**Windows:**
+```bash
+winget install pandoc                # or: choco install pandoc
+pip install weasyprint               # requires GTK3 runtime
+npm install -g mermaid-filter        # optional
+```
+
+If `pandoc` or `weasyprint` are missing, the agent receives a fallback prompt to convert the report via browser print-to-PDF.
+
 ## Architecture
 
 ```
@@ -223,6 +288,8 @@ user says "research topic X"
 │                                 │
 │  → saves report.md              │
 │  → saves <runId>.log (JSONL)    │
+│  → exports report.pdf (if       │
+│    pdfExport enabled)           │
 └─────────────────────────────────┘
 ```
 
@@ -234,6 +301,7 @@ extension/
 ├── prefilter.ts                Three-step research planning
 ├── state-machine.ts            Research run state machine
 ├── scraper.ts                  Web page scraper
+├── export-pdf.ts               PDF conversion (pandoc + fallback)
 ├── logger.ts                   JSONL research log
 ├── ids.ts                      Shared ID generation
 ├── slug.ts                     Topic → filename slug
@@ -342,4 +410,4 @@ cd extension && node --import tsx --test ../tests/*.test.ts
 | [0011](docs/adr/0011-logger-locality.md) | accepted | Logger locality — state machine owns log |
 | [0012](docs/adr/0012-settings-context-cascade.md) | accepted | SettingsContext unified settings cascade |
 | [0013](docs/adr/0013-mind-map-and-mcp-sources.md) | proposed | Mind map, MCP/local sources, repo link |
-| [0014](docs/adr/0014-pdf-export.md) | proposed | PDF export of research reports |
+| [0014](docs/adr/0014-pdf-export.md) | accepted | PDF export of research reports |

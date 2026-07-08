@@ -30,6 +30,7 @@ const ENV = {
   reportsDir: "DEEP_RESEARCH_REPORTS_DIR",
   artifactsDir: "DEEP_RESEARCH_ARTIFACTS_DIR",
   defaultProfile: "DEEP_RESEARCH_DEFAULT_PROFILE",
+  pdfExport: "DEEP_RESEARCH_PDF_EXPORT",
 } as const;
 
 // ─── Built-in defaults ─────────────────────────────────────────
@@ -45,6 +46,7 @@ export interface SettingsContextData {
   defaultProfile: string;
   profiles: Record<string, ResearchProfile>;
   credentials: SearchProviderCredentials;
+  pdfExport: boolean;
 }
 
 export interface InitParams {
@@ -61,6 +63,7 @@ export class SettingsContext implements SettingsContextData {
   readonly defaultProfile: string;
   readonly profiles: Record<string, ResearchProfile>;
   readonly credentials: SearchProviderCredentials;
+  readonly pdfExport: boolean;
 
   private constructor(params: InitParams) {
     const homeAgentDir = params.homeAgentDir ?? join(homedir(), ".pi", "agent");
@@ -87,6 +90,12 @@ export class SettingsContext implements SettingsContextData {
       ?? (localDr.defaultProfile as string | undefined)
       ?? (globalDr.defaultProfile as string | undefined)
       ?? BUILTIN.defaultProfile;
+
+    // ─── pdfExport: env → local → global → built-in false ──
+    this.pdfExport = envBool(ENV.pdfExport)
+      ?? (localDr.pdfExport as boolean | undefined)
+      ?? (globalDr.pdfExport as boolean | undefined)
+      ?? false;
 
     // ─── Profiles: local → global → built-in (no env) ────────
     const globalProfiles = (globalDr.profiles ?? {}) as Record<string, Partial<ResearchProfile>>;
@@ -189,4 +198,10 @@ function readJsonFile(path: string): Record<string, unknown> | null {
 function envString(key: string): string | undefined {
   const v = process.env[key];
   return v && v.length > 0 ? v : undefined;
+}
+
+function envBool(key: string): boolean | undefined {
+  const v = process.env[key];
+  if (!v || v.length === 0) return undefined;
+  return v === "true" || v === "1";
 }
