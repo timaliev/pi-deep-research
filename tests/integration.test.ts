@@ -1,4 +1,5 @@
 import { ProfileResolver } from "../extension/profile-resolver.js";
+import { ResearchDraft } from "../extension/research-draft.js";
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, rmSync, readFileSync } from "node:fs";
@@ -103,8 +104,8 @@ describe("Integration: full research pipeline", () => {
     // Agent responds with report text (can be content blocks array in real pi)
     r = await machine.next(snapshot, plan, "# F1 Technical Regulations\n\nThe 2026 regulations...");
     assert.equal(r.phase, "saving");
-    assert.ok(r.snapshot.draftReport.length > 50, "draftReport must be populated");
-    assert.ok(r.snapshot.draftReport.includes("2026"), "draftReport must contain report text");
+    assert.ok(r.snapshot.draft.get().length > 50, "draft must be populated");
+    assert.ok(r.snapshot.draft.get().includes("2026"), "draft must contain report text");
     snapshot = r.snapshot;
 
     r = await machine.next(snapshot, plan);

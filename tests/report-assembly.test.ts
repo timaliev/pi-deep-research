@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, rmSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import type { ResearchSnapshot } from "../extension/state-machine.js";
+import { ResearchDraft } from "../extension/research-draft.js";
 
 // Dynamic import to verify module compiles
 describe("ReportAssembly module", () => {
@@ -37,7 +38,7 @@ describe("ReportAssembly module", () => {
       totalDepth: 3,
       allFindings: [],
       allVisitedUrls: ["https://a.com", "https://b.com"],
-      draftReport: "# Test Report\n\nContent.",
+      draft: new ResearchDraft("# Test Report\n\nContent."),
       reportPath: "",
       searchCalls: 5,
       scrapeCalls: 7,
@@ -76,7 +77,7 @@ describe("ReportAssembly module", () => {
       totalDepth: 1,
       allFindings: [],
       allVisitedUrls: [],
-      draftReport: "short",
+      draft: new ResearchDraft("short"),
       reportPath: "",
       searchCalls: 1,
       scrapeCalls: 1,

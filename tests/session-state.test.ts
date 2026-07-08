@@ -2,18 +2,19 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { SessionState } from "../extension/session-state.js";
 import type { ResearchSnapshot } from "../extension/state-machine.js";
+import { ResearchDraft } from "../extension/research-draft.js";
 
 describe("SessionState — persistence seam", () => {
   function makeSnapshot(): ResearchSnapshot {
     return {
       phase: "saving", runId: "r1", currentDepth: 1, totalDepth: 2,
-      allFindings: [], allVisitedUrls: [], draftReport: "long report...".repeat(10),
+      allFindings: [], allVisitedUrls: [], draft: new ResearchDraft("long report...".repeat(10)),
       reportPath: "", searchCalls: 5, scrapeCalls: 8, startedAt: Date.now(),
       softLimitTriggered: false,
     };
   }
 
-  it("saveState persists snapshot without draftReport, includes extra fields", () => {
+  it("saveState persists snapshot with encoded draft, omits draft object", () => {
     const entries: Array<{ customType: string; data: any }> = [];
     const session = new SessionState({ appendEntry: (t, d) => entries.push({ customType: t, data: d }) });
     const snap = makeSnapshot();
@@ -22,8 +23,11 @@ describe("SessionState — persistence seam", () => {
 
     const saved = entries[0].data;
     assert.equal(entries[0].customType, "deep-research:state");
-    assert.equal(saved.draftReady, true, "draftReady flag set");
-    assert.ok(!("draftReport" in saved), "draftReport stripped from persisted state");
+    assert.ok(typeof saved.draftEncoded === "string", "draftEncoded must be a string");
+    assert.ok(saved.draftEncoded!.length > 0, "draftEncoded must not be empty");
+    assert.ok(!("draft" in saved), "draft object omitted from persisted state");
+    assert.ok(!("draftReport" in saved), "draftReport must not be in persisted state");
+    assert.ok(!("draftReady" in saved), "draftReady proxy must not be in persisted state");
     assert.equal(saved.phase, "saving");
     assert.equal(saved.planArtifactPath, "/p", "extra fields merged");
   });
