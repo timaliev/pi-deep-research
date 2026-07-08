@@ -63,6 +63,18 @@ export class ResearchRunOrchestrator {
     this.settings = deps.settings;
   }
 
+  /** Single construction site for ResearchStateMachine. Optional logger covers the only variance between first and subsequent calls. */
+  private createMachine(artifactsDir: string, logger?: JsonlLogger): ResearchStateMachine {
+    return new ResearchStateMachine({
+      searchFn: this.searchFn,
+      scraper: this.scraper,
+      profileResolver: this.profileResolver,
+      artifactsDir,
+      searchCred: this.searchCred,
+      logger,
+    });
+  }
+
   async handle(params: OrchestratorParams): Promise<OrchestratorResult> {
     if (params.planArtifactPath) {
       return this.handleFirstCall(params.planArtifactPath, params.entries);
@@ -97,14 +109,7 @@ export class ResearchRunOrchestrator {
     mkdirSync(reportsDir, { recursive: true });
 
     const runLogger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
-    const machine = new ResearchStateMachine({
-      searchFn: this.searchFn,
-      scraper: this.scraper,
-      profileResolver: this.profileResolver,
-      artifactsDir,
-      searchCred: this.searchCred,
-      logger: runLogger,
-    });
+    const machine = this.createMachine(artifactsDir, runLogger);
 
     const result = await machine.next(snapshot, artifact.plan);
 
@@ -158,13 +163,7 @@ export class ResearchRunOrchestrator {
       return { kind: "error", error: "corrupted_state", details: {} };
     }
 
-    const machine = new ResearchStateMachine({
-      searchFn: this.searchFn,
-      scraper: this.scraper,
-      profileResolver: this.profileResolver,
-      artifactsDir,
-      searchCred: this.searchCred,
-    });
+    const machine = this.createMachine(artifactsDir);
 
     const result = await machine.next(snapshot, plan, parsedResponse);
 
