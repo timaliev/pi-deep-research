@@ -238,7 +238,7 @@ extension/
 ├── ids.ts                      Shared ID generation
 ├── slug.ts                     Topic → filename slug
 ├── profile-resolver.ts         Profile resolution with user override merging
-├── search-providers.ts         API key resolution (settings.json → env fallback)
+├── settings-context.ts         unified settings + SearchProviderCredentials
 ├── session-state.ts            Unified persistence seam
 ├── settings-context.ts         Settings cascade (env → project → user → defaults)
 ├── report-assembly.ts          Final report assembly with telemetry

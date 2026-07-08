@@ -49,7 +49,7 @@ A web search backend used by all research tools. The extension uses a unified `s
 _Avoid_: retriever, search backend, search provider
 
 **SearchProviderCredentials**:
-Module (extension/search-providers.ts) resolving API keys for search engines. Loads from `deepResearch.searchProviders` in `~/.pi/agent/settings.json`, falls back to `process.env` (env wins). Used by `checkApiKeys` in prefilter and search functions.
+Class inside SettingsContext (extension/settings-context.ts) resolving API keys for search engines. Uses process.env override over settings.json. Used by prefilter checkApiKeys and search functions.
 _Avoid_: API key resolver, credential manager
 
 **SettingsContext**:
