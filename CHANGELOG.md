@@ -13,6 +13,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.22.0](https://github.com/timaliev/pi-deep-research/compare/v0.21.0..v0.22.0) - 2026-07-08
+
+### Features
+
+- **(injector)** extract MindMapInjector module - ([4755a70](https://github.com/timaliev/pi-deep-research/commit/4755a703b005e1af9e4f798ab9fb81fb06ffd68d)) - Tim Aliev
+
+### Refactoring
+
+- **(index)** extract 6 inline tool implementations to tools/ - ([151c0af](https://github.com/timaliev/pi-deep-research/commit/151c0af5800075b6869e7ef7ff3210c0a704e155)) - Tim Aliev
+- **(orchestrator)** move post-processing to orchestrator (ADR-0016) - ([594c4b5](https://github.com/timaliev/pi-deep-research/commit/594c4b58806ed8a9dfd07703e5f0f540fd944e0c)) - Tim Aliev
+- **(orchestrator)** deduplicate ResearchStateMachine construction - ([d18c530](https://github.com/timaliev/pi-deep-research/commit/d18c530c7f19cdba498d59d7fe9689fc2b9cf251)) - Tim Aliev
+- **(prefilter)** inject scraper and searchFn into PrefilterSession - ([9de68e0](https://github.com/timaliev/pi-deep-research/commit/9de68e053a8b571133e846393267cef482daef49)) - Tim Aliev
+- **(state-machine)** extract search+scrape pipeline to ResearchRound - ([85b4319](https://github.com/timaliev/pi-deep-research/commit/85b431921e0fd321795fa3021f006e1f3e264904)) - Tim Aliev
+- **(styles)** collapse ReportStyle classes to functions - ([eaac0b7](https://github.com/timaliev/pi-deep-research/commit/eaac0b7f6d91260fa3032bbc1a666a3989988469)) - Tim Aliev
+
 ## [0.21.0](https://github.com/timaliev/pi-deep-research/compare/v0.20.0..v0.21.0) - 2026-07-08
 
 ### Features
