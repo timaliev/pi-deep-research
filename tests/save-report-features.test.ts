@@ -15,20 +15,20 @@ describe("save_report → reportsDir", () => {
     assert.ok(src.includes("reportsDir"), "save_report must reference reportsDir");
   });
 
-  it("save_report mkdirSync creates reportsDir before writing", async () => {
-    const src = readFileSync(
-      join(import.meta.dirname ?? ".", "..", "extension", "tools/save-report.ts"),
-      "utf-8",
-    );
-    // mkdirSync must precede writeFileSync for reportsDir
-    const saveReportSection = src.match(/name: "save_report"[\s\S]*?^\s*},/m);
-    assert.ok(saveReportSection, "save_report section must exist");
-    const mkdirIndex = saveReportSection[0].indexOf("mkdirSync(settings.reportsDir");
-    const writeIndex = saveReportSection[0].indexOf("writeFileSync");
-    assert.ok(
-      mkdirIndex >= 0 && writeIndex > mkdirIndex,
-      "mkdirSync(reportsDir) must precede writeFileSync",
-    );
+  it("writeReportFile creates reportsDir and writes content", async () => {
+    const { writeReportFile } = await import("../extension/report-assembly.js");
+    const tmpDir = join(tmpdir(), `save-test-${Date.now()}`);
+    const path = join(tmpDir, "report.md");
+
+    try {
+      writeReportFile(path, "# Report\n\nContent.", "## Research Telemetry\n\ntable");
+      assert.ok(existsSync(path), "report file must exist");
+      const content = readFileSync(path, "utf-8");
+      assert.ok(content.includes("# Report"), "must contain report content");
+      assert.ok(content.includes("## Research Telemetry"), "must contain appended telemetry");
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
   });
 
   it("auto-save and save_report use same reportsDir source", async () => {

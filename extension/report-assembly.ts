@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { topicToSlug } from "./slug.js";
 import { buildTelemetrySection, readExtensionVersion } from "./state-machine.js";
 import type { ResearchSnapshot } from "./state-machine.js";
@@ -16,6 +16,19 @@ export function resolveReportPath(
     ? `${runId}-${slug}.md`
     : `${date}-${slug}.md`;
   return join(reportsDir, filename);
+}
+
+/** Write report markdown to file. Appends telemetry section if not already present. */
+export function writeReportFile(
+  path: string,
+  content: string,
+  telemetry?: string,
+): void {
+  mkdirSync(dirname(path), { recursive: true });
+  const final = (telemetry && !content.includes("## Research Telemetry"))
+    ? `${content}\n\n${telemetry}\n`
+    : content;
+  writeFileSync(path, final, "utf-8");
 }
 
 export interface ReportAssemblyParams {
@@ -35,8 +48,6 @@ export interface ReportAssemblyParams {
 export function assembleReport(params: ReportAssemblyParams): string {
   const { snapshot, topic, reportsDir, planArtifactPath, logsDir, extensionVersion, profileName } = params;
 
-  mkdirSync(reportsDir, { recursive: true });
-
   const reportPath = resolveReportPath(topic, reportsDir);
 
   const reportText = snapshot.draftReport ?? "";
@@ -47,8 +58,7 @@ export function assembleReport(params: ReportAssemblyParams): string {
     join(logsDir, `${snapshot.runId}.log`),
   ], profileName);
 
-  const fullReport = `${reportText}\n\n${telemetry}\n`;
-  writeFileSync(reportPath, fullReport, "utf-8");
+  writeReportFile(reportPath, reportText, telemetry);
 
   return reportPath;
 }
