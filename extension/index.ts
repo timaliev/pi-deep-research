@@ -181,6 +181,51 @@ Use "compare" mode to see results from each engine separately without deduplicat
     },
   });
 
+  // === TOOL: mind_map ===
+  pi.registerTool({
+    name: "mind_map",
+    label: "Generate Mind Map",
+    description:
+      "Generate a Mermaid mind map (graph TD) from research findings or any text content. The agent responds with a Mermaid diagram block. Use save_path to persist to a file.",
+    parameters: Type.Object({
+      topic: Type.String({ description: "Topic for the mind map" }),
+      content: Type.String({ description: "Content to base the mind map on (findings, notes, report text)" }),
+      save_path: Type.Optional(
+        Type.String({ description: "Optional file path to save the mind map diagram" }),
+      ),
+    }),
+    async execute(_toolCallId, params) {
+      const topic = params.topic as string;
+      const content = params.content as string;
+      const savePath = (params.save_path as string | undefined) ?? undefined;
+
+      const saveHint = savePath
+        ? `\nSave the diagram block to: ${savePath}`
+        : "";
+
+      pi.sendUserMessage(
+        `## Generate Mind Map\n\n` +
+          `Create a Mermaid mind map diagram (\`graph TD\`) for this topic:\n\n` +
+          `**Topic:** ${topic}\n\n` +
+          `**Content:**\n${content.substring(0, 3000)}\n\n` +
+          `Respond with a \`\`\`mermaid\`\`\` block containing the \`graph TD\` diagram.\n` +
+          `Use short node labels. Group related concepts. Show hierarchy with arrows.${saveHint}`,
+        { deliverAs: "steer" },
+      );
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Mind map prompt sent. Respond with a Mermaid \`graph TD\` block for topic: ${topic}.` +
+              (savePath ? ` Save to: ${savePath}` : ""),
+          },
+        ],
+        details: { topic, save_path: savePath },
+      };
+    },
+  });
+
   // === TOOL: plan_research ===
   pi.registerTool(createPlanResearchTool(pi, settings, profileResolver, searchCred));
 
