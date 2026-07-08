@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -64,5 +64,41 @@ describe("mindMap setting", () => {
     const { SettingsContext } = await import("../extension/settings-context.js");
     const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
     assert.equal(ctx.mindMap, true);
+  });
+});
+
+// ─── mind_map tool registration ─────────────────────────────
+describe("mind_map tool", () => {
+  const readIndex = () => readFileSync(
+    join(import.meta.dirname ?? ".", "..", "extension", "index.ts"),
+    "utf-8",
+  );
+
+  it("tool is registered in index.ts", () => {
+    const src = readIndex();
+    assert.ok(src.includes('"mind_map"'), "index.ts must register mind_map tool");
+  });
+
+  it("tool accepts topic, content, and optional save_path", () => {
+    const src = readIndex();
+    assert.ok(src.includes("topic"), "must have topic param");
+    assert.ok(src.includes("content"), "must have content param");
+    assert.ok(src.includes("save_path"), "must have save_path param");
+  });
+
+  it("tool sends injection prompt via pi.sendUserMessage", () => {
+    const src = readIndex();
+    assert.ok(
+      src.includes("sendUserMessage"),
+      "must inject prompt via pi.sendUserMessage",
+    );
+  });
+
+  it("injection prompt includes Mermaid graph TD instruction", () => {
+    const src = readIndex();
+    assert.ok(
+      src.includes("graph TD") || src.includes("mermaid") || src.includes("Mermaid"),
+      "prompt must instruct agent to generate Mermaid graph TD",
+    );
   });
 });
