@@ -5,10 +5,13 @@ import type { ResearchSnapshot } from "./state-machine.js";
 import type { ResearchPlan, PrefilterArtifact } from "./prefilter.js";
 import type { searchWeb as SearchWebFn } from "./search/web-search.js";
 import type { Scraper } from "./scraper.js";
-import type { SearchProviderCredentials } from "./settings-context.js";
+import type { SearchProviderCredentials, SettingsContext } from "./settings-context.js";
 import { JsonlLogger } from "./logger.js";
 import { ProfileResolver } from "./profile-resolver.js";
 import { ResearchDraft } from "./research-draft.js";
+import { convertToPdf } from "./export-pdf.js";
+import { assembleReport } from "./report-assembly.js";
+import { buildMindMapPrompt } from "./mind-map-injector.js";
 
 export interface StatePersistence {
   saveState(snapshot: ResearchSnapshot, extra: Record<string, unknown>): void;
@@ -22,6 +25,8 @@ export interface OrchestratorDeps {
   searchCred?: SearchProviderCredentials;
   /** Typed state persistence — wired to SessionState.saveState. */
   saveState?: StatePersistence["saveState"];
+  /** Settings context for post-processing features (PDF, mind-map). Optional for test compatibility. */
+  settings?: SettingsContext;
 }
 
 export interface OrchestratorParams {
@@ -33,7 +38,7 @@ export interface OrchestratorParams {
 export type OrchestratorResult =
   | { kind: "error"; error: string; details?: Record<string, unknown> }
   | { kind: "in_progress"; snapshot: ResearchSnapshot; inject?: string; plan: ResearchPlan; planArtifactPath: string; deepResearchBase: string }
-  | { kind: "done"; snapshot: ResearchSnapshot; plan: ResearchPlan; planArtifactPath: string; deepResearchBase: string; logsDir: string };
+  | { kind: "done"; snapshot: ResearchSnapshot; plan: ResearchPlan; planArtifactPath: string; deepResearchBase: string; logsDir: string; reportPath?: string; pdfResult?: any; mindMapPrompt?: string };
 
 const STATE_KEY = "deep-research:state";
 
@@ -45,6 +50,9 @@ export class ResearchRunOrchestrator {
   private readonly saveState?: StatePersistence["saveState"];
   private readonly profileResolver: ProfileResolver;
 
+  /** Settings context for post-processing features (PDF, mind-map). Optional for test compatibility. */
+  private readonly settings?: SettingsContext;
+
   constructor(deps: OrchestratorDeps) {
     this.searchFn = deps.searchFn;
     this.scraper = deps.scraper;
@@ -52,6 +60,7 @@ export class ResearchRunOrchestrator {
     this.searchCred = deps.searchCred;
     this.saveState = deps.saveState;
     this.profileResolver = deps.profileResolver;
+    this.settings = deps.settings;
   }
 
   async handle(params: OrchestratorParams): Promise<OrchestratorResult> {
@@ -166,14 +175,7 @@ export class ResearchRunOrchestrator {
     });
 
     if (result.phase === "done") {
-      return {
-        kind: "done",
-        snapshot: result.snapshot,
-        plan,
-        planArtifactPath,
-        deepResearchBase,
-        logsDir,
-      };
+      return this.buildDoneResult(result.snapshot, plan, planArtifactPath, deepResearchBase, logsDir);
     }
 
     return {
@@ -185,6 +187,64 @@ export class ResearchRunOrchestrator {
       deepResearchBase,
     };
   }
+  /**
+   * Post-process a done phase: assemble report, export PDF, generate mind-map.
+   * All conditional on this.settings being present (absent in test mode).
+   */
+  private async buildDoneResult(
+    snapshot: ResearchSnapshot,
+    plan: ResearchPlan,
+    planArtifactPath: string,
+    deepResearchBase: string,
+    logsDir: string,
+  ): Promise<OrchestratorResult> {
+    const base = { snapshot, plan, planArtifactPath, deepResearchBase, logsDir };
+
+    if (!this.settings) {
+      return { kind: "done", ...base };
+    }
+
+    const reportsDir = this.settings.reportsDir;
+    const profileName = typeof plan.profile === "object" && "name" in plan.profile
+      ? (plan.profile as any).name : undefined;
+
+    const reportPath = assembleReport({
+      snapshot,
+      topic: plan.topic,
+      reportsDir,
+      planArtifactPath,
+      logsDir,
+      profileName,
+    });
+
+    let pdfResult: any;
+    if (this.settings.pdfExport) {
+      const pdfR = await convertToPdf({ reportPath });
+      if (pdfR.kind === "success") {
+        pdfResult = { kind: "success", outputPath: pdfR.outputPath, method: pdfR.method };
+      } else if (pdfR.kind === "fallback") {
+        pdfResult = { kind: "fallback", error: pdfR.error, outputPath: pdfR.outputPath };
+      }
+    }
+
+    let mindMapPrompt: string | undefined;
+    if (this.settings.mindMap && snapshot.allFindings.length > 0) {
+      const findingsSummary = snapshot.allFindings
+        .slice(0, 30)
+        .map((f, i) => `${i + 1}. ${f.text.substring(0, 200)}`)
+        .join("\n");
+      mindMapPrompt = buildMindMapPrompt(plan.topic, findingsSummary, undefined, undefined);
+    }
+
+    return {
+      kind: "done",
+      ...base,
+      reportPath,
+      pdfResult,
+      mindMapPrompt,
+    };
+  }
+
 }
 
 /** Extract plain text from agent response (handles string and content blocks array).

@@ -1,7 +1,5 @@
 import { Type } from "typebox";
 import { ResearchRunOrchestrator } from "../research-run-orchestrator.js";
-import { assembleReport } from "../report-assembly.js";
-import { convertToPdf } from "../export-pdf.js";
 import type { SettingsContext } from "../settings-context.js";
 import type { SessionState } from "../session-state.js";
 
@@ -57,54 +55,28 @@ export function createRunResearchTool(
       }
 
       if (result.kind === "done") {
-        const reportPath = assembleReport({
-          snapshot: result.snapshot,
-          topic: result.plan.topic,
-          reportsDir: settings.reportsDir,
-          planArtifactPath: result.planArtifactPath,
-          logsDir: result.logsDir,
-          profileName: typeof result.plan.profile === "object" && "name" in result.plan.profile ? (result.plan.profile as any).name : undefined,
-        });
-
-        session.saveReportPath(reportPath, settings.reportsDir, "", result.snapshot.runId);
+        const reportPath = result.reportPath;
+        if (reportPath) {
+          session.saveReportPath(reportPath, settings.reportsDir, "", result.snapshot.runId);
+        }
 
         let pdfInfo = "";
-
-        // Auto-export PDF if enabled
-        if (settings.pdfExport) {
-          const pdfResult = await convertToPdf({ reportPath });
-          if (pdfResult.kind === "success") {
-            pdfInfo = `\nPDF exported: ${pdfResult.outputPath}`;
-          } else if (pdfResult.kind === "fallback") {
-            pdfInfo = `\nPDF export: ${pdfResult.error} Prompt sent for agent-based conversion. Output: ${pdfResult.outputPath}`;
-            pi.sendUserMessage(
-              `## PDF Export — Agent Fallback\n\n${pdfResult.error}\n\nConvert the report to PDF using available tools:\n` +
-                `- Report: ${reportPath}\n- Output: ${pdfResult.outputPath}\n\n` +
-                `Use print-to-PDF in browser, or any other available PDF tool.`,
-              { deliverAs: "steer" },
-            );
-          }
+        if (result.pdfResult?.kind === "fallback") {
+          pdfInfo = `\nPDF export: ${result.pdfResult.error} Prompt sent for agent-based conversion. Output: ${result.pdfResult.outputPath}`;
+          pi.sendUserMessage(
+            `## PDF Export — Agent Fallback\n\n${result.pdfResult.error}\n\nConvert the report to PDF using available tools:\n` +
+              `- Report: ${reportPath}\n- Output: ${result.pdfResult.outputPath}\n\n` +
+              `Use print-to-PDF in browser, or any other available PDF tool.`,
+            { deliverAs: "steer" },
+          );
+        } else if (result.pdfResult?.kind === "success") {
+          pdfInfo = `\nPDF exported: ${result.pdfResult.outputPath}`;
         }
 
         let mindMapInfo = "";
-
-        // Auto-generate mind map if enabled
-        if (settings.mindMap && result.snapshot.allFindings.length > 0) {
-          const findingsSummary = result.snapshot.allFindings
-            .slice(0, 30)
-            .map((f, i) => `${i + 1}. ${f.text.substring(0, 200)}`)
-            .join("\n");
-
+        if (result.mindMapPrompt) {
           mindMapInfo = `\nMind map: prompt sent. Respond with a Mermaid \`graph TD\` block.`;
-
-          pi.sendUserMessage(
-            `## Generate Mind Map\n\n` +
-              `Create a Mermaid \`graph TD\` mind map for: **${result.plan.topic}**\n\n` +
-              `**Key findings:**\n${findingsSummary}\n\n` +
-              `Respond with a \`\`\`mermaid\`\`\` block. Then append it to the report at **${reportPath}** ` +
-              `as a \`## Mind Map\` section using the edit tool.`,
-            { deliverAs: "steer" },
-          );
+          pi.sendUserMessage(result.mindMapPrompt, { deliverAs: "steer" });
         }
 
         return {

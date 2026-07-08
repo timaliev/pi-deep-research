@@ -69,21 +69,21 @@ describe("save_report — writes full content", () => {
 
   it("auto-save writes reportText + telemetry", async () => {
     const src = readFileSync(
-      join(import.meta.dirname ?? ".", "..", "extension", "tools/run-research.ts"),
+      join(import.meta.dirname ?? ".", "..", "extension", "research-run-orchestrator.ts"),
       "utf-8",
     );
-    // Auto-save delegates to assembleReport module (extracted from index.ts)
+    // Auto-save delegates to assembleReport module (now in orchestrator)
     const match = src.match(/assembleReport\(\{/);
     assert.ok(match, "auto-save must call assembleReport");
   });
 
   it("report is saved when phase is 'done'", async () => {
     const src = readFileSync(
-      join(import.meta.dirname ?? ".", "..", "extension", "tools/run-research.ts"),
+      join(import.meta.dirname ?? ".", "..", "extension", "research-run-orchestrator.ts"),
       "utf-8",
     );
     const doneSection = src.match(/assembleReport\(\{/);
-    assert.ok(doneSection, "done phase must call assembleReport");
+    assert.ok(doneSection, "orchestrator done phase must call assembleReport");
   });
 });
 
