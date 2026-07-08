@@ -93,7 +93,6 @@ jobs:
             echo "" >> CHANGELOG.md
             cat CHANGELOG-prior.md >> CHANGELOG.md
           fi
-          git-cliff --body="" --strip header --offline >> CHANGELOG.md
           rm -f CHANGELOG-header.md CHANGELOG-bump.md CHANGELOG-prior.md
 
       - name: Commit changelog and version
