@@ -95,6 +95,10 @@ _Avoid_: diagram, concept map, knowledge graph
 An optional post-research step gated by the Research Run Orchestrator (not the state machine). After the state machine returns `done`, the orchestrator checks `deepResearch.mindMap`; if enabled, injects a prompt asking the agent to generate a Mind Map from findings, captures the response, and appends it to the report. The state machine is unaware of this phase.
 _Avoid_: mind-map generation, diagram phase
 
+**Mind Map Injector**:
+Module (`extension/mind-map-injector.ts`) exporting a single `buildMindMapPrompt(topic, findings?, rawContent?, savePath?)` function. Generates the standardized Mermaid `graph TD` prompt template. Called by the Research Run Orchestrator (auto-generation with `findings[]`) and the standalone `mind_map` tool (manual generation with `rawContent`). Replaces the duplicated prompt template previously embedded in both `index.ts` and `tools/run-research.ts`.
+_Avoid_: mind-map prompt builder, diagram template
+
 **Enriched Search**:
 An extension of the `searching` phase where, after synchronous web search completes, the state machine injects a prompt asking the agent to supplement results using Local Sources (grep, find, read) and MCP Sources (mcp__* tools). The agent's raw text response is passed as unstructured context to the extraction phase. Gated by `plan.sources` presence.
 _Avoid_: supplemental search, extended search
