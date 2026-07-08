@@ -86,8 +86,29 @@ export function createRunResearchTool(
           }
         }
 
+        let mindMapInfo = "";
+
+        // Auto-generate mind map if enabled
+        if (settings.mindMap && result.snapshot.allFindings.length > 0) {
+          const findingsSummary = result.snapshot.allFindings
+            .slice(0, 30)
+            .map((f, i) => `${i + 1}. ${f.text.substring(0, 200)}`)
+            .join("\n");
+
+          mindMapInfo = `\nMind map: prompt sent. Respond with a Mermaid \`graph TD\` block.`;
+
+          pi.sendUserMessage(
+            `## Generate Mind Map\n\n` +
+              `Create a Mermaid \`graph TD\` mind map for: **${result.plan.topic}**\n\n` +
+              `**Key findings:**\n${findingsSummary}\n\n` +
+              `Respond with a \`\`\`mermaid\`\`\` block. Then append it to the report at **${reportPath}** ` +
+              `as a \`## Mind Map\` section using the edit tool.`,
+            { deliverAs: "steer" },
+          );
+        }
+
         return {
-          content: [{ type: "text", text: `## Research Complete ✅\n\nReport saved to: ${reportPath}${pdfInfo}\n\nSearch calls: ${result.snapshot.searchCalls}\nScrape calls: ${result.snapshot.scrapeCalls}\nSources visited: ${result.snapshot.allVisitedUrls.length}` }],
+          content: [{ type: "text", text: `## Research Complete ✅\n\nReport saved to: ${reportPath}${pdfInfo}${mindMapInfo}\n\nSearch calls: ${result.snapshot.searchCalls}\nScrape calls: ${result.snapshot.scrapeCalls}\nSources visited: ${result.snapshot.allVisitedUrls.length}` }],
           details: { phase: "done", report_path: reportPath, run_id: result.snapshot.runId },
         };
       }
