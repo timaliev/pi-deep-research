@@ -10,14 +10,18 @@ import type { SearchProviderCredentials } from "./search-providers.js";
 import { JsonlLogger } from "./logger.js";
 import { ProfileResolver } from "./profile-resolver.js";
 
+export interface StatePersistence {
+  saveState(snapshot: ResearchSnapshot, extra: Record<string, unknown>): void;
+}
+
 export interface OrchestratorDeps {
   searchFn: typeof SearchWebFn;
   scraper: Scraper;
   profileResolver: ProfileResolver;
   artifactsDir?: string;
   searchCred?: SearchProviderCredentials;
-  /** For state persistence. Called with customType and data. */
-  appendEntry?: (customType: string, data?: unknown) => void;
+  /** Typed state persistence — wired to SessionState.saveState. */
+  saveState?: StatePersistence["saveState"];
 }
 
 export interface OrchestratorParams {
@@ -38,7 +42,7 @@ export class ResearchRunOrchestrator {
   private readonly scraper: Scraper;
   private readonly artifactsDir?: string;
   private readonly searchCred?: SearchProviderCredentials;
-  private readonly appendEntry?: (customType: string, data?: unknown) => void;
+  private readonly saveState?: StatePersistence["saveState"];
   private readonly profileResolver: ProfileResolver;
 
   constructor(deps: OrchestratorDeps) {
@@ -46,7 +50,7 @@ export class ResearchRunOrchestrator {
     this.scraper = deps.scraper;
     this.artifactsDir = deps.artifactsDir;
     this.searchCred = deps.searchCred;
-    this.appendEntry = deps.appendEntry;
+    this.saveState = deps.saveState;
     this.profileResolver = deps.profileResolver;
   }
 
@@ -96,8 +100,7 @@ export class ResearchRunOrchestrator {
     const result = await machine.next(snapshot, artifact.plan);
 
     // Persist state
-    this.appendEntry?.(STATE_KEY, {
-      ...result.snapshot,
+    this.saveState?.(result.snapshot, {
       plan: artifact.plan,
       planArtifactPath,
       deepResearchBase,
@@ -159,8 +162,7 @@ export class ResearchRunOrchestrator {
 
     const result = await machine.next(snapshot, plan, agentResponse);
 
-    this.appendEntry?.(STATE_KEY, {
-      ...result.snapshot,
+    this.saveState?.(result.snapshot, {
       plan,
       planArtifactPath,
       deepResearchBase,

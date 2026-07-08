@@ -30,7 +30,7 @@ export function createRunResearchTool(
         profileResolver,
         artifactsDir: settings.artifactsDir,
         searchCred,
-        appendEntry: (type: string, data: unknown) => pi.appendEntry(type, data),
+        saveState: (snapshot, extra) => session.saveState(snapshot, extra),
       });
 
       const entries = ctx.sessionManager.getEntries();
