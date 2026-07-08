@@ -1,6 +1,7 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { ResearchDraft } from "../extension/research-draft.js";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildTelemetrySection, readExtensionVersion } from "../extension/report-assembly.js";
@@ -17,7 +18,7 @@ function makeSnapshot(overrides?: Partial<ResearchSnapshot>): ResearchSnapshot {
     totalDepth: 3,
     allFindings: [],
     allVisitedUrls: ["https://a.com"],
-    draftReport: "",
+    draft: new ResearchDraft(),
     reportPath: "",
     searchCalls: 5,
     scrapeCalls: 7,

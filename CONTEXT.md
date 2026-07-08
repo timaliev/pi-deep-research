@@ -83,6 +83,10 @@ _Avoid_: analytics, metrics, usage report
 A JSONL trace file recording every discrete event during a Research Run and its Prefilter phase: phase transitions, search calls, scrape calls, errors, injection prompts sent, soft limit triggers, deepening decisions, and artifact saves. Saved as `<runId>.log` in `./deep-research/logs/`. Complements Telemetry (aggregate) with a step-by-step audit trail. One log per Prefilter run (<runId>-prefilter.log), one per Research Run (<runId>.log).
 _Avoid_: debug log, trace, audit log
 
+**Research Draft**:
+The final markdown report text captured during the drafting phase and persisted through the saving phase. Owned by the `ResearchDraft` module — a value object on `ResearchSnapshot` replacing the bare `draftReport: string` field. Provides `set(text)`, `get()`, `isReady()`, `encode()` (zlib-deflate → base64url), and static `decode()`. Eliminates the triple-path draft handling (doDrafting capture → doSaving fallback → orchestrator re-extract) by centralizing the draft lifecycle behind one interface. Persisted as a compressed `draftEncoded` field in session entries.
+_Avoid_: draftReport, draft string, report text
+
 **Mind Map**:
 A Mermaid `graph TD` diagram visualizing research findings as a topic tree. Generated at the end of a Research Run (when `deepResearch.mindMap` setting is `true`) or on-demand via the standalone `mind_map` tool. Appended to the report as a `## Mind Map` section containing a ` ```mermaid ` block. Renders in GitHub, VS Code, and any Mermaid-aware viewer.
 _Avoid_: diagram, concept map, knowledge graph

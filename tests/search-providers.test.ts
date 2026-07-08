@@ -11,10 +11,16 @@ describe("SearchProviderCredentials", () => {
   afterEach(() => { if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true }); });
 
   it("get returns setting value when no env var", () => {
-    const cred = new SearchProviderCredentials({
-      brave: { apiKey: "bsa-key" },
-    });
-    assert.equal(cred.get("brave", "apiKey"), "bsa-key");
+    const prev = process.env.BRAVE_API_KEY;
+    delete process.env.BRAVE_API_KEY;
+    try {
+      const cred = new SearchProviderCredentials({
+        brave: { apiKey: "bsa-key" },
+      });
+      assert.equal(cred.get("brave", "apiKey"), "bsa-key");
+    } finally {
+      if (prev) process.env.BRAVE_API_KEY = prev;
+    }
   });
 
   it("get returns env var over settings", () => {
@@ -31,7 +37,13 @@ describe("SearchProviderCredentials", () => {
   });
 
   it("get returns undefined when no source has it", () => {
-    const cred = new SearchProviderCredentials({});
-    assert.equal(cred.get("brave", "apiKey"), undefined);
+    const prev = process.env.BRAVE_API_KEY;
+    delete process.env.BRAVE_API_KEY;
+    try {
+      const cred = new SearchProviderCredentials({});
+      assert.equal(cred.get("brave", "apiKey"), undefined);
+    } finally {
+      if (prev) process.env.BRAVE_API_KEY = prev;
+    }
   });
 });

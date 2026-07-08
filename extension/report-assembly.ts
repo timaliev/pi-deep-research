@@ -50,7 +50,7 @@ export function assembleReport(params: ReportAssemblyParams): string {
 
   const reportPath = resolveReportPath(topic, reportsDir);
 
-  const reportText = snapshot.draftReport ?? "";
+  const reportText = snapshot.draft.get();
 
   const ver = extensionVersion ?? readExtensionVersion();
   const telemetry = buildTelemetrySection(snapshot, ver, [

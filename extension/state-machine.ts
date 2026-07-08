@@ -14,6 +14,7 @@ import { createReportStyle } from "./report-styles.js";
 import type { ReportStyle } from "./report-styles.js";
 import type { ProfileResolver } from "./profile-resolver.js";
 import { JsonlLogger } from "./logger.js";
+import { ResearchDraft } from "./research-draft.js";
 
 /** Parameters controlling research depth and breadth. */
 export interface ResearchProfile {
@@ -40,7 +41,7 @@ export interface ResearchSnapshot {
   totalDepth: number;
   allFindings: Finding[];
   allVisitedUrls: string[];
-  draftReport: string;
+  draft: ResearchDraft;
   reportPath: string;
   searchCalls: number;
   scrapeCalls: number;
@@ -122,7 +123,7 @@ export class ResearchStateMachine {
       totalDepth: profile.depth,
       allFindings: [],
       allVisitedUrls: [],
-      draftReport: "",
+      draft: new ResearchDraft(),
       reportPath: "",
       searchCalls: 0,
       scrapeCalls: 0,
@@ -353,25 +354,21 @@ export class ResearchStateMachine {
         inject: `⚠️ No report text in your response.\n\n**Write the report as your response text. Do NOT call run_research or any other tools.** After you write the complete report, then call run_research.\n\n${inject}`,
       };
     }
+    snapshot.draft.set(reportText);
     this.logger?.event("phase_changed", { from: "drafting", to: "saving" });
     return {
       phase: "saving",
-      snapshot: { ...snapshot, phase: "saving", draftReport: reportText },
+      snapshot: { ...snapshot, phase: "saving" },
     };
   }
 
-  private doSaving(snapshot: ResearchSnapshot, parsedResponse?: string): ResearchStateResult {
-    let text = snapshot.draftReport ?? "";
-    // Fallback: if draft was stripped by session persistence, re-extract from parsed response
-    if (text.length < 40 && parsedResponse !== undefined) {
-      text = parsedResponse;
-    }
-    if (text.length < 40) {
-      this.logger?.event("saving_blocked", { reason: "empty_draft", draftLength: text.length });
+  private doSaving(snapshot: ResearchSnapshot, _parsedResponse?: string): ResearchStateResult {
+    if (!snapshot.draft.isReady()) {
+      this.logger?.event("saving_blocked", { reason: "empty_draft", draftLength: snapshot.draft.get().length });
       return { phase: "saving", snapshot };
     }
-    this.logger?.event("phase_changed", { from: "saving", to: "done", draftLength: text.length });
-    return { phase: "done", snapshot: { ...snapshot, phase: "done", draftReport: text } };
+    this.logger?.event("phase_changed", { from: "saving", to: "done", draftLength: snapshot.draft.get().length });
+    return { phase: "done", snapshot: { ...snapshot, phase: "done" } };
   }
 }
 

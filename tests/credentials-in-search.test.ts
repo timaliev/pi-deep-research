@@ -16,28 +16,34 @@ const MOCK_PLAN: ResearchPlan = {
 
 describe("credentials passed to searchWeb from state machine", () => {
   it("doSearching includes credentials in callbacks when searchCred provided", async () => {
-    let capturedCredentials: SearchProviderCredentials | undefined;
+    const prev = process.env.BRAVE_API_KEY;
+    delete process.env.BRAVE_API_KEY;
+    try {
+      let capturedCredentials: SearchProviderCredentials | undefined;
 
-    const mockSearch = async (_q: string, _n: number, _e: string[], cb?: any) => {
-      capturedCredentials = cb?.credentials;
-      return [] as WebSearchResult[];
-    };
+      const mockSearch = async (_q: string, _n: number, _e: string[], cb?: any) => {
+        capturedCredentials = cb?.credentials;
+        return [] as WebSearchResult[];
+      };
 
-    const mockScraper: Scraper = {
-      async scrape() { throw new Error("no mock"); },
-    };
+      const mockScraper: Scraper = {
+        async scrape() { throw new Error("no mock"); },
+      };
 
-    const cred = new SearchProviderCredentials({
-      brave: { apiKey: "bsa-from-settings" },
-    });
+      const cred = new SearchProviderCredentials({
+        brave: { apiKey: "bsa-from-settings" },
+      });
 
-    const machine = new ResearchStateMachine({ searchFn: mockSearch, scraper: mockScraper, searchCred: cred });
-    const snapshot = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
+      const machine = new ResearchStateMachine({ searchFn: mockSearch, scraper: mockScraper, searchCred: cred });
+      const snapshot = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
 
-    await machine.next(snapshot, MOCK_PLAN);
+      await machine.next(snapshot, MOCK_PLAN);
 
-    assert.ok(capturedCredentials, "credentials must be passed to searchWeb callbacks");
-    assert.equal(capturedCredentials?.get("brave", "apiKey"), "bsa-from-settings");
+      assert.ok(capturedCredentials, "credentials must be passed to searchWeb callbacks");
+      assert.equal(capturedCredentials?.get("brave", "apiKey"), "bsa-from-settings");
+    } finally {
+      if (prev) process.env.BRAVE_API_KEY = prev;
+    }
   });
 
   it("credentials is undefined in callbacks when searchCred not provided", async () => {
