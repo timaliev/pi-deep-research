@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { buildTelemetrySection } from "../extension/state-machine.js";
+import { buildTelemetrySection } from "../extension/report-assembly.js";
 import type { ResearchSnapshot } from "../extension/state-machine.js";
 
 function makeSnapshot(overrides?: Partial<ResearchSnapshot>): ResearchSnapshot {

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildTelemetrySection, readExtensionVersion } from "../extension/state-machine.js";
+import { buildTelemetrySection, readExtensionVersion } from "../extension/report-assembly.js";
 import type { ResearchSnapshot } from "../extension/state-machine.js";
 
 const baseDir = dirname(fileURLToPath(import.meta.url));

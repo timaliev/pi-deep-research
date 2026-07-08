@@ -1,7 +1,8 @@
 import { ProfileResolver } from "../extension/profile-resolver.js";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { ResearchStateMachine, buildTelemetrySection } from "../extension/state-machine.js";
+import { ResearchStateMachine } from "../extension/state-machine.js";
+import { buildTelemetrySection } from "../extension/report-assembly.js";
 import type { ResearchPlan } from "../extension/prefilter.js";
 
 const MOCK_PLAN: ResearchPlan = {

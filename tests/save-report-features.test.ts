@@ -90,7 +90,7 @@ describe("save_report — writes full content", () => {
 // ─── Feature 3: telemetry appended to report ──────────────────
 describe("telemetry appended to report", () => {
   it("buildTelemetrySection returns markdown table", async () => {
-    const { buildTelemetrySection } = await import("../extension/state-machine.js");
+    const { buildTelemetrySection } = await import("../extension/report-assembly.js");
     const snapshot = {
       runId: "test-run",
       searchCalls: 5,
