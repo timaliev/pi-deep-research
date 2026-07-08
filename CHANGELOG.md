@@ -13,6 +13,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.20.0](https://github.com/timaliev/pi-deep-research/compare/v0.19.0..v0.20.0) - 2026-07-08
+
+### Features
+
+- **(mind-map)** add mind_map standalone tool - ([3d64f85](https://github.com/timaliev/pi-deep-research/commit/3d64f85bc2bfa06d1655de77a9a06b9207dc6122)) - Tim Aliev
+- **(mind-map)** add auto mind-map generation after research run - ([368b790](https://github.com/timaliev/pi-deep-research/commit/368b7907867dd34cc0ec059350c474a23934a3f1)) - Tim Aliev
+- **(settings)** add mindMap boolean setting - ([c175e72](https://github.com/timaliev/pi-deep-research/commit/c175e721d0e033b10fd33feb4d4333718ad55bb3)) - Tim Aliev
+
+### Documentation
+
+- **(mind-map)** update README, SKILL.md, ADR-0013 with mind map docs - ([b12152c](https://github.com/timaliev/pi-deep-research/commit/b12152c6f65990f2188518705e42a03deb298a62)) - Tim Aliev
+- clarify boolean env var values in README - ([e4dcea4](https://github.com/timaliev/pi-deep-research/commit/e4dcea431ad22d58ade227b661fb2192dc1e098d)) - Tim Aliev
+
 ## [0.19.0](https://github.com/timaliev/pi-deep-research/compare/v0.18.4..v0.19.0) - 2026-07-08
 
 ### Features
