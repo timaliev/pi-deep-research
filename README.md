@@ -158,7 +158,7 @@ Auto-export research reports to PDF after each run. Defaults to `false` (opt-in)
 
 | Env var | Type | Default |
 |---------|------|---------|
-| `DEEP_RESEARCH_PDF_EXPORT` | `true`/`1` | `false` |
+| `DEEP_RESEARCH_PDF_EXPORT` | `true` | `false` |
 
 Requires `pandoc` and `weasyprint` installed on the system. If missing, falls back to agent-based conversion (browser print-to-PDF). See [PDF Export](#pdf-export) for platform setup instructions.
 
