@@ -164,6 +164,20 @@ Requires `pandoc` and `weasyprint` installed on the system. If missing, falls ba
 
 PDF output path is always derived from the input report path (`.md` → `.pdf`, same directory). Use `export_pdf` tool's `output_path` parameter to override per-call. No separate `DEEP_RESEARCH_PDF_OUTPUT_DIR` env var.
 
+#### `mindMap`
+
+Auto-generate a Mermaid mind map diagram after each research run. Defaults to `false` (opt-in). When enabled, the agent receives a prompt with key findings and generates a `graph TD` Mermaid diagram appended as `## Mind Map` to the report.
+
+```json
+"mindMap": true
+```
+
+| Env var | Type | Default |
+|---------|------|---------|
+| `DEEP_RESEARCH_MIND_MAP` | `true` | `false` |
+
+No system dependencies required — the agent generates the diagram using its LLM capabilities.
+
 ### Environment Variables
 
 All settings can be configured via environment variables. Env vars take priority over `settings.json` values.
@@ -175,7 +189,8 @@ All settings can be configured via environment variables. Env vars take priority
 | `DEEP_RESEARCH_REPORTS_DIR` | `<cwd>/deep-research/reports` | Report output directory |
 | `DEEP_RESEARCH_ARTIFACTS_DIR` | `<cwd>/deep-research/artifacts` | Artifact output directory |
 | `DEEP_RESEARCH_DEFAULT_PROFILE` | `default` | Default research profile name |
-| `DEEP_RESEARCH_PDF_EXPORT` | `false` | Auto-export reports to PDF (`true`/`1`) |
+| `DEEP_RESEARCH_PDF_EXPORT` | `false` | Auto-export reports to PDF (`true`) |
+| `DEEP_RESEARCH_MIND_MAP` | `false` | Auto-generate mind map after research (`true`) |
 
 #### Search Engine API Keys
 
@@ -259,6 +274,24 @@ npm install -g mermaid-filter        # optional
 ```
 
 If `pandoc` or `weasyprint` are missing, the agent receives a fallback prompt to convert the report via browser print-to-PDF.
+
+## Mind Map
+
+Generate Mermaid mind map diagrams from research findings or any text content.
+
+### Standalone tool
+
+Agent calls `mind_map(topic, content, save_path?)` on any topic:
+
+```
+mind_map({ topic: "AI Trends 2026", content: "..." })
+```
+
+Always available — no configuration required. The agent responds with a ` ```mermaid ` block containing a `graph TD` diagram. Optionally saves to `save_path`.
+
+### Auto-generation
+
+Enable `deepResearch.mindMap: true` in settings.json or set `DEEP_RESEARCH_MIND_MAP=true`. After each research run, the agent receives key findings and generates a Mermaid mind map appended to the report as `## Mind Map`.
 
 ## Architecture
 
@@ -409,5 +442,5 @@ cd extension && node --import tsx --test ../tests/*.test.ts
 | [0010](docs/adr/0010-presets-ownership.md) | superseded | Presets ownership — superseded by ProfileResolver (C2) |
 | [0011](docs/adr/0011-logger-locality.md) | accepted | Logger locality — state machine owns log |
 | [0012](docs/adr/0012-settings-context-cascade.md) | accepted | SettingsContext unified settings cascade |
-| [0013](docs/adr/0013-mind-map-and-mcp-sources.md) | proposed | Mind map, MCP/local sources, repo link |
+| [0013](docs/adr/0013-mind-map-and-mcp-sources.md) | partially accepted | Mind map, MCP/local sources, repo link |
 | [0014](docs/adr/0014-pdf-export.md) | accepted | PDF export of research reports |
