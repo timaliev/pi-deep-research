@@ -2,13 +2,16 @@ import { readFileSync, existsSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { ResearchStateMachine } from "./state-machine.js";
 import type { ResearchSnapshot } from "./state-machine.js";
-import { extractTextContent } from "./state-machine.js";
 import type { ResearchPlan, PrefilterArtifact } from "./prefilter.js";
 import type { searchWeb as SearchWebFn } from "./search/web-search.js";
 import type { Scraper } from "./scraper.js";
-import type { SearchProviderCredentials } from "./search-providers.js";
+import type { SearchProviderCredentials } from "./settings-context.js";
 import { JsonlLogger } from "./logger.js";
 import { ProfileResolver } from "./profile-resolver.js";
+
+export interface StatePersistence {
+  saveState(snapshot: ResearchSnapshot, extra: Record<string, unknown>): void;
+}
 
 export interface OrchestratorDeps {
   searchFn: typeof SearchWebFn;
@@ -16,8 +19,8 @@ export interface OrchestratorDeps {
   profileResolver: ProfileResolver;
   artifactsDir?: string;
   searchCred?: SearchProviderCredentials;
-  /** For state persistence. Called with customType and data. */
-  appendEntry?: (customType: string, data?: unknown) => void;
+  /** Typed state persistence — wired to SessionState.saveState. */
+  saveState?: StatePersistence["saveState"];
 }
 
 export interface OrchestratorParams {
@@ -38,7 +41,7 @@ export class ResearchRunOrchestrator {
   private readonly scraper: Scraper;
   private readonly artifactsDir?: string;
   private readonly searchCred?: SearchProviderCredentials;
-  private readonly appendEntry?: (customType: string, data?: unknown) => void;
+  private readonly saveState?: StatePersistence["saveState"];
   private readonly profileResolver: ProfileResolver;
 
   constructor(deps: OrchestratorDeps) {
@@ -46,7 +49,7 @@ export class ResearchRunOrchestrator {
     this.scraper = deps.scraper;
     this.artifactsDir = deps.artifactsDir;
     this.searchCred = deps.searchCred;
-    this.appendEntry = deps.appendEntry;
+    this.saveState = deps.saveState;
     this.profileResolver = deps.profileResolver;
   }
 
@@ -96,8 +99,7 @@ export class ResearchRunOrchestrator {
     const result = await machine.next(snapshot, artifact.plan);
 
     // Persist state
-    this.appendEntry?.(STATE_KEY, {
-      ...result.snapshot,
+    this.saveState?.(result.snapshot, {
       plan: artifact.plan,
       planArtifactPath,
       deepResearchBase,
@@ -117,7 +119,9 @@ export class ResearchRunOrchestrator {
     const lastAssistant = [...entries].reverse().find(
       (e) => e.message?.role === "assistant"
     );
-    const agentResponse = lastAssistant?.message?.content as string | undefined;
+    const rawResponse = lastAssistant?.message?.content as string | undefined;
+    // Parse once — used for both draft recovery and state machine phases
+    const parsedResponse = extractTextContent(rawResponse) || undefined;
 
     const lastStateEntry = [...entries].reverse().find((e) => e.customType === STATE_KEY);
     if (!lastStateEntry) {
@@ -132,11 +136,8 @@ export class ResearchRunOrchestrator {
     // Restore draft only when entering drafting phase
     if (snapshot.phase === "drafting") {
       const draftReady = stateData.draftReady as boolean | undefined;
-      if (draftReady) {
-        const text = extractTextContent(agentResponse);
-        if (text && text.length >= 40) {
-          snapshot.draftReport = text;
-        }
+      if (draftReady && parsedResponse && parsedResponse.length >= 40) {
+        snapshot.draftReport = parsedResponse;
       }
     }
 
@@ -157,10 +158,9 @@ export class ResearchRunOrchestrator {
       searchCred: this.searchCred,
     });
 
-    const result = await machine.next(snapshot, plan, agentResponse);
+    const result = await machine.next(snapshot, plan, parsedResponse);
 
-    this.appendEntry?.(STATE_KEY, {
-      ...result.snapshot,
+    this.saveState?.(result.snapshot, {
       plan,
       planArtifactPath,
       deepResearchBase,
@@ -186,4 +186,20 @@ export class ResearchRunOrchestrator {
       deepResearchBase,
     };
   }
+}
+
+/** Extract plain text from agent response (handles string and content blocks array).
+ *  Strips <tool_calls>...</tool_calls> XML blocks from string input. */
+export function extractTextContent(agentResponse?: unknown): string {
+  if (!agentResponse) return "";
+  if (typeof agentResponse === "string") {
+    return agentResponse.replace(/<tool_calls>[\s\S]*?<\/tool_calls>/g, "").trim();
+  }
+  if (Array.isArray(agentResponse)) {
+    return (agentResponse as any[])
+      .filter((b: any) => b.type === "text" && b.text)
+      .map((b: any) => b.text)
+      .join("\n");
+  }
+  return "";
 }

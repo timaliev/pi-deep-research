@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, rmSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ResearchStateMachine } from "../extension/state-machine.js";
-import { resolveProfile } from "../extension/profile-resolver.js";
+import { ProfileResolver } from "../extension/profile-resolver.js";
 import { PrefilterManager } from "../extension/prefilter.js";
 import type { ResearchPlan, PrefilterArtifact } from "../extension/prefilter.js";
 import type { WebSearchResult } from "../extension/search/web-search.js";
@@ -44,7 +44,8 @@ describe("estimate_research_cost scrape ratio", () => {
       estimatedCost: { searchCalls: 144, scrapeCalls: 0, description: "" },
     };
 
-    const profile = resolveProfile(plan.profile);
+    const resolver = new ProfileResolver({});
+    const profile = resolver.resolve(plan.profile);
     const estSearches = profile.breadth * profile.depth * plan.researchQuestions.length;
     // 6 * 3 * 8 = 144
     assert.equal(estSearches, 144);
@@ -64,7 +65,8 @@ describe("estimate_research_cost scrape ratio", () => {
       scope: { include: "", exclude: "" },
       estimatedCost: { searchCalls: 6, scrapeCalls: 0, description: "" },
     };
-    const profile = resolveProfile(plan.profile);
+    const resolver2 = new ProfileResolver({});
+    const profile = resolver2.resolve(plan.profile);
     const estSearches = profile.breadth * profile.depth * plan.researchQuestions.length;
     // 2 * 1 * 3 = 6
     assert.equal(estSearches, 6);

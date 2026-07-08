@@ -5,12 +5,13 @@ import type { searchWeb as SearchWebFn } from "./search/web-search.js";
 import type { WebSearchResult } from "./search/web-search.js";
 import type { SearchEngine } from "./search/web-search.js";
 import type { Scraper, ScrapedPage } from "./scraper.js";
-import { existsSync, readFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildSearchQueue, saveQueue } from "./search-queue.js";
-import type { SearchProviderCredentials } from "./search-providers.js";
+import type { SearchProviderCredentials } from "./settings-context.js";
 import { createReportStyle } from "./report-styles.js";
+import type { ReportStyle } from "./report-styles.js";
 import type { ProfileResolver } from "./profile-resolver.js";
 import { JsonlLogger } from "./logger.js";
 
@@ -101,6 +102,7 @@ export class ResearchStateMachine {
   private logger?: Logger;
   private readonly artifactsDir?: string;
   private readonly searchCred?: SearchProviderCredentials;
+  private style?: ReportStyle;
 
   constructor(ctx: ResearchContext) {
     this.searchFn = ctx.searchFn;
@@ -141,6 +143,11 @@ export class ResearchStateMachine {
       snapshot.profile = this.profileResolver.resolve(plan.profile);
       snapshot.totalDepth = snapshot.profile.depth;
     }
+    // Resolve report style once per run
+    if (!this.style) {
+      this.style = createReportStyle(plan.reportStyle ?? "narrative");
+    }
+    // Agent response already parsed by orchestrator — phase handlers receive clean text or undefined
     switch (snapshot.phase) {
       case "searching":  return this.doSearching(snapshot, plan);
       case "extracting": return this.doExtracting(snapshot, plan);
@@ -276,7 +283,7 @@ export class ResearchStateMachine {
     // Check soft limits after this round's searches
     this.checkSoftLimits(nextSnapshot);
 
-    const style = createReportStyle(plan.reportStyle ?? "narrative");
+    const style = this.style!;
     const inject = style.buildExtractionPrompt(searchResults, scraped, nextDepth, snapshot.totalDepth);
     this.logger?.event("phase_changed", { from: "searching", to: "extracting", depth: nextDepth });
     this.logger?.event("inject_sent", { type: "extraction", length: inject.length, depth: nextDepth });
@@ -286,28 +293,33 @@ export class ResearchStateMachine {
   private doExtracting(snapshot: ResearchSnapshot, plan: ResearchPlan): ResearchStateResult {
     const nextPhase = phaseRouter(snapshot);
     if (nextPhase === "questioning") {
-    const inject = createReportStyle(plan.reportStyle ?? "narrative").buildQuestioningPrompt(plan, snapshot.currentDepth, snapshot.totalDepth);
-      this.logger?.event("phase_changed", { from: "extracting", to: "questioning", depth: snapshot.currentDepth });
-      this.logger?.event("inject_sent", { type: "deepening", length: inject.length, depth: snapshot.currentDepth });
-      return { phase: "questioning", snapshot: { ...snapshot, phase: "questioning" }, inject };
+      return this.doQuestioningInject(snapshot, plan);
     }
     this.logger?.event("deepening_skipped", {
       reason: snapshot.softLimitTriggered ? "soft_limit" : "depth_reached",
       currentDepth: snapshot.currentDepth,
       totalDepth: snapshot.totalDepth,
     });
-    const inject = createReportStyle(plan.reportStyle ?? "narrative").buildDraftingPrompt(plan, snapshot.allFindings);
+    return this.doDraftingInject(snapshot, plan);
+  }
+
+  private doQuestioningInject(snapshot: ResearchSnapshot, plan: ResearchPlan): ResearchStateResult {
+    const inject = this.style!.buildQuestioningPrompt(plan, snapshot.currentDepth, snapshot.totalDepth);
+    this.logger?.event("phase_changed", { from: "extracting", to: "questioning", depth: snapshot.currentDepth });
+    this.logger?.event("inject_sent", { type: "deepening", length: inject.length, depth: snapshot.currentDepth });
+    return { phase: "questioning", snapshot: { ...snapshot, phase: "questioning" }, inject };
+  }
+
+  private doDraftingInject(snapshot: ResearchSnapshot, plan: ResearchPlan): ResearchStateResult {
+    const inject = this.style!.buildDraftingPrompt(plan, snapshot.allFindings);
     this.logger?.event("phase_changed", { from: "extracting", to: "drafting", depth: snapshot.currentDepth });
     this.logger?.event("inject_sent", { type: "drafting", length: inject.length });
     return { phase: "drafting", snapshot: { ...snapshot, phase: "drafting" }, inject };
   }
 
-  private async doQuestioning(snapshot: ResearchSnapshot, plan: ResearchPlan, agentResponse?: unknown): Promise<ResearchStateResult> {
-    if (agentResponse) {
-      const text = typeof agentResponse === "string"
-        ? agentResponse
-        : (Array.isArray(agentResponse) ? (agentResponse as any[]).map((b: any) => b.text ?? "").join("\n") : "");
-      const questions = this.extractQuestions(text);
+  private async doQuestioning(snapshot: ResearchSnapshot, plan: ResearchPlan, parsedResponse?: string): Promise<ResearchStateResult> {
+    if (parsedResponse) {
+      const questions = this.extractQuestions(parsedResponse);
       snapshot.pendingQuestions = questions.length > 0 ? questions : plan.researchQuestions;
     } else {
       snapshot.pendingQuestions = plan.researchQuestions;
@@ -328,12 +340,12 @@ export class ResearchStateMachine {
     return questions;
   }
 
-  private doDrafting(snapshot: ResearchSnapshot, plan: ResearchPlan, agentResponse?: unknown): ResearchStateResult {
-    const reportText = extractTextContent(agentResponse);
-    this.logger?.event("drafting_extracted", { textLength: reportText.length, agentResponseType: typeof agentResponse, isArray: Array.isArray(agentResponse) });
+  private doDrafting(snapshot: ResearchSnapshot, plan: ResearchPlan, parsedResponse?: string): ResearchStateResult {
+    const reportText = parsedResponse ?? "";
+    this.logger?.event("drafting_extracted", { textLength: reportText.length, agentResponseType: "string" });
     if (!reportText || reportText.length < 40) {
       // Agent didn't produce a proper report — re-inject drafting prompt
-      const inject = createReportStyle(plan.reportStyle ?? "narrative").buildDraftingPrompt(plan, snapshot.allFindings);
+      const inject = this.style!.buildDraftingPrompt(plan, snapshot.allFindings);
       this.logger?.event("drafting_retry", { reason: "empty_response", length: reportText?.length ?? 0 });
       return {
         phase: "drafting",
@@ -348,12 +360,11 @@ export class ResearchStateMachine {
     };
   }
 
-  private doSaving(snapshot: ResearchSnapshot, agentResponse?: unknown): ResearchStateResult {
+  private doSaving(snapshot: ResearchSnapshot, parsedResponse?: string): ResearchStateResult {
     let text = snapshot.draftReport ?? "";
-    // Fallback: if draft was stripped by session persistence, try re-extracting
-    // from the agent response passed directly (bypasses fragile assistant-message lookup)
-    if (text.length < 40 && agentResponse !== undefined) {
-      text = extractTextContent(agentResponse);
+    // Fallback: if draft was stripped by session persistence, re-extract from parsed response
+    if (text.length < 40 && parsedResponse !== undefined) {
+      text = parsedResponse;
     }
     if (text.length < 40) {
       this.logger?.event("saving_blocked", { reason: "empty_draft", draftLength: text.length });
@@ -370,84 +381,6 @@ export function phaseRouter(snapshot: ResearchSnapshot): "questioning" | "drafti
   return shouldDeepen ? "questioning" : "drafting";
 }
 
-/** Extract plain text from agent response (handles string and content blocks array).
- *  Strips <tool_calls>...</tool_calls> XML blocks from string input. */
-export function extractTextContent(agentResponse?: unknown): string {
-  if (!agentResponse) return "";
-  if (typeof agentResponse === "string") {
-    return agentResponse.replace(/<tool_calls>[\s\S]*?<\/tool_calls>/g, "").trim();
-  }
-  if (Array.isArray(agentResponse)) {
-    return (agentResponse as any[])
-      .filter((b: any) => b.type === "text" && b.text)
-      .map((b: any) => b.text)
-      .join("\n");
-  }
-  return "";
-}
-
-/** Build a telemetry summary section to append to the final report. */
-export function buildTelemetrySection(snapshot: ResearchSnapshot, extensionVersion?: string, artifactLinks?: string[], profileName?: string, reportStyle?: string): string {
-  const durationSec = Math.round((Date.now() - snapshot.startedAt) / 1000);
-  const durationStr =
-    durationSec < 60
-      ? `${durationSec}s`
-      : `${Math.floor(durationSec / 60)}m ${durationSec % 60}s`;
-
-  const prof = snapshot.profile;
-  const rows = [
-    `| Metric | Value |`,
-    `| --- | --- |`,
-    `| Run ID | \`${snapshot.runId}\` |`,
-  ];
-  if (extensionVersion) {
-    rows.push(`| Pi Extension version | \`${extensionVersion}\` |`);
-  }
-  if (profileName && prof) {
-    rows.push(`| Profile | ${profileName} |`);
-    rows.push(`| Breadth | ${prof.breadth} |`);
-    rows.push(`| Depth | ${prof.depth} |`);
-    rows.push(`| Concurrency | ${prof.concurrency} |`);
-    if (prof.maxSearchCalls) rows.push(`| Max search calls | ${prof.maxSearchCalls} |`);
-    if (prof.maxElapsedSeconds) rows.push(`| Max elapsed (s) | ${prof.maxElapsedSeconds} |`);
-  }
-  if (reportStyle) {
-    rows.push(`| Report style | ${reportStyle} |`);
-  }
-  rows.push(
-    `| Search calls | ${snapshot.searchCalls} |`,
-    `| Scrape calls | ${snapshot.scrapeCalls} |`,
-    `| Sources visited | ${snapshot.allVisitedUrls.length} |`,
-    `| Depth reached | ${snapshot.currentDepth}/${snapshot.totalDepth} |`,
-    `| Duration | ${durationStr} |`,
-    `| Soft limit triggered | ${snapshot.softLimitTriggered ? "yes" : "no"} |`,
-  );
-
-  return [
-    `## Research Telemetry`,
-    ``,
-    ...rows,
-    ``,
-    ...(artifactLinks && artifactLinks.length > 0
-      ? [`## Artifacts`, ``, ...artifactLinks.map((p) => `- [${p}](${p})`), ``]
-      : []),
-    ``,
-  ].join("\n");
-}
-
 
 const stateMachineDir = dirname(fileURLToPath(import.meta.url));
 const defaultArtifactsDir = () => join(stateMachineDir, "..", "..", "deep-research", "artifacts");
-const rootPkgPath = join(stateMachineDir, "..", "package.json");
-
-/** Read extension version from root package.json. Returns undefined if unreadable. */
-export function readExtensionVersion(pkgPath?: string): string | undefined {
-  try {
-    const path = pkgPath ?? rootPkgPath;
-    if (!existsSync(path)) return undefined;
-    const pkg = JSON.parse(readFileSync(path, "utf-8"));
-    return pkg.version || undefined;
-  } catch {
-    return undefined;
-  }
-}

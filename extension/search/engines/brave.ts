@@ -4,7 +4,7 @@
  */
 
 import type { WebSearchOptions, WebSearchResult } from "../web-search.js";
-import type { SearchProviderCredentials } from "../../search-providers.js";
+import type { SearchProviderCredentials } from "../../settings-context.js";
 import { DDG_USER_AGENT, fetchUrl } from "../web-search.js";
 import { waitIfNeeded } from "./utils.js";
 

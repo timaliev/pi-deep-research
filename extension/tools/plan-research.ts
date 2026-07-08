@@ -1,31 +1,21 @@
 import { Type } from "typebox";
 import { mkdirSync } from "node:fs";
-import { join } from "node:path";
-import { searchWeb } from "../search/web-search.js";
 import type { SearchEngine } from "../search/web-search.js";
-import { WebScraper } from "../scraper.js";
-import { JsonlLogger } from "../logger.js";
-import { PrefilterManager } from "../prefilter.js";
+import { PrefilterManager, PrefilterSession } from "../prefilter.js";
 import type { ResearchPlanProfile } from "../prefilter.js";
 import type { ProfileResolver } from "../profile-resolver.js";
-import type { SearchProviderCredentials } from "../search-providers.js";
-import { generateRunId } from "../ids.js";
+import type { SearchProviderCredentials } from "../settings-context.js";
 import type { SettingsContext } from "../settings-context.js";
 
-/**
- * Create the plan_research tool.
- *
- * The `_prefilterManagers` Map and `pi` (ExtensionAPI) stay in closure so
- * the PrefilterManager survives across execute() calls for step 1→2→3
- * while remaining scoped (not a bare module-level global).
- */
 export function createPlanResearchTool(
   pi: any,
   settings: SettingsContext,
   profileResolver: ProfileResolver,
   searchCred: SearchProviderCredentials,
 ) {
-  const _prefilterManagers = new Map<string, PrefilterManager>();
+  const session = new PrefilterSession(
+    settings.artifactsDir, profileResolver, searchCred,
+  );
 
   return {
     name: "plan_research",
@@ -38,29 +28,13 @@ export function createPlanResearchTool(
       plan_json: Type.Optional(Type.String({ description: "JSON research plan (third call)" })),
     }),
     async execute(_toolCallId: string, params: any, _signal: any, onUpdate: any, ctx: any) {
-      const artifactsDir = settings.artifactsDir;
-      mkdirSync(artifactsDir, { recursive: true });
+      mkdirSync(settings.artifactsDir, { recursive: true });
 
-      const scraper = new WebScraper();
-      const logsDir = join(artifactsDir, "..", "logs");
-
-      // Find or create manager: look up runId from session state for steps 2/3
       const entries = ctx.sessionManager.getEntries();
-      const prefilterEntry = [...entries].reverse().find((e: any) => e.customType === "deep-research:prefilter-run");
-      const existingRunId = prefilterEntry?.data?.runId as string | undefined;
-
-      let manager: PrefilterManager;
-      if (existingRunId && _prefilterManagers.has(existingRunId)) {
-        manager = _prefilterManagers.get(existingRunId)!;
-      } else {
-        // New prefilter session — clear stale managers from previous runs
-        _prefilterManagers.clear();
-        const runId = generateRunId();
-        const logger = new JsonlLogger(runId, join(logsDir, `${runId}-prefilter.log`));
-        manager = new PrefilterManager(searchWeb, scraper, artifactsDir, logger, profileResolver, searchCred, runId);
-        _prefilterManagers.set(runId, manager);
-        pi.appendEntry("deep-research:prefilter-run", { runId, topic: params.topic });
-      }
+      const manager = session.getOrCreate(
+        params.topic ?? "", entries,
+        (runId) => pi.appendEntry("deep-research:prefilter-run", { runId, topic: params.topic }),
+      );
 
       // Step 1: topic only → negotiate params
       if (!params.params_json && !params.plan_json) {
@@ -110,7 +84,7 @@ export function createPlanResearchTool(
           try { topic = JSON.parse(params.plan_json).topic || "unknown"; } catch { topic = "unknown"; }
         }
         const result = await manager.finalize(topic, params.plan_json);
-        _prefilterManagers.delete(result.runId);
+        session.remove(result.runId);
         return {
           content: [{ type: "text", text: result.phase === "plan_ready"
             ? `## Research Plan Ready ✅\n\nPlan saved to: ${result.planArtifactPath}\n\n**Topic:** ${result.plan?.topic}\n**Engines:** ${result.plan?.engines.join(", ")}\n**Profile:** ${result.plan?.profile.name}\n**Questions:** ${result.plan?.researchQuestions.length}\n\nNext: show user and ask for confirmation before calling run_research.`

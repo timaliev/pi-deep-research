@@ -14,6 +14,27 @@ export interface ReportStyle {
   buildDraftingPrompt(plan: ResearchPlan, findings: Finding[]): string;
 }
 
+/** Format search results and scraped content as markdown — shared by both styles. */
+function formatSearchResults(
+  allResults: Array<{ question: string; results: WebSearchResult[] }>,
+  scraped: ScrapedPage[],
+): string {
+  let section = `### Search Results\n\n`;
+  for (const { question, results } of allResults) {
+    section += `**Query:** ${question}\n`;
+    for (const r of results) section += `- [${r.title}](${r.url}): ${r.snippet}\n`;
+    section += `\n`;
+  }
+  if (scraped.length > 0) {
+    section += `### Scraped Content\n\n`;
+    for (const page of scraped) {
+      const excerpt = page.content.length > 1000 ? page.content.substring(0, 1000) + "..." : page.content;
+      section += `**Source: ${page.title}** (${page.url})\n\n${excerpt}\n\n---\n`;
+    }
+  }
+  return section;
+}
+
 class NarrativeStyle implements ReportStyle {
   buildExtractionPrompt(
     allResults: Array<{ question: string; results: WebSearchResult[] }>,
@@ -26,19 +47,7 @@ class NarrativeStyle implements ReportStyle {
     prompt += `- The insight (1-2 sentences)\n`;
     prompt += `- Source URL\n`;
     prompt += `- A relevant quote/citation from the source\n\n`;
-    prompt += `### Search Results\n\n`;
-    for (const { question, results } of allResults) {
-      prompt += `**Query:** ${question}\n`;
-      for (const r of results) prompt += `- [${r.title}](${r.url}): ${r.snippet}\n`;
-      prompt += `\n`;
-    }
-    if (scraped.length > 0) {
-      prompt += `### Scraped Content\n\n`;
-      for (const page of scraped) {
-        const excerpt = page.content.length > 1000 ? page.content.substring(0, 1000) + "..." : page.content;
-        prompt += `**Source: ${page.title}** (${page.url})\n\n${excerpt}\n\n---\n`;
-      }
-    }
+    prompt += formatSearchResults(allResults, scraped);
     prompt += `\nProduce findings as a numbered list. Each finding must cite its source URL in parentheses.`;
     return prompt;
   }
@@ -67,19 +76,7 @@ class SubtopicStyle implements ReportStyle {
     prompt += `- Which theme it belongs to\n`;
     prompt += `- Source URL\n`;
     prompt += `- A relevant quote/citation from the source\n\n`;
-    prompt += `### Search Results\n\n`;
-    for (const { question, results } of allResults) {
-      prompt += `**Query:** ${question}\n`;
-      for (const r of results) prompt += `- [${r.title}](${r.url}): ${r.snippet}\n`;
-      prompt += `\n`;
-    }
-    if (scraped.length > 0) {
-      prompt += `### Scraped Content\n\n`;
-      for (const page of scraped) {
-        const excerpt = page.content.length > 1000 ? page.content.substring(0, 1000) + "..." : page.content;
-        prompt += `**Source: ${page.title}** (${page.url})\n\n${excerpt}\n\n---\n`;
-      }
-    }
+    prompt += formatSearchResults(allResults, scraped);
     prompt += `\nGroup findings by theme. Each theme should be a named category. List findings under their themes with source citations.`;
     return prompt;
   }

@@ -1,8 +1,8 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { SearchProviderCredentials } from "../extension/search-providers.js";
+import { SearchProviderCredentials } from "../extension/settings-context.js";
 
 const TEST_DIR = join(import.meta.dirname ?? ".", "..", "test-search-providers");
 
@@ -33,26 +33,5 @@ describe("SearchProviderCredentials", () => {
   it("get returns undefined when no source has it", () => {
     const cred = new SearchProviderCredentials({});
     assert.equal(cred.get("brave", "apiKey"), undefined);
-  });
-
-  it("has returns missing keys when required keys absent", () => {
-    const cred = new SearchProviderCredentials({
-      yandex: { oauthToken: "tok" },
-    });
-
-    const missing = cred.has("yandex", ["oauthToken", "folderId"]);
-    assert.deepEqual(missing, ["folderId"]);
-  });
-
-  it("has returns empty when all keys present", () => {
-    const cred = new SearchProviderCredentials({
-      brave: { apiKey: "key" },
-    });
-    assert.deepEqual(cred.has("brave", ["apiKey"]), []);
-  });
-
-  it("has returns all keys when engine unknown", () => {
-    const cred = new SearchProviderCredentials({});
-    assert.deepEqual(cred.has("brave", ["apiKey"]), ["apiKey"]);
   });
 });

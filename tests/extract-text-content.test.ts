@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { extractTextContent } from "../extension/state-machine.js";
+import { extractTextContent } from "../extension/research-run-orchestrator.js";
 
 describe("extractTextContent", () => {
   it("returns string unchanged (no tool XML)", () => {

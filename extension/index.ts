@@ -11,6 +11,7 @@ import { WebScraper } from "./scraper.js";
 import { SettingsContext } from "./settings-context.js";
 import { ProfileResolver } from "./profile-resolver.js";
 import { SessionState } from "./session-state.js";
+import { ResearchRunOrchestrator } from "./research-run-orchestrator.js";
 import { createRunResearchTool } from "./tools/run-research.js";
 import { createPlanResearchTool } from "./tools/plan-research.js";
 import { createSaveReportTool } from "./tools/save-report.js";
@@ -30,6 +31,18 @@ export default function (pi: ExtensionAPI) {
   const artifactsDir = settings.artifactsDir;
   const searchCred = settings.credentials;
   const session = new SessionState({ appendEntry: pi.appendEntry.bind(pi) });
+
+  const scraper = new WebScraper();
+
+  // Construct orchestrator once — shared across all run_research invocations
+  const orchestrator = new ResearchRunOrchestrator({
+    searchFn: searchWeb,
+    scraper,
+    profileResolver,
+    artifactsDir: settings.artifactsDir,
+    searchCred,
+    saveState: (snapshot, extra) => session.saveState(snapshot, extra),
+  });
 
   // Contribute the skill file
   pi.on("resources_discover", () => ({
@@ -105,7 +118,6 @@ Use "compare" mode to see results from each engine separately without deduplicat
       url: Type.String({ description: "URL to scrape" }),
     }),
     async execute(_toolCallId, params) {
-      const scraper = new WebScraper();
       const page = await scraper.scrape(params.url);
       return {
         content: [{ type: "text", text: `# ${page.title}\n\n${page.content.substring(0, 5000)}` }],
@@ -173,5 +185,5 @@ Use "compare" mode to see results from each engine separately without deduplicat
   });
 
   // === TOOL: run_research ===
-  pi.registerTool(createRunResearchTool(pi, settings, profileResolver, searchCred, session));
+  pi.registerTool(createRunResearchTool(pi, orchestrator, settings, session));
 }

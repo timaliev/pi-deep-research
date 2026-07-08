@@ -65,7 +65,7 @@ describe("ResearchRunOrchestrator", () => {
         profileResolver: defaultResolver,
       scraper: { scrape: async (url: string) => ({ url, title: url, content: "mock" }) },
         artifactsDir,
-        appendEntry: () => {},
+        saveState: () => {},
       });
       const result = await orch.handle({
         planArtifactPath: planPath,
@@ -118,7 +118,7 @@ describe("ResearchRunOrchestrator", () => {
         profileResolver: defaultResolver,
         scraper: { scrape: async (url: string) => ({ url, title: url, content: "mock" }) },
         artifactsDir,
-        appendEntry: () => {},
+        saveState: () => {},
       });
 
       // Simulate: plan A was completed earlier, state stored in session
@@ -185,7 +185,7 @@ describe("ResearchRunOrchestrator", () => {
         profileResolver: defaultResolver,
       scraper: { scrape: async (url: string) => ({ url, title: url, content: "mock content" }) },
         artifactsDir,
-        appendEntry: () => {},
+        saveState: () => {},
       });
 
       // First call: initialize run (will go searching → extracting)

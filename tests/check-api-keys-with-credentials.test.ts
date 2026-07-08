@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { PrefilterManager } from "../extension/prefilter.js";
-import { SearchProviderCredentials } from "../extension/search-providers.js";
+import { SearchProviderCredentials } from "../extension/settings-context.js";
 import type { WebSearchResult } from "../extension/search/web-search.js";
 import type { Scraper, ScrapedPage } from "../extension/scraper.js";
 

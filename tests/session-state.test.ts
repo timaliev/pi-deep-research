@@ -13,17 +13,37 @@ describe("SessionState — persistence seam", () => {
     };
   }
 
-  it("saveResearchState persists without draftReport string", () => {
+  it("saveState persists snapshot without draftReport, includes extra fields", () => {
     const entries: Array<{ customType: string; data: any }> = [];
     const session = new SessionState({ appendEntry: (t, d) => entries.push({ customType: t, data: d }) });
     const snap = makeSnapshot();
 
-    session.saveResearchState(snap, { plan: {}, planArtifactPath: "/p" });
+    session.saveState(snap, { plan: {}, planArtifactPath: "/p" });
 
     const saved = entries[0].data;
+    assert.equal(entries[0].customType, "deep-research:state");
     assert.equal(saved.draftReady, true, "draftReady flag set");
-    assert.ok(!("draftReport" in saved), "draftReport stripped");
+    assert.ok(!("draftReport" in saved), "draftReport stripped from persisted state");
     assert.equal(saved.phase, "saving");
+    assert.equal(saved.planArtifactPath, "/p", "extra fields merged");
+  });
+
+  it("restoreState recovers persisted state from session entries", () => {
+    const entries = [
+      { customType: "other", data: {} },
+      { customType: "deep-research:state", data: { runId: "r1", phase: "extracting", currentDepth: 1 } },
+    ];
+
+    const state = SessionState.restoreState(entries);
+    assert.ok(state, "must find state entry");
+    assert.equal(state.runId, "r1");
+    assert.equal(state.phase, "extracting");
+  });
+
+  it("restoreState returns undefined when no state entry exists", () => {
+    const entries = [{ customType: "other", data: {} }];
+    const state = SessionState.restoreState(entries);
+    assert.equal(state, undefined);
   });
 
   it("saveReportPath stores path, dir, telemetry", () => {
@@ -44,21 +64,5 @@ describe("SessionState — persistence seam", () => {
 
     session.saveConfirmation("/p/plan.json");
     assert.equal(entries[0].customType, "deep-research:plan-confirmed");
-  });
-
-  it("restoreDraft re-extracts from agent response", () => {
-    const stateData = { draftReady: true, draftLength: 200 };
-    const agentResp = "# Report\n\nFull content here...".repeat(5);
-
-    const session = new SessionState({ appendEntry: () => {} });
-    const restored = session.restoreDraft(stateData, agentResp);
-
-    assert.ok(restored.length > 40);
-    assert.ok(restored.includes("# Report"));
-  });
-
-  it("restoreDraft returns empty when draftReady is false", () => {
-    const session = new SessionState({ appendEntry: () => {} });
-    assert.equal(session.restoreDraft({ draftReady: false }, "text"), "");
   });
 });

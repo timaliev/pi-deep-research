@@ -5,7 +5,7 @@ import { ResearchStateMachine } from "../extension/state-machine.js";
 import type { ResearchPlan, ResearchPlanProfile } from "../extension/prefilter.js";
 import type { WebSearchResult } from "../extension/search/web-search.js";
 import type { Scraper } from "../extension/scraper.js";
-import { SearchProviderCredentials } from "../extension/search-providers.js";
+import { SearchProviderCredentials } from "../extension/settings-context.js";
 import type { Logger } from "../extension/logger.js";
 import type { ResearchProfile } from "../extension/state-machine.js";
 

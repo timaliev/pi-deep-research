@@ -1,11 +1,15 @@
 import { generateRunId } from "./ids.js";
 import type { Logger } from "./logger.js";
+import { JsonlLogger } from "./logger.js";
+import { join } from "node:path";
+import { searchWeb } from "./search/web-search.js";
+import { WebScraper } from "./scraper.js";
 import type { searchWeb as SearchWebFn } from "./search/web-search.js";
 import type { WebSearchResult } from "./search/web-search.js";
 import type { SearchEngine } from "./search/web-search.js";
 import type { Scraper, ScrapedPage } from "./scraper.js";
 import { ProfileResolver } from "./profile-resolver.js";
-import type { SearchProviderCredentials } from "./search-providers.js";
+import type { SearchProviderCredentials } from "./settings-context.js";
 
 export interface ResearchPlanProfile {
   name: "default" | "fast" | "deep" | "custom";
@@ -296,5 +300,49 @@ export class PrefilterManager {
     p += `\n### Instructions\n\nProduce research plan JSON:
 \`\`\`json\n{"topic":"${topic}","goal":"...","researchQuestions":["Q1"],"engines":${JSON.stringify(engines)},"profile":${JSON.stringify(profile)},"scope":{"include":"...","exclude":"..."},"estimatedCost":{"searchCalls":12,"scrapeCalls":8,"description":"~12 searches"}}\n\`\`\`\n\nSet reportStyle to \"narrative\" (fixed 5-section) or \"subtopics\" (LLM discovers thematic sections). Output ONLY JSON.`;
     return p;
+  }
+}
+
+/** Manages PrefilterManager lifecycle across tool invocations. */
+export class PrefilterSession {
+  private managers = new Map<string, PrefilterManager>();
+
+  constructor(
+    private readonly artifactsDir: string,
+    private readonly profileResolver: ProfileResolver,
+    private readonly searchCred?: SearchProviderCredentials,
+  ) {}
+
+  /** Get existing manager or create a new one. Session entry lookup handled internally. */
+  getOrCreate(
+    topic: string,
+    sessionEntries: Array<{ customType?: string; data?: unknown }>,
+    persist: (runId: string) => void,
+  ): PrefilterManager {
+    const prefilterEntry = [...sessionEntries].reverse().find(
+      (e: any) => e.customType === "deep-research:prefilter-run"
+    );
+    const existingRunId = prefilterEntry?.data?.runId as string | undefined;
+
+    if (existingRunId && this.managers.has(existingRunId)) {
+      return this.managers.get(existingRunId)!;
+    }
+
+    // New prefilter session — clear stale managers
+    this.managers.clear();
+    const runId = generateRunId();
+    const logsDir = join(this.artifactsDir, "..", "logs");
+    const logger = new JsonlLogger(runId, join(logsDir, `${runId}-prefilter.log`));
+    const manager = new PrefilterManager(
+      searchWeb, new WebScraper(), this.artifactsDir,
+      logger, this.profileResolver, this.searchCred, runId,
+    );
+    this.managers.set(runId, manager);
+    persist(runId);
+    return manager;
+  }
+
+  remove(runId: string): void {
+    this.managers.delete(runId);
   }
 }

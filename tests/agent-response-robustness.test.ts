@@ -2,6 +2,7 @@ import { ProfileResolver } from "../extension/profile-resolver.js";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { ResearchStateMachine } from "../extension/state-machine.js";
+import { extractTextContent } from "../extension/research-run-orchestrator.js";
 import type { ResearchPlan } from "../extension/prefilter.js";
 import type { WebSearchResult } from "../extension/search/web-search.js";
 import type { Scraper } from "../extension/scraper.js";
@@ -32,8 +33,9 @@ describe("ResearchStateMachine — agentResponse robustness", () => {
     let s = ResearchStateMachine.init(PLAN, new ProfileResolver({}, "default"));
     s = (await machine.next(s, PLAN)).snapshot;
     s = (await machine.next(s, PLAN)).snapshot;
-    // AgentMessage.content can be an array of text blocks
-    s = (await machine.next(s, PLAN, [{ type: "text", text: "1. Question one?\n2. Question two?" }] as any)).snapshot;
+    // Content blocks parsed before reaching state machine (orchestrator's responsibility)
+    const parsed = extractTextContent([{ type: "text", text: "1. Question one?\n2. Question two?" }] as any);
+    s = (await machine.next(s, PLAN, parsed)).snapshot;
     assert.equal(s.phase, "extracting");
   });
 

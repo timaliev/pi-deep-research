@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-describe("Candidate 1 — DEFAULT_PRESETS + resolveProfile → profile-resolver", () => {
+describe("Candidate 1 — DEFAULT_PRESETS + ProfileResolver → profile-resolver", () => {
   it("DEFAULT_PRESETS is exported from profile-resolver", async () => {
     const { DEFAULT_PRESETS } = await import("../extension/profile-resolver.js");
     assert.ok(DEFAULT_PRESETS.default, "default preset exists");
@@ -10,20 +10,18 @@ describe("Candidate 1 — DEFAULT_PRESETS + resolveProfile → profile-resolver"
     assert.equal(DEFAULT_PRESETS.default.breadth, 4);
   });
 
-  it("resolveProfile is exported from profile-resolver", async () => {
-    const { resolveProfile } = await import("../extension/profile-resolver.js");
-    assert.equal(typeof resolveProfile, "function");
+  it("ProfileResolver.resolve resolves default preset", async () => {
+    const { ProfileResolver } = await import("../extension/profile-resolver.js");
+    const resolver = new ProfileResolver({}, "default");
+    const result = resolver.resolve({ name: "default" });
+    assert.equal(result.breadth, 4);
+    assert.equal(result.depth, 2);
   });
 
-  it("resolveProfile resolves default preset", async () => {
-    const { resolveProfile, DEFAULT_PRESETS } = await import("../extension/profile-resolver.js");
-    const result = resolveProfile({ name: "default" }, DEFAULT_PRESETS);
-    assert.deepEqual(result, DEFAULT_PRESETS.default);
-  });
-
-  it("resolveProfile resolves custom profile", async () => {
-    const { resolveProfile, DEFAULT_PRESETS } = await import("../extension/profile-resolver.js");
-    const result = resolveProfile({ name: "custom", breadth: 10, depth: 5 }, DEFAULT_PRESETS);
+  it("ProfileResolver.resolve resolves custom profile", async () => {
+    const { ProfileResolver } = await import("../extension/profile-resolver.js");
+    const resolver = new ProfileResolver({}, "default");
+    const result = resolver.resolve({ name: "custom", breadth: 10, depth: 5 });
     assert.equal(result.breadth, 10);
     assert.equal(result.depth, 5);
   });

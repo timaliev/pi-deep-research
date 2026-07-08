@@ -8,27 +8,6 @@ export const DEFAULT_PRESETS: Record<string, ResearchProfile> = {
   deep:    { breadth: 6, depth: 3, concurrency: 4 },
 };
 
-/** Resolve a ResearchPlanProfile into a concrete ResearchProfile.
- *  @deprecated Use ProfileResolver.resolve() instead for user-merged presets.
- *  Kept as a pure function for tests and backward-compat. */
-export function resolveProfile(
-  planProfile: ResearchPlanProfile,
-  presets?: Record<string, ResearchProfile>,
-): ResearchProfile {
-  const p = presets ?? DEFAULT_PRESETS;
-  if (planProfile.name !== "custom") {
-    return p[planProfile.name] ?? p.default;
-  }
-  const preset = p.custom;
-  return {
-    breadth: planProfile.breadth ?? preset?.breadth ?? 4,
-    depth: planProfile.depth ?? preset?.depth ?? 2,
-    concurrency: planProfile.concurrency ?? preset?.concurrency ?? 4,
-    maxSearchCalls: preset?.maxSearchCalls,
-    maxElapsedSeconds: preset?.maxElapsedSeconds,
-  };
-}
-
 /** Shallow-merge user profile overrides into built-in presets. */
 export function mergeProfiles(
   builtin: Record<string, ResearchProfile>,
