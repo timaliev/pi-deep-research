@@ -1,12 +1,13 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { buildTelemetrySection } from "../extension/report-assembly.js";
+import { ResearchDraft } from "../extension/research-draft.js";
 import type { ResearchSnapshot } from "../extension/state-machine.js";
 
 function makeSnapshot(overrides?: Partial<ResearchSnapshot>): ResearchSnapshot {
   return {
     phase: "done", runId: "test-run", currentDepth: 2, totalDepth: 3,
-    allFindings: [], allVisitedUrls: [], draftReport: "", reportPath: "",
+    allFindings: [], allVisitedUrls: [], draft: new ResearchDraft(), reportPath: "",
     searchCalls: 5, scrapeCalls: 7, startedAt: Date.now() - 100_000,
     softLimitTriggered: false, ...overrides,
   };

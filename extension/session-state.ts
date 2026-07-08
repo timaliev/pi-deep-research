@@ -13,11 +13,11 @@ export class SessionState {
 
   /** Persist research snapshot + extra metadata (plan, planArtifactPath, deepResearchBase). */
   saveState(snapshot: ResearchSnapshot, extra: Record<string, unknown>): void {
-    const { draftReport: _dr, ...safe } = snapshot;
+    const draftEncoded = snapshot.draft?.encode();
+    const { draft: _d, ...safe } = snapshot;
     this.writer.appendEntry(STATE_KEY, {
       ...safe,
-      draftReady: (snapshot.draftReport?.length ?? 0) >= 40,
-      draftLength: snapshot.draftReport?.length ?? 0,
+      draftEncoded,
       ...extra,
     });
   }

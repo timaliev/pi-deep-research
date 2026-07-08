@@ -31,15 +31,21 @@ describe("checkApiKeys with SearchProviderCredentials", () => {
   });
 
   it("rejects when credentials missing from both settings and env", async () => {
-    const cred = new SearchProviderCredentials({});
+    const prev = process.env.BRAVE_API_KEY;
+    delete process.env.BRAVE_API_KEY;
+    try {
+      const cred = new SearchProviderCredentials({});
 
-    const manager = new PrefilterManager(mockSearchFn(), mockScraper(), TEST_DIR, undefined, undefined, cred);
-    const result = await manager.withParams("test", ["brave"], { name: "default" });
+      const manager = new PrefilterManager(mockSearchFn(), mockScraper(), TEST_DIR, undefined, undefined, cred);
+      const result = await manager.withParams("test", ["brave"], { name: "default" });
 
-    assert.equal(result.phase, "awaiting_params",
-      "must loop back when brave selected but no api key");
-    assert.ok(result.inject!.includes("BRAVE_API_KEY"),
-      `must mention missing key, got: ${result.inject}`);
+      assert.equal(result.phase, "awaiting_params",
+        "must loop back when brave selected but no api key");
+      assert.ok(result.inject!.includes("BRAVE_API_KEY"),
+        `must mention missing key, got: ${result.inject}`);
+    } finally {
+      if (prev) process.env.BRAVE_API_KEY = prev;
+    }
   });
 
   it("passes when credentials in env override empty settings", async () => {

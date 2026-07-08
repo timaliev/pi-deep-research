@@ -5,9 +5,15 @@ import type { SearchProviderCredentials } from "../extension/settings-context.js
 
 describe("searchBrave credentials", () => {
   it("reads api key from SearchProviderCredentials when no env var", () => {
-    const cred = { get: () => "bsa-from-settings" } as any as SearchProviderCredentials;
-    const key = resolveBraveApiKey(cred);
-    assert.equal(key, "bsa-from-settings");
+    const prev = process.env.BRAVE_API_KEY;
+    delete process.env.BRAVE_API_KEY;
+    try {
+      const cred = { get: () => "bsa-from-settings" } as any as SearchProviderCredentials;
+      const key = resolveBraveApiKey(cred);
+      assert.equal(key, "bsa-from-settings");
+    } finally {
+      if (prev) process.env.BRAVE_API_KEY = prev;
+    }
   });
 
   it("env var wins over credentials", () => {
@@ -20,9 +26,15 @@ describe("searchBrave credentials", () => {
   });
 
   it("returns undefined when no source has key", () => {
-    const cred = { get: () => undefined } as any as SearchProviderCredentials;
-    const key = resolveBraveApiKey(cred);
-    assert.equal(key, undefined);
+    const prev = process.env.BRAVE_API_KEY;
+    delete process.env.BRAVE_API_KEY;
+    try {
+      const cred = { get: () => undefined } as any as SearchProviderCredentials;
+      const key = resolveBraveApiKey(cred);
+      assert.equal(key, undefined);
+    } finally {
+      if (prev) process.env.BRAVE_API_KEY = prev;
+    }
   });
 });
 

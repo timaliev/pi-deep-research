@@ -77,7 +77,7 @@ describe("save_report — writes full content", () => {
     assert.ok(match, "auto-save must call assembleReport");
   });
 
-  it("draftReport is saved when phase is 'done'", async () => {
+  it("report is saved when phase is 'done'", async () => {
     const src = readFileSync(
       join(import.meta.dirname ?? ".", "..", "extension", "tools/run-research.ts"),
       "utf-8",

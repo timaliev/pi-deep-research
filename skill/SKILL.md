@@ -108,6 +108,7 @@ Environment variables take precedence over settings.json. Example settings.json:
    run_research()
    ```
    **Guardrail:** Never pass `plan_artifact_path` on subsequent calls. The tool manages state internally — passing it would restart the research from scratch.
+   **Auto-loop:** Do NOT ask the user whether to continue at each depth. The research profile already defines depth — the agent must call `run_research` automatically until `phase` is `"done"`. The user approved the plan and cost in Phase 3; no further confirmation is needed.*
 3. Between calls, process the injected prompt:
    - **Extraction:** Extract key findings from search results (cite sources). Then call `run_research()`.
    - **Questioning:** Generate **numbered** follow-up questions (e.g. `1. What is...?`). The state machine parses these to drive the next search iteration. Unnumbered responses fall back to the original plan questions. Then call `run_research()`.

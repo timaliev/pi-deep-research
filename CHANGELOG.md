@@ -13,6 +13,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.21.0](https://github.com/timaliev/pi-deep-research/compare/v0.20.0..v0.21.0) - 2026-07-08
+
+### Features
+
+- **(draft)** add ResearchDraft module with zlib encoding - ([f142b43](https://github.com/timaliev/pi-deep-research/commit/f142b432f939c8d8a80171847f18b420ee8f6d44)) - Tim Aliev
+
+### Bug Fixes
+
+- **(test)** isolate tests from real BRAVE_API_KEY env var - ([554b0c5](https://github.com/timaliev/pi-deep-research/commit/554b0c57a4d3f8ed4ed998c62ba4c4fa0e80bc0b)) - Tim Aliev
+
+### Refactoring
+
+- **(draft)** replace draftReport string with ResearchDraft module - ([67be047](https://github.com/timaliev/pi-deep-research/commit/67be047504b8b82f38535afa190419a9760fa6e9)) - Tim Aliev
+
+### Documentation
+
+- **(skill)** clarify auto-loop — no user confirmation between depths - ([b8a8a65](https://github.com/timaliev/pi-deep-research/commit/b8a8a65f9ddb86b420542d12a50b5cff0d4c4ac0)) - Tim Aliev
+
 ## [0.20.0](https://github.com/timaliev/pi-deep-research/compare/v0.19.0..v0.20.0) - 2026-07-08
 
 ### Features

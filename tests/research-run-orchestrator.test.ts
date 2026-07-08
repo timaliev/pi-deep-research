@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { ResearchDraft } from "../extension/research-draft.js";
 import { ProfileResolver } from "../extension/profile-resolver.js";
 
 const defaultResolver = new ProfileResolver({}, "default");
@@ -133,7 +134,7 @@ describe("ResearchRunOrchestrator", () => {
             estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" } },
           planArtifactPath: planPathA,
           deepResearchBase: tmpDir,
-          draftReport: "Old report content for plan A with enough text to pass threshold.",
+          draft: new ResearchDraft("Old report content for plan A with enough text to pass threshold."),
         },
       }];
 
@@ -223,12 +224,13 @@ describe("ResearchRunOrchestrator", () => {
       assert.equal(result2.kind, "in_progress");
       assert.equal(result2.snapshot.phase, "saving");
 
-      // Third call: saving → done
+      // Third call: restore draft from encoded session state and advance to done
       const entries3 = [
         {
           customType: STATE_KEY,
           data: {
             ...result2.snapshot,
+            draftEncoded: result2.snapshot.draft.encode(),  // encode draft for session restore
             plan: result2.plan,
             planArtifactPath: result2.planArtifactPath,
             deepResearchBase: tmpDir,
@@ -239,8 +241,8 @@ describe("ResearchRunOrchestrator", () => {
       assert.equal(result3.kind, "done");
 
       // Verify draft text does NOT contain tool-call XML
-      const draft = result3.snapshot.draftReport;
-      assert.ok(draft, "draftReport must exist");
+      const draft = result3.snapshot.draft.get();
+      assert.ok(draft, "draft must exist");
       assert.ok(!draft.includes("<tool_calls>"), "draft must not contain tool-call XML");
       assert.ok(!draft.includes("run_research"), "draft must not contain tool names");
       assert.ok(draft.includes("# Full Research Report"), "draft must contain report content");
