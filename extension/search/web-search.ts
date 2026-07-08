@@ -240,100 +240,20 @@ interface SearchCallbacks {
   logger?: Logger;
 }
 
-/**
- * Raw multi-engine web search. Returns deduped results, no markdown.
- * Used by the research pipeline (plan_research, run_research) and
- * by multiEngineWebSearch (which adds formatting).
- */
-export async function searchWeb(
+/** Internal shared engine loop — called by both searchWeb and multiEngineWebSearch. */
+async function searchAllEngines(
   query: string,
-  maxResults: number = 5,
-  engines: SearchEngine[] = ["duckduckgo"],
-  callbacks?: SearchCallbacks,
-): Promise<WebSearchResult[]> {
-  if (!query || query.trim().length === 0) {
-    throw new Error("Error: query is required and must not be empty.");
-  }
-
-  callbacks?.onUpdate?.({
-    content: [
-      { type: "text", text: `Searching "${query}" via [${engines.join(", ")}]...` },
-    ],
-    details: { phase: "searching", engine: engines[0] },
-  });
-
-  const engineFns: Record<string, EngineSearchFn> = {};
-  for (const engine of engines) {
-    engineFns[engine] = createEngineSearchFn(engine);
-  }
-
-  const allResults: WebSearchResult[] = [];
-  const searchOpts: WebSearchOptions = { query, maxResults };
-
-  for (const engine of engines) {
-    if (callbacks?.signal?.aborted) break;
-
-    const fn = engineFns[engine];
-    if (!fn) continue;
-
-    await waitIfNeeded(engine);
-
-    try {
-      const startMs = Date.now();
-      callbacks?.onUpdate?.({
-        content: [{ type: "text", text: `Querying ${engine}...` }],
-        details: { phase: "searching", engine },
-      });
-
-      const results = await fn(query, searchOpts, callbacks?.credentials);
-      const elapsedMs = Date.now() - startMs;
-      engineLastCall[engine] = Date.now();
-      allResults.push(...results);
-
-      callbacks?.logger?.event("search_executed", {
-        query,
-        engine,
-        resultCount: results.length,
-        elapsedMs,
-      });
-
-      callbacks?.onUpdate?.({
-        content: [{ type: "text", text: `${engine}: ${results.length} results` }],
-        details: { phase: "done", engine, count: results.length },
-      });
-    } catch (err: any) {
-      callbacks?.logger?.event("search_failed", {
-        query,
-        engine,
-        error: err.message,
-      });
-      callbacks?.onUpdate?.({
-        content: [{ type: "text", text: `${engine}: failed — ${err.message}` }],
-        details: { phase: "error", engine, error: err.message },
-      });
-    }
-  }
-
-  return deduplicateByUrl(allResults);
-}
-
-/**
- * Multi-engine web search with markdown formatting.
- * Used by the web_search tool for user-facing output.
- */
-export async function multiEngineWebSearch(
-  opts: WebSearchOptions,
-): Promise<WebSearchOutput> {
-  const query = opts.query;
-  const maxResults = opts.maxResults ?? 5;
-  const engines: SearchEngine[] = opts.engines ?? ["duckduckgo"];
-  const compareMode = opts.compare ?? false;
-
-  if (!query || query.trim().length === 0) {
-    throw new Error("Error: query is required and must not be empty.");
-  }
-
-  // Collect per-engine results separately for compare mode
+  maxResults: number,
+  engines: SearchEngine[],
+  signal: AbortSignal | undefined,
+  credentials: SearchProviderCredentials | undefined,
+  onUpdate: SearchCallbacks["onUpdate"],
+  logger: Logger | undefined,
+): Promise<{
+  allResults: WebSearchResult[];
+  perEngine: Record<string, WebSearchResult[]>;
+  errors: string[];
+}> {
   const engineFns: Record<string, EngineSearchFn> = {};
   for (const engine of engines) {
     engineFns[engine] = createEngineSearchFn(engine);
@@ -342,9 +262,10 @@ export async function multiEngineWebSearch(
   const allResults: WebSearchResult[] = [];
   const perEngine: Record<string, WebSearchResult[]> = {};
   const errors: string[] = [];
+  const searchOpts: WebSearchOptions = { query, maxResults };
 
   for (const engine of engines) {
-    if (opts.signal?.aborted) break;
+    if (signal?.aborted) break;
 
     const fn = engineFns[engine];
     if (!fn) continue;
@@ -352,30 +273,55 @@ export async function multiEngineWebSearch(
     await waitIfNeeded(engine);
 
     try {
-      opts.onUpdate?.({
+      const startMs = Date.now();
+      onUpdate?.({
         content: [{ type: "text", text: `Querying ${engine}...` }],
         details: { phase: "searching", engine },
       });
 
-      const results = await fn(query, opts, opts.credentials);
+      const results = await fn(query, searchOpts, credentials);
+      const elapsedMs = Date.now() - startMs;
       engineLastCall[engine] = Date.now();
       perEngine[engine] = results;
       allResults.push(...results);
 
-      opts.onUpdate?.({
+      logger?.event("search_executed", {
+        query,
+        engine,
+        resultCount: results.length,
+        elapsedMs,
+      });
+
+      onUpdate?.({
         content: [{ type: "text", text: `${engine}: ${results.length} results` }],
         details: { phase: "done", engine, count: results.length },
       });
     } catch (err: any) {
       errors.push(`${engine}: ${err.message}`);
-      opts.onUpdate?.({
+      logger?.event("search_failed", {
+        query,
+        engine,
+        error: err.message,
+      });
+      onUpdate?.({
         content: [{ type: "text", text: `${engine}: failed — ${err.message}` }],
         details: { phase: "error", engine, error: err.message },
       });
     }
   }
 
-  // Build output markdown
+  return { allResults, perEngine, errors };
+}
+
+/** Format per-engine results as markdown. */
+function formatSearchMarkdown(
+  query: string,
+  engines: SearchEngine[],
+  allResults: WebSearchResult[],
+  perEngine: Record<string, WebSearchResult[]>,
+  errors: string[],
+  compareMode: boolean,
+): string {
   let text = "";
 
   if (compareMode && engines.length > 1) {
@@ -401,6 +347,62 @@ export async function multiEngineWebSearch(
     text += `\n---\n## Errors\n${errors.map((e) => `- ${e}`).join("\n")}\n`;
   }
 
+  return text;
+}
+
+/**
+ * Raw multi-engine web search. Returns deduped results, no markdown.
+ * Used by the research pipeline (plan_research, run_research).
+ */
+export async function searchWeb(
+  query: string,
+  maxResults: number = 5,
+  engines: SearchEngine[] = ["duckduckgo"],
+  callbacks?: SearchCallbacks,
+): Promise<WebSearchResult[]> {
+  if (!query || query.trim().length === 0) {
+    throw new Error("Error: query is required and must not be empty.");
+  }
+
+  callbacks?.onUpdate?.({
+    content: [
+      { type: "text", text: `Searching "${query}" via [${engines.join(", ")}]...` },
+    ],
+    details: { phase: "searching", engine: engines[0] },
+  });
+
+  const { allResults } = await searchAllEngines(
+    query, maxResults, engines,
+    callbacks?.signal, callbacks?.credentials,
+    callbacks?.onUpdate, callbacks?.logger,
+  );
+
+  return deduplicateByUrl(allResults);
+}
+
+/**
+ * Multi-engine web search with markdown formatting.
+ * Used by the web_search tool for user-facing output.
+ */
+export async function multiEngineWebSearch(
+  opts: WebSearchOptions,
+): Promise<WebSearchOutput> {
+  const query = opts.query;
+  const maxResults = opts.maxResults ?? 5;
+  const engines: SearchEngine[] = opts.engines ?? ["duckduckgo"];
+  const compareMode = opts.compare ?? false;
+
+  if (!query || query.trim().length === 0) {
+    throw new Error("Error: query is required and must not be empty.");
+  }
+
+  const { allResults, perEngine, errors } = await searchAllEngines(
+    query, maxResults, engines,
+    opts.signal, opts.credentials,
+    opts.onUpdate, undefined,
+  );
+
+  const text = formatSearchMarkdown(query, engines, allResults, perEngine, errors, compareMode);
   const deduped = deduplicateByUrl(allResults);
 
   return {

@@ -57,17 +57,13 @@ describe("DDG search stagger", () => {
     );
   });
 
-  it("waitIfNeeded is called BEFORE the HTTP request in searchWeb loop", () => {
-    // In searchWeb's engine loop, waitIfNeeded must be called before the HTTP call
-    const searchWebMatch = webSearchCode.match(/export async function searchWeb[\s\S]*?^export/m);
-    assert.ok(searchWebMatch, "searchWeb function must exist");
-    const fnBody = searchWebMatch[0];
+  it("waitIfNeeded is called BEFORE the HTTP request in engine loop", () => {
+    // In the engine loop (searchAllEngines), waitIfNeeded must be called before the HTTP call
+    const waitPos = webSearchCode.search(/await waitIfNeeded/);
+    const fnCallPos = webSearchCode.search(/const results = await fn\(/);
     
-    const waitPos = fnBody.search(/await waitIfNeeded/);
-    const fnCallPos = fnBody.search(/const results = await fn\(/);
-    
-    assert.ok(waitPos >= 0, "waitIfNeeded must be in searchWeb");
-    assert.ok(fnCallPos >= 0, "engine fn call must be in searchWeb");
+    assert.ok(waitPos >= 0, "waitIfNeeded must exist in web-search.ts");
+    assert.ok(fnCallPos >= 0, "engine fn call must exist in web-search.ts");
     assert.ok(
       waitPos < fnCallPos,
       `waitIfNeeded (pos ${waitPos}) must be BEFORE engine call (pos ${fnCallPos})`
