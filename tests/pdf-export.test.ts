@@ -122,6 +122,35 @@ describe("convertToPdf", () => {
 
     assert.equal(result.outputPath, explicitPdf);
   });
+
+  it("creates PDF file when pandoc is available", async () => {
+    // Mock pandoc and weasyprint via fake scripts in PATH
+    const binDir = join(tmpDir, "bin");
+    mkdirSync(binDir, { recursive: true });
+
+    // Fake pandoc: creates output file (simulates conversion)
+    writeFileSync(join(binDir, "pandoc"), "#!/bin/bash\ntouch \"$3\"\n", { mode: 0o755 });
+    writeFileSync(join(binDir, "weasyprint"), "#!/bin/bash\nexit 0\n", { mode: 0o755 });
+
+    const reportPath = join(tmpDir, "research.md");
+    const pdfPath = join(tmpDir, "research.pdf");
+    writeFileSync(reportPath, "# Research Report\n\nContent here.");
+
+    // Prepend binDir to PATH
+    const prevPath = process.env.PATH;
+    process.env.PATH = binDir + ":" + (prevPath || "");
+
+    try {
+      const mod = await import("../extension/export-pdf.js");
+      const result = await mod.convertToPdf({ reportPath, outputPath: pdfPath });
+
+      assert.equal(result.kind, "success");
+      assert.equal(result.method, "pandoc");
+      assert.ok(existsSync(pdfPath), "PDF file must exist after pandoc conversion");
+    } finally {
+      process.env.PATH = prevPath;
+    }
+  });
 });
 
 // ─── export_pdf tool registration ───────────────────────────
