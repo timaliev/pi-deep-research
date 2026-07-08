@@ -311,6 +311,8 @@ export class PrefilterSession {
     private readonly artifactsDir: string,
     private readonly profileResolver: ProfileResolver,
     private readonly searchCred?: SearchProviderCredentials,
+    private readonly searchFn: typeof SearchWebFn = searchWeb,
+    private readonly scraper: Scraper = new WebScraper(),
   ) {}
 
   /** Get existing manager or create a new one. Session entry lookup handled internally. */
@@ -334,7 +336,7 @@ export class PrefilterSession {
     const logsDir = join(this.artifactsDir, "..", "logs");
     const logger = new JsonlLogger(runId, join(logsDir, `${runId}-prefilter.log`));
     const manager = new PrefilterManager(
-      searchWeb, new WebScraper(), this.artifactsDir,
+      this.searchFn, this.scraper, this.artifactsDir,
       logger, this.profileResolver, this.searchCred, runId,
     );
     this.managers.set(runId, manager);

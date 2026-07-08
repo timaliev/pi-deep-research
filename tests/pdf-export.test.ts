@@ -210,7 +210,7 @@ describe("export_pdf tool", () => {
 /** Read index.ts source for static analysis. */
 function readIndexTs(): string {
   return readFs(
-    join(import.meta.dirname ?? ".", "..", "extension", "index.ts"),
+    join(import.meta.dirname ?? ".", "..", "extension", "tools", "export-pdf.ts"),
     "utf-8",
   );
 }
@@ -223,22 +223,30 @@ function readRunResearchTs(): string {
   );
 }
 
+/** Read orchestrator source for static analysis. */
+function readOrchestratorTs(): string {
+  return readFs(
+    join(import.meta.dirname ?? ".", "..", "extension", "research-run-orchestrator.ts"),
+    "utf-8",
+  );
+}
+
 // ─── Auto-export integration ─────────────────────────────────
 describe("auto-export after run_research done", () => {
-  it("run-research tool checks pdfExport when research completes", async () => {
-    const src = readRunResearchTs();
-    // done handler must check pdfExport setting
+  it("orchestrator checks pdfExport when research completes", async () => {
+    const src = readOrchestratorTs();
+    // buildDoneResult must check pdfExport setting
     assert.ok(
       src.includes("pdfExport"),
-      "run-research done handler must check pdfExport setting",
+      "orchestrator must check pdfExport setting",
     );
   });
 
-  it("run-research imports convertToPdf for auto-export", async () => {
-    const src = readRunResearchTs();
+  it("orchestrator imports convertToPdf for auto-export", async () => {
+    const src = readOrchestratorTs();
     assert.ok(
       src.includes("convertToPdf") || src.includes("export-pdf"),
-      "run-research must reference convertToPdf",
+      "orchestrator must reference convertToPdf",
     );
   });
 

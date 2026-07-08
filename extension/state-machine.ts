@@ -2,19 +2,19 @@ import type { ResearchPlan, ResearchPlanProfile } from "./prefilter.js";
 import { generateRunId } from "./ids.js";
 import type { Logger } from "./logger.js";
 import type { searchWeb as SearchWebFn } from "./search/web-search.js";
-import type { WebSearchResult } from "./search/web-search.js";
 import type { SearchEngine } from "./search/web-search.js";
-import type { Scraper, ScrapedPage } from "./scraper.js";
+import type { Scraper } from "./scraper.js";
 import { mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildSearchQueue, saveQueue } from "./search-queue.js";
 import type { SearchProviderCredentials } from "./settings-context.js";
 import { createReportStyle } from "./report-styles.js";
 import type { ReportStyle } from "./report-styles.js";
 import type { ProfileResolver } from "./profile-resolver.js";
 import { JsonlLogger } from "./logger.js";
 import { ResearchDraft } from "./research-draft.js";
+import { ConcurrencySemaphore } from "./concurrency.js";
+import { executeResearchRound } from "./research-round.js";
 
 /** Parameters controlling research depth and breadth. */
 export interface ResearchProfile {
@@ -58,27 +58,6 @@ export interface ResearchStateResult {
   inject?: string;
   reportPath?: string;
   error?: string;
-}
-
-/** Simple async semaphore to limit concurrency. */
-class ConcurrencySemaphore {
-  private running = 0;
-  private readonly queue: Array<() => void> = [];
-
-  constructor(private readonly limit: number) {}
-
-  async run<T>(fn: () => Promise<T>): Promise<T> {
-    while (this.running >= this.limit) {
-      await new Promise<void>((resolve) => this.queue.push(resolve));
-    }
-    this.running++;
-    try {
-      return await fn();
-    } finally {
-      this.running--;
-      this.queue.shift()?.();
-    }
-  }
 }
 
 /**
@@ -200,92 +179,39 @@ export class ResearchStateMachine {
 
     const activeQuestions = questions.slice(0, breadth);
     const semaphore = new ConcurrencySemaphore(prof.concurrency);
-    const newVisited = new Set(snapshot.allVisitedUrls);
-    const engines = plan.engines;
+    const engines = plan.engines.length > 0 ? plan.engines : ["duckduckgo"];
 
-    // Build and save search request queue for post-mortem analysis
-    const queue = buildSearchQueue(activeQuestions, engines.length > 0 ? engines : ["duckduckgo"]);
-    if (this.artifactsDir) {
-      try {
-        saveQueue(queue, join(this.artifactsDir, `queue-${snapshot.runId}-d${snapshot.currentDepth}.json`));
-        this.logger?.event("queue_saved", {
-          depth: snapshot.currentDepth,
-          entries: queue.length,
-          engines: engines.join(","),
-        });
-      } catch { /* non-critical */ }
-    }
+    const round = await executeResearchRound({
+      searchFn: this.searchFn,
+      scraper: this.scraper,
+      logger: this.logger,
+      activeQuestions,
+      maxResultsPerQuery,
+      engines: engines as any,
+      semaphore,
+      visitedUrls: new Set(snapshot.allVisitedUrls),
+      artifactsDir: this.artifactsDir,
+      runId: snapshot.runId,
+      currentDepth: snapshot.currentDepth,
+      searchCred: this.searchCred,
+    });
 
-    // Concurrent searches (pass logger but credentials come from env/settings per-engine)
-    const searchResults = await Promise.all(
-      activeQuestions.map((question) =>
-        semaphore.run(async () => {
-          const startMs = Date.now();
-          const results = await this.searchFn(question, maxResultsPerQuery, engines, { logger: this.logger, credentials: this.searchCred });
-          this.logger?.event("search_executed", {
-            query: question,
-            resultCount: results.length,
-            elapsedMs: Date.now() - startMs,
-            depth: snapshot.currentDepth,
-          });
-          snapshot.searchCalls++;
-          return { question, results };
-        })
-      )
-    );
-
-    // Collect URLs for scraping
-    const urlsToScrape: string[] = [];
-    for (const { results } of searchResults) {
-      for (const r of results.slice(0, 2)) {
-        if (!newVisited.has(r.url)) {
-          urlsToScrape.push(r.url);
-          newVisited.add(r.url);
-        }
-      }
-    }
-
-    // Concurrent scrapes
-    const scrapedResults = await Promise.all(
-      urlsToScrape.map((url) =>
-        semaphore.run(async () => {
-          try {
-            const startMs = Date.now();
-            const page = await this.scraper.scrape(url);
-            this.logger?.event("scrape_executed", {
-              url,
-              title: page.title,
-              bytes: page.content.length,
-              elapsedMs: Date.now() - startMs,
-              depth: snapshot.currentDepth,
-            });
-            snapshot.scrapeCalls++;
-            return page;
-          } catch (err: any) {
-            this.logger?.event("scrape_failed", { url, error: err.message, depth: snapshot.currentDepth });
-            return null;
-          }
-        })
-      )
-    );
-
-    const scraped: ScrapedPage[] = scrapedResults.filter(
-      (p): p is ScrapedPage => p !== null
-    );
+    snapshot.searchCalls += round.searchCalls;
+    snapshot.scrapeCalls += round.scrapeCalls;
 
     const nextDepth = snapshot.currentDepth + 1;
     const nextSnapshot: ResearchSnapshot = {
       ...snapshot,
       phase: "extracting",
       currentDepth: nextDepth,
-      allVisitedUrls: [...newVisited],
+      allVisitedUrls: [...round.newVisitedUrls],
     };
 
     // Check soft limits after this round's searches
     this.checkSoftLimits(nextSnapshot);
 
     const style = this.style!;
-    const inject = style.buildExtractionPrompt(searchResults, scraped, nextDepth, snapshot.totalDepth);
+    const inject = style.buildExtractionPrompt(round.searchResults, round.scrapedPages, nextDepth, snapshot.totalDepth);
     this.logger?.event("phase_changed", { from: "searching", to: "extracting", depth: nextDepth });
     this.logger?.event("inject_sent", { type: "extraction", length: inject.length, depth: nextDepth });
     return { phase: "extracting", snapshot: nextSnapshot, inject };
