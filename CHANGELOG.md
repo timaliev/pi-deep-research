@@ -13,6 +13,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.22.0](https://github.com/timaliev/pi-deep-research/compare/v0.21.0..v0.22.0) - 2026-07-08
+
+### Features
+
+- **(injector)** extract MindMapInjector module - ([4755a70](https://github.com/timaliev/pi-deep-research/commit/4755a703b005e1af9e4f798ab9fb81fb06ffd68d)) - Tim Aliev
+
+### Refactoring
+
+- **(orchestrator)** move post-processing to orchestrator (ADR-0016) - ([594c4b5](https://github.com/timaliev/pi-deep-research/commit/594c4b58806ed8a9dfd07703e5f0f540fd944e0c)) - Tim Aliev
+
 ## [0.21.0](https://github.com/timaliev/pi-deep-research/compare/v0.20.0..v0.21.0) - 2026-07-08
 
 ### Features
