@@ -31,6 +31,7 @@ const ENV = {
   artifactsDir: "DEEP_RESEARCH_ARTIFACTS_DIR",
   defaultProfile: "DEEP_RESEARCH_DEFAULT_PROFILE",
   pdfExport: "DEEP_RESEARCH_PDF_EXPORT",
+  mindMap: "DEEP_RESEARCH_MIND_MAP",
 } as const;
 
 // ─── Built-in defaults ─────────────────────────────────────────
@@ -47,6 +48,7 @@ export interface SettingsContextData {
   profiles: Record<string, ResearchProfile>;
   credentials: SearchProviderCredentials;
   pdfExport: boolean;
+  mindMap: boolean;
 }
 
 export interface InitParams {
@@ -64,6 +66,7 @@ export class SettingsContext implements SettingsContextData {
   readonly profiles: Record<string, ResearchProfile>;
   readonly credentials: SearchProviderCredentials;
   readonly pdfExport: boolean;
+  readonly mindMap: boolean;
 
   private constructor(params: InitParams) {
     const homeAgentDir = params.homeAgentDir ?? join(homedir(), ".pi", "agent");
@@ -95,6 +98,12 @@ export class SettingsContext implements SettingsContextData {
     this.pdfExport = envBool(ENV.pdfExport)
       ?? (localDr.pdfExport as boolean | undefined)
       ?? (globalDr.pdfExport as boolean | undefined)
+      ?? false;
+
+    // ─── mindMap: env → local → global → built-in false ─────
+    this.mindMap = envBool(ENV.mindMap)
+      ?? (localDr.mindMap as boolean | undefined)
+      ?? (globalDr.mindMap as boolean | undefined)
       ?? false;
 
     // ─── Profiles: local → global → built-in (no env) ────────
