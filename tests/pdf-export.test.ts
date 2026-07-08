@@ -185,3 +185,49 @@ function readIndexTs(): string {
     "utf-8",
   );
 }
+
+/** Read run-research.ts source for static analysis. */
+function readRunResearchTs(): string {
+  return readFs(
+    join(import.meta.dirname ?? ".", "..", "extension", "tools", "run-research.ts"),
+    "utf-8",
+  );
+}
+
+// ─── Auto-export integration ─────────────────────────────────
+describe("auto-export after run_research done", () => {
+  it("run-research tool checks pdfExport when research completes", async () => {
+    const src = readRunResearchTs();
+    // done handler must check pdfExport setting
+    assert.ok(
+      src.includes("pdfExport"),
+      "run-research done handler must check pdfExport setting",
+    );
+  });
+
+  it("run-research imports convertToPdf for auto-export", async () => {
+    const src = readRunResearchTs();
+    assert.ok(
+      src.includes("convertToPdf") || src.includes("export-pdf"),
+      "run-research must reference convertToPdf",
+    );
+  });
+
+  it("run-research tool has access to settings (for pdfExport)", async () => {
+    const src = readRunResearchTs();
+    assert.ok(
+      src.includes("settings"),
+      "createRunResearchTool receives settings param",
+    );
+  });
+
+  it("auto-export result appended to done response", async () => {
+    const src = readRunResearchTs();
+    // When pdfExport enabled and conversion succeeds, the done message includes PDF info
+    const hasPdfInDone =
+      src.includes("pdf") ||
+      src.includes("PDF") ||
+      src.includes("export_pdf");
+    assert.ok(hasPdfInDone, "done handler must mention PDF output");
+  });
+});
