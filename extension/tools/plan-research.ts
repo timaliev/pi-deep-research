@@ -1,20 +1,25 @@
 import { Type } from "typebox";
 import { mkdirSync } from "node:fs";
 import type { SearchEngine } from "../search/web-search.js";
+import { searchWeb } from "../search/web-search.js";
+import type { searchWeb as SearchWebFn } from "../search/web-search.js";
 import { PrefilterManager, PrefilterSession } from "../prefilter.js";
 import type { ResearchPlanProfile } from "../prefilter.js";
 import type { ProfileResolver } from "../profile-resolver.js";
 import type { SearchProviderCredentials } from "../settings-context.js";
 import type { SettingsContext } from "../settings-context.js";
+import type { Scraper } from "../scraper.js";
 
 export function createPlanResearchTool(
   pi: any,
   settings: SettingsContext,
   profileResolver: ProfileResolver,
   searchCred: SearchProviderCredentials,
+  scraper: Scraper,
+  searchFn: typeof SearchWebFn = searchWeb,
 ) {
   const session = new PrefilterSession(
-    settings.artifactsDir, profileResolver, searchCred,
+    settings.artifactsDir, profileResolver, searchCred, searchFn, scraper,
   );
 
   return {
