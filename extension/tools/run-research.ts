@@ -1,18 +1,13 @@
 import { Type } from "typebox";
-import { searchWeb } from "../search/web-search.js";
-import { WebScraper } from "../scraper.js";
 import { ResearchRunOrchestrator } from "../research-run-orchestrator.js";
 import { assembleReport } from "../report-assembly.js";
-import type { ProfileResolver } from "../profile-resolver.js";
-import type { SearchProviderCredentials } from "../search-providers.js";
 import type { SettingsContext } from "../settings-context.js";
 import type { SessionState } from "../session-state.js";
 
 export function createRunResearchTool(
   pi: any,
+  orchestrator: ResearchRunOrchestrator,
   settings: SettingsContext,
-  profileResolver: ProfileResolver,
-  searchCred: SearchProviderCredentials,
   session: SessionState,
 ) {
   return {
@@ -24,15 +19,6 @@ export function createRunResearchTool(
       plan_artifact_path: Type.Optional(Type.String({ description: "Path to prefilter.json (first call only)" })),
     }),
     async execute(_toolCallId: string, params: any, _signal: any, _onUpdate: any, ctx: any) {
-      const orchestrator = new ResearchRunOrchestrator({
-        searchFn: searchWeb,
-        scraper: new WebScraper(),
-        profileResolver,
-        artifactsDir: settings.artifactsDir,
-        searchCred,
-        saveState: (snapshot, extra) => session.saveState(snapshot, extra),
-      });
-
       const entries = ctx.sessionManager.getEntries();
 
       // Confirmation gate — only for first call

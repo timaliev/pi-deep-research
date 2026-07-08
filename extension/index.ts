@@ -11,6 +11,7 @@ import { WebScraper } from "./scraper.js";
 import { SettingsContext } from "./settings-context.js";
 import { ProfileResolver } from "./profile-resolver.js";
 import { SessionState } from "./session-state.js";
+import { ResearchRunOrchestrator } from "./research-run-orchestrator.js";
 import { createRunResearchTool } from "./tools/run-research.js";
 import { createPlanResearchTool } from "./tools/plan-research.js";
 import { createSaveReportTool } from "./tools/save-report.js";
@@ -30,6 +31,16 @@ export default function (pi: ExtensionAPI) {
   const artifactsDir = settings.artifactsDir;
   const searchCred = settings.credentials;
   const session = new SessionState({ appendEntry: pi.appendEntry.bind(pi) });
+
+  // Construct orchestrator once — shared across all run_research invocations
+  const orchestrator = new ResearchRunOrchestrator({
+    searchFn: searchWeb,
+    scraper: new WebScraper(),
+    profileResolver,
+    artifactsDir: settings.artifactsDir,
+    searchCred,
+    saveState: (snapshot, extra) => session.saveState(snapshot, extra),
+  });
 
   // Contribute the skill file
   pi.on("resources_discover", () => ({
@@ -173,5 +184,5 @@ Use "compare" mode to see results from each engine separately without deduplicat
   });
 
   // === TOOL: run_research ===
-  pi.registerTool(createRunResearchTool(pi, settings, profileResolver, searchCred, session));
+  pi.registerTool(createRunResearchTool(pi, orchestrator, settings, session));
 }
