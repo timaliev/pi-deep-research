@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync } from "node:fs";
-import { dirname } from "node:path";
-import { execSync } from "node:child_process";
+import { dirname, basename } from "node:path";
+import { execSync, execFileSync } from "node:child_process";
 
 export interface ConvertToPdfParams {
   reportPath: string;
@@ -35,20 +35,25 @@ export async function convertToPdf(params: ConvertToPdfParams): Promise<ConvertT
   mkdirSync(dirname(outputPath), { recursive: true });
 
   // Pre-flight: check system tools
-  const pandocOk = which("pandoc");
-  const weasyOk = which("weasyprint");
+  const pandocOk = commandExists("pandoc");
+  const weasyOk = commandExists("weasyprint");
 
   if (pandocOk && weasyOk) {
     // Primary: pandoc + weasyprint
     try {
       const topic = extractTopic(reportPath);
-      const mermaidOk = which("mermaid-filter");
-      const filterArg = mermaidOk ? " --filter mermaid-filter" : "";
+      const mermaidOk = commandExists("mermaid-filter");
 
-      const cmd =
-        `pandoc "${reportPath}" -o "${outputPath}" --pdf-engine=weasyprint -f markdown --metadata title="Research: ${topic}"${filterArg}`;
+      const args = [
+        reportPath,
+        "-o", outputPath,
+        "--pdf-engine=weasyprint",
+        "-f", "markdown",
+        "--metadata", `title=Research: ${topic}`,
+      ];
+      if (mermaidOk) args.push("--filter", "mermaid-filter");
 
-      execSync(cmd, { timeout: 30_000 });
+      execFileSync("pandoc", args, { timeout: 30_000 });
 
       return {
         kind: "success",
@@ -80,10 +85,13 @@ export async function convertToPdf(params: ConvertToPdfParams): Promise<ConvertT
   };
 }
 
-/** Check if a command is available in PATH. */
-function which(cmd: string): boolean {
+/** Check if a command is available. Cross-platform (Unix `which` / Windows `where`). */
+function commandExists(cmd: string): boolean {
   try {
-    execSync(`which ${cmd}`, { stdio: "ignore" });
+    execSync(
+      process.platform === "win32" ? `where ${cmd}` : `which ${cmd}`,
+      { stdio: "ignore" },
+    );
     return true;
   } catch {
     return false;
@@ -92,7 +100,7 @@ function which(cmd: string): boolean {
 
 /** Extract a human-readable topic from a report filename. */
 function extractTopic(path: string): string {
-  const base = path.split("/").pop() ?? path;
+  const base = basename(path);
   // Strip date prefix and .md extension
   return base
     .replace(/^\d{4}-\d{2}-\d{2}-/, "")

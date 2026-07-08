@@ -128,7 +128,7 @@ describe("convertToPdf", () => {
     const binDir = join(tmpDir, "bin");
     mkdirSync(binDir, { recursive: true });
 
-    // Fake pandoc: creates output file (simulates conversion)
+    // Fake pandoc: creates output file (arg order: reportPath, -o, outputPath, ...)
     writeFileSync(join(binDir, "pandoc"), "#!/bin/bash\ntouch \"$3\"\n", { mode: 0o755 });
     writeFileSync(join(binDir, "weasyprint"), "#!/bin/bash\nexit 0\n", { mode: 0o755 });
 
