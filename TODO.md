@@ -47,6 +47,12 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 - TODO: read `cred?.get("searxng", "url")` in searxng adapter to prepend custom URL to instance list.
 - TODO: custom instance has no fallback to public instances (privacy).
 
+### Search engine allowlist
+
+- TODO: add `enabledEngines` field to `SettingsContext` — env `DEEP_RESEARCH_ENABLED_ENGINES` (comma-separated) or `deepResearch.enabledEngines` in settings.json. Absent/empty = all configured engines enabled (backward compat).
+- TODO: update `buildEngineStatus()` to AND the enabled list into availability: `(hasKey \|\| isFree) && (inList \|\| listNotSet)`.
+- TODO: listed engine without key → ❌ "needs key" (existing). Has key but not in list → ❌ "not enabled" (new).
+
 ### ADR-0017: LLM introspection + source-tagged questions (designed 2026-07-09)
 
 - TODO: add `introspectionDone` flag and LLM introspection substate to `PrefilterManager` / `PrefilterSession`.
