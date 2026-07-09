@@ -17,9 +17,6 @@
     "check": "biome check extension/ tests/",
     "check:fix": "biome check --write extension/ tests/"
   },
-  "devDependencies": {
-    "@biomejs/biome": "^1.9.4"
-  },
   "pi": {
     "extensions": [
       "./extension/index.ts"
