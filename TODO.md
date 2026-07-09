@@ -33,6 +33,17 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 - TODO: add source-type breakdown rows (Web/Local/MCP counts) to `buildTelemetrySection()`.
 - TODO: update `buildParamsPrompt` and `buildPlanPrompt` to mention MCP/local sources in prefilter flow.
 
+### ADR-0017: LLM introspection + source-tagged questions (designed 2026-07-09)
+
+- TODO: add `introspectionDone` flag and LLM introspection substate to `PrefilterManager` / `PrefilterSession`.
+- TODO: add LLM introspection injection prompt to `prefilter-prompts.ts` — agent proposes topics from internal knowledge with confidence/importance.
+- TODO: add merge injection prompt to `prefilter-prompts.ts` — merge LLM topics with web search results, tag sources, flag contradictions.
+- TODO: extend `plan_research` tool to dispatch introspection turn (Turn 1: with params_json → inject introspection; Turn 2: no params → run search + inject merge).
+- TODO: add `questionMetadata?: Record<string, {source, confidence, importance, contradictionOf?, debatableFact?}>` to ResearchPlan.
+- TODO: extend subtopics drafting prompt topic tiers: 0-4q → 5-7, 5-7q → 8-12, 8+q → 12-20.
+- TODO: add post-report contradiction analysis in `ResearchRunOrchestrator` — gated by presence of contradiction flags, inject analysis prompt, append `## Contradictions & Debatable Facts` to report.
+- FUTURE: Question 8 — runtime consumption of questionMetadata (priority ordering, prompt enrichment based on confidence).
+
 ### Default report style (implemented 2026-07-09)
 
 - DONE: add `reportStyle` field to `SettingsContext` — cascade: env `DEEP_RESEARCH_REPORT_STYLE` → local settings.json `deepResearch.defaultReportStyle` → global settings.json → `"narrative"`.
