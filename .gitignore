@@ -5,9 +5,6 @@
 extension/node_modules/
 node_modules/
 
-# Lockfile (generated)
-package-lock.json
-
 # Generated artifacts  
 /deep-research/
 
