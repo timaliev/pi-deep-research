@@ -13,6 +13,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.23.0](https://github.com/timaliev/pi-deep-research/compare/v0.22.0..v0.23.0) - 2026-07-09
+
+### Features
+
+- **(ci)** add biome lint/format with GitHub Actions workflow - ([54ad923](https://github.com/timaliev/pi-deep-research/commit/54ad923924b4275161d8c68b4c8a20bd51a7f273)) - Tim Aliev
+- **(report)** add profile listing and repository link to telemetry - ([27f741a](https://github.com/timaliev/pi-deep-research/commit/27f741ab91512dab120daad345337c284411d55a)) - Tim Aliev
+- **(report)** add configurable default report style - ([1dd761c](https://github.com/timaliev/pi-deep-research/commit/1dd761cb58aa84a020f03a03b3bafcfa57a08485)) - Tim Aliev
+
+### Bug Fixes
+
+- **(ci)** add package-lock.json for npm ci in GitHub Actions - ([9f97cbe](https://github.com/timaliev/pi-deep-research/commit/9f97cbe108c9786cee30ffb9401820c655685498)) - Tim Aliev
+- **(engines)** remove utils.ts pass-through module - ([e42abd1](https://github.com/timaliev/pi-deep-research/commit/e42abd16cd7b15430a5b4433b007455e2810ba41)) - Tim Aliev
+
+### Refactoring
+
+- **(prefilter)** extract prompt builders into prefilter-prompts.ts - ([e14acb0](https://github.com/timaliev/pi-deep-research/commit/e14acb0caa9c248c832ee3a5dedcc26bfaab3162)) - Tim Aliev
+- **(prefilter)** add continue() method, state-driven dispatch - ([cdbcd8c](https://github.com/timaliev/pi-deep-research/commit/cdbcd8c7b7c21549fe5fb919d9e5af365bcf2337)) - Tim Aliev
+- **(search)** remove redundant waitIfNeeded from searchAllEngines - ([28aa3a6](https://github.com/timaliev/pi-deep-research/commit/28aa3a605724f076a5a68fcc184060923443ab09)) - Tim Aliev
+- **(search)** extract RateLimiter module - ([37169dd](https://github.com/timaliev/pi-deep-research/commit/37169dd7b2abc92d839bcf38aa96eeb40a905c19)) - Tim Aliev
+- **(tools)** de-duplicate artifact-not-found guard - ([b887155](https://github.com/timaliev/pi-deep-research/commit/b8871551b53d0b9ec2f5cefca0f2026a6262ba72)) - Tim Aliev
+- **(tools)** consolidate tool factory dependency injection - ([4d45021](https://github.com/timaliev/pi-deep-research/commit/4d45021fab7cc0a84d6b173442abd9d5615526ed)) - Tim Aliev
+
+### Documentation
+
+- update ADR statuses and TODO.md - ([5d51098](https://github.com/timaliev/pi-deep-research/commit/5d51098043c6a08203a18b3b2c9c039da2705c8d)) - Tim Aliev
+- add ADR-0017 LLM introspection design, update TODO.md - ([2fdcc06](https://github.com/timaliev/pi-deep-research/commit/2fdcc0625ad71aff5dab5945d9035d9e676cad00)) - Tim Aliev
+
+### Miscellaneous Chores
+
+- **(build)** add pretest biome lint hook - ([8a57009](https://github.com/timaliev/pi-deep-research/commit/8a57009f9e82c8269915a4e63f05f4243c1bab12)) - Tim Aliev
+- **(build)** remove duplicate devDependencies block - ([c3bc28b](https://github.com/timaliev/pi-deep-research/commit/c3bc28bb40c02f4af94c9b4433eda07c088c3cfe)) - Tim Aliev
+- add node_modules/ and package-lock.json to gitignore - ([269e784](https://github.com/timaliev/pi-deep-research/commit/269e784c103f8430d8baf08f7e6aa4ac2e6972a6)) - Tim Aliev
+
 ## [0.22.0](https://github.com/timaliev/pi-deep-research/compare/v0.21.0..v0.22.0) - 2026-07-08
 
 ### Features
