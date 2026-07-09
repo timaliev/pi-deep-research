@@ -57,16 +57,23 @@ describe("DDG search stagger", () => {
     );
   });
 
-  it("waitIfNeeded is called BEFORE the HTTP request in engine loop", () => {
-    // In the engine loop (searchAllEngines), waitIfNeeded must be called before the HTTP call
-    const waitPos = webSearchCode.search(/await waitIfNeeded/);
-    const fnCallPos = webSearchCode.search(/const results = await fn\(/);
-    
-    assert.ok(waitPos >= 0, "waitIfNeeded must exist in web-search.ts");
-    assert.ok(fnCallPos >= 0, "engine fn call must exist in web-search.ts");
+  it("each adapter calls waitIfNeeded BEFORE HTTP request", () => {
+    // waitIfNeeded moved from searchAllEngines into each adapter's search()
+    // Verify in brave.ts as representative adapter
+    const braveCode = readFileSync(
+      join(import.meta.dirname ?? ".", "..", "extension", "search", "engines", "brave.ts"),
+      "utf-8"
+    );
+    const fnMatch = braveCode.match(/export async function search[\s\S]*?^}/m);
+    assert.ok(fnMatch, "search function must exist in brave.ts");
+    const fnBody = fnMatch[0];
+    const waitPos = fnBody.search(/await waitIfNeeded/);
+    const httpPos = fnBody.search(/searchBrave\(/);
+    assert.ok(waitPos >= 0, "waitIfNeeded must exist in brave.ts search()");
+    assert.ok(httpPos >= 0, "searchBrave call must exist in brave.ts search()");
     assert.ok(
-      waitPos < fnCallPos,
-      `waitIfNeeded (pos ${waitPos}) must be BEFORE engine call (pos ${fnCallPos})`
+      waitPos < httpPos,
+      `waitIfNeeded (pos ${waitPos}) must be BEFORE searchBrave HTTP call (pos ${httpPos})`
     );
   });
 });

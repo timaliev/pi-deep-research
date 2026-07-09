@@ -270,8 +270,6 @@ async function searchAllEngines(
     const fn = engineFns[engine];
     if (!fn) continue;
 
-    await waitIfNeeded(engine);
-
     try {
       const startMs = Date.now();
       onUpdate?.({
@@ -382,7 +380,7 @@ export async function searchWeb(
 
 /**
  * Multi-engine web search with markdown formatting.
- * Used by the web_search tool for user-facing output.
+ * Used by the deep_web_search tool for user-facing output.
  */
 export async function multiEngineWebSearch(
   opts: WebSearchOptions,
