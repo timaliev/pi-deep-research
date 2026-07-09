@@ -33,6 +33,14 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 - TODO: add source-type breakdown rows (Web/Local/MCP counts) to `buildTelemetrySection()`.
 - TODO: update `buildParamsPrompt` and `buildPlanPrompt` to mention MCP/local sources in prefilter flow.
 
+### ADR-0018: Release monitor on session start (designed 2026-07-09)
+
+- TODO: create `extension/release-monitor.ts` — checkForNewRelease(sendUserMessage) with 6-hour cooldown.
+- TODO: wire `pi.on("session_start", ...)` in `extension/index.ts`.
+- TODO: GitHub API call `GET /repos/timaliev/pi-deep-research/releases/latest`, unauthenticated.
+- TODO: version comparison — GitHub `tag_name` vs local `package.json` `version`.
+- TODO: notify via `pi.sendUserMessage()` only if newer version exists.
+
 ### ADR-0017: LLM introspection + source-tagged questions (designed 2026-07-09)
 
 - TODO: add `introspectionDone` flag and LLM introspection substate to `PrefilterManager` / `PrefilterSession`.
