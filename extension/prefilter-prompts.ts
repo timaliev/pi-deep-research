@@ -55,11 +55,15 @@ export function buildPlanPrompt(
   resolvedBreadth: number,
   resolvedDepth: number,
   resolvedConcurrency: number,
-  profileNames: string,
+  presets: Record<string, { breadth: number; depth: number; concurrency: number }>,
   searchResults: WebSearchResult[],
   scrapedContent: ScrapedPage[],
 ): string {
-  let p = `## Research Planning\n\nTopic: ${topic}\nEngines: [${engines.join(", ")}]\nProfile: ${profileName} (breadth=${resolvedBreadth}, depth=${resolvedDepth}, concurrency=${resolvedConcurrency})\n\nYou may change the profile in the plan JSON — use any named preset (${profileNames}) or custom with breadth/depth/concurrency. Pick the profile that best fits this research.\n\n### Preliminary Search\n\n`;
+  const profileList = Object.entries(presets)
+    .map(([name, p]) => `  ${name}: breadth=${p.breadth}, depth=${p.depth}, concurrency=${p.concurrency}`)
+    .join("\n");
+
+  let p = `## Research Planning\n\nTopic: ${topic}\nEngines: [${engines.join(", ")}]\nProfile: ${profileName} (breadth=${resolvedBreadth}, depth=${resolvedDepth}, concurrency=${resolvedConcurrency})\n\nYou may change the profile in the plan JSON. Available profiles:\n${profileList}\n  custom: specify breadth, depth, concurrency\n\nPick the profile that best fits this research.\n\n### Preliminary Search\n\n`;
   for (const r of searchResults) p += `- [${r.title}](${r.url}): ${r.snippet}\n`;
   if (scrapedContent.length > 0) {
     p += `\n### Scraped Content\n\n`;

@@ -152,7 +152,7 @@ export class PrefilterManager {
     const inject = buildPlanPrompt(
       topic, engines, profile.name,
       resolved.breadth, resolved.depth, resolved.concurrency,
-      this.profileResolver.listNames().join("/"),
+      this.profileResolver.getPresets(),
       searchResults, scrapedContent,
     );
     return { phase: "awaiting_plan", runId, inject, engines, profile, searchResults, scrapedContent };

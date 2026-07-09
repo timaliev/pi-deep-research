@@ -52,11 +52,11 @@ export function assembleReport(params: ReportAssemblyParams): string {
 
   const reportText = snapshot.draft.get();
 
-  const ver = extensionVersion ?? readExtensionVersion();
-  const telemetry = buildTelemetrySection(snapshot, ver, [
+  const meta = extensionVersion ? { version: extensionVersion } : readExtensionMeta();
+  const telemetry = buildTelemetrySection(snapshot, meta.version, [
     planArtifactPath,
     join(logsDir, `${snapshot.runId}.log`),
-  ], profileName);
+  ], profileName, undefined, meta.repoUrl);
 
   writeReportFile(reportPath, reportText, telemetry);
 
@@ -64,7 +64,7 @@ export function assembleReport(params: ReportAssemblyParams): string {
 }
 
 /** Build a telemetry summary section to append to the final report. */
-export function buildTelemetrySection(snapshot: ResearchSnapshot, extensionVersion?: string, artifactLinks?: string[], profileName?: string, reportStyle?: string): string {
+export function buildTelemetrySection(snapshot: ResearchSnapshot, extensionVersion?: string, artifactLinks?: string[], profileName?: string, reportStyle?: string, extensionRepoUrl?: string): string {
   const durationSec = Math.round((Date.now() - snapshot.startedAt) / 1000);
   const durationStr =
     durationSec < 60
@@ -79,6 +79,9 @@ export function buildTelemetrySection(snapshot: ResearchSnapshot, extensionVersi
   ];
   if (extensionVersion) {
     rows.push(`| Pi Extension version | \`${extensionVersion}\` |`);
+  }
+  if (extensionRepoUrl) {
+    rows.push(`| Pi Extension repository | ${extensionRepoUrl} |`);
   }
   if (profileName && prof) {
     rows.push(`| Profile | ${profileName} |`);
@@ -115,14 +118,17 @@ export function buildTelemetrySection(snapshot: ResearchSnapshot, extensionVersi
 const reportAssemblyDir = dirname(fileURLToPath(import.meta.url));
 const rootPkgPath = join(reportAssemblyDir, "..", "package.json");
 
-/** Read extension version from root package.json. Returns undefined if unreadable. */
-export function readExtensionVersion(pkgPath?: string): string | undefined {
+/** Read extension version and repository URL from root package.json. Returns undefined fields if unreadable. */
+export function readExtensionMeta(pkgPath?: string): { version?: string; repoUrl?: string } {
   try {
     const path = pkgPath ?? rootPkgPath;
-    if (!existsSync(path)) return undefined;
+    if (!existsSync(path)) return {};
     const pkg = JSON.parse(readFileSync(path, "utf-8"));
-    return pkg.version || undefined;
+    return {
+      version: pkg.version || undefined,
+      repoUrl: pkg.repository?.url || undefined,
+    };
   } catch {
-    return undefined;
+    return {};
   }
 }
