@@ -1,7 +1,7 @@
 # ADR-0016: Move post-processing to orchestrator, extract MindMapInjector
 
 **Date:** 2026-07-09
-**Status:** proposed
+**Status:** accepted ✓ (implemented 2026-07-09)
 
 ## Context
 
