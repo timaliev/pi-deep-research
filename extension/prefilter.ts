@@ -10,6 +10,13 @@ import type { SearchEngine } from "./search/web-search.js";
 import type { Scraper, ScrapedPage } from "./scraper.js";
 import { ProfileResolver } from "./profile-resolver.js";
 import type { SearchProviderCredentials } from "./settings-context.js";
+import {
+  buildSearchQuery,
+  buildEngineStatus,
+  buildApiKeyWarning,
+  buildParamsPrompt,
+  buildPlanPrompt,
+} from "./prefilter-prompts.js";
 
 export interface ResearchPlanProfile {
   name: "default" | "fast" | "deep" | "custom";
@@ -107,7 +114,12 @@ export class PrefilterManager {
   async start(topic: string): Promise<PrefilterResult> {
     const runId = this.runId();
     this.logger?.event("prefilter_started", { topic });
-    const inject = this.buildParamsPrompt(topic);
+    const inject = buildParamsPrompt(
+      topic,
+      this.profileResolver.getPresets(),
+      this.profileResolver?.defaultProfileName ?? "default",
+      buildEngineStatus(this.searchCred),
+    );
     return { phase: "awaiting_params", runId, inject };
   }
 
@@ -118,11 +130,11 @@ export class PrefilterManager {
 
     const missingKeys = this.checkApiKeys(engines);
     if (missingKeys.length > 0) {
-      const inject = this.buildApiKeyWarning(missingKeys);
+      const inject = buildApiKeyWarning(missingKeys);
       return { phase: "awaiting_params", runId, inject, engines, profile };
     }
 
-    const searchQuery = this.buildSearchQuery(topic);
+    const searchQuery = buildSearchQuery(topic);
     const searchResults = await this.searchFn(searchQuery, 3, engines, { logger: this.logger, credentials: this.searchCred });
     this.lastSearchResultCount = searchResults.length;
 
@@ -136,7 +148,13 @@ export class PrefilterManager {
       } catch { /* skip */ }
     }
 
-    const inject = this.buildPlanPrompt(topic, engines, profile, searchResults, scrapedContent);
+    const resolved = this.profileResolver.resolve(profile);
+    const inject = buildPlanPrompt(
+      topic, engines, profile.name,
+      resolved.breadth, resolved.depth, resolved.concurrency,
+      this.profileResolver.listNames().join("/"),
+      searchResults, scrapedContent,
+    );
     return { phase: "awaiting_plan", runId, inject, engines, profile, searchResults, scrapedContent };
   }
 
@@ -185,7 +203,7 @@ export class PrefilterManager {
       inputTopic: topic,
       plan,
       preliminarySearch: {
-        query: this.buildSearchQuery(topic),
+        query: buildSearchQuery(topic),
         resultsCount: this.lastSearchResultCount,
         scrapedUrls: this.lastScrapedUrls,
       },
@@ -204,11 +222,6 @@ export class PrefilterManager {
       planArtifactPath: artifactPath,
       plan,
     };
-  }
-
-  private buildSearchQuery(topic: string): string {
-    // Normalize topic into a web search query
-    return topic.trim().replace(/\s+/g, " ").substring(0, 300);
   }
 
   private validatePlan(plan: unknown): string | null {
@@ -254,52 +267,6 @@ export class PrefilterManager {
       if (!hasToken || !hasFolder) missing.push("YANDEX_OAUTH_TOKEN, YANDEX_FOLDER_ID");
     }
     return missing;
-  }
-
-  private buildParamsPrompt(topic: string): string {
-    const presets = Object.entries(this.profileResolver.getPresets())
-        .map(([name, p]) => `  ${name}: breadth=${p.breadth}, depth=${p.depth}, concurrency=${p.concurrency}`)
-        .join("\n");
-    const defaultName = this.profileResolver?.defaultProfileName ?? "default";
-
-    // Check which engines have API keys configured
-    const engineStatus = this.buildEngineStatus();
-
-    return `## Research Parameters\n\nTopic: ${topic}\n\nChoose search engines, profile, and report style. Reply with JSON:\n\`\`\`json\n{"engines":["duckduckgo"],"profile":{"name":"${defaultName}"},"reportStyle":"narrative"}\n\`\`\`\n\nEngine availability:\n${engineStatus}\n\nAvailable profiles (default: **${defaultName}**):\n${presets}\n  custom: specify breadth, depth, concurrency\n\nReport styles:\n  narrative — fixed 5-section template (Introduction/Findings/Analysis/Recommendations/Sources)\n  subtopics — LLM discovers 5–10 thematic sections from findings\n\nYou may change the profile or report style later during plan creation.`;
-  }
-
-  private buildEngineStatus(): string {
-    const engines: Array<{ name: string; key: string; available: boolean }> = [
-      { name: "duckduckgo", key: "none", available: true },
-      { name: "brave", key: "BRAVE_API_KEY", available: this.searchCred?.get("brave", "apiKey") != null },
-      { name: "tavily", key: "TAVILY_API_KEY", available: this.searchCred?.get("tavily", "apiKey") != null },
-      { name: "yandex", key: "YANDEX_OAUTH_TOKEN", available: this.searchCred?.get("yandex", "oauthToken") != null },
-      { name: "searxng", key: "none", available: true },
-    ];
-    return engines
-      .map((e) => `  ${e.available ? "✅" : "❌"} ${e.name}${e.key !== "none" ? ` (needs ${e.key})` : ""}`)
-      .join("\n");
-  }
-
-  private buildApiKeyWarning(missing: string[]): string {
-    return `## API Key Required\n\nMissing: ${missing.join(", ")}. Set env vars and retry, or switch to duckduckgo.`;
-  }
-
-  private buildPlanPrompt(
-    topic: string, engines: SearchEngine[], profile: ResearchPlanProfile,
-    searchResults: WebSearchResult[], scrapedContent: ScrapedPage[],
-  ): string {
-    const resolved = this.profileResolver.resolve(profile);
-    const profileNames = this.profileResolver.listNames().join("/");
-    let p = `## Research Planning\n\nTopic: ${topic}\nEngines: [${engines.join(", ")}]\nProfile: ${profile.name} (breadth=${resolved.breadth}, depth=${resolved.depth}, concurrency=${resolved.concurrency})\n\nYou may change the profile in the plan JSON — use any named preset (${profileNames}) or custom with breadth/depth/concurrency. Pick the profile that best fits this research.\n\n### Preliminary Search\n\n`;
-    for (const r of searchResults) p += `- [${r.title}](${r.url}): ${r.snippet}\n`;
-    if (scrapedContent.length > 0) {
-      p += `\n### Scraped Content\n\n`;
-      for (const sp of scrapedContent) p += `**${sp.title}** (${sp.url})\n\n${sp.content.substring(0, 800)}\n\n---\n`;
-    }
-    p += `\n### Instructions\n\nProduce research plan JSON:
-\`\`\`json\n{"topic":"${topic}","goal":"...","researchQuestions":["Q1"],"engines":${JSON.stringify(engines)},"profile":${JSON.stringify(profile)},"scope":{"include":"...","exclude":"..."},"estimatedCost":{"searchCalls":12,"scrapeCalls":8,"description":"~12 searches"}}\n\`\`\`\n\nSet reportStyle to \"narrative\" (fixed 5-section) or \"subtopics\" (LLM discovers thematic sections). Output ONLY JSON.`;
-    return p;
   }
 }
 
