@@ -1,10 +1,10 @@
-import { ProfileResolver } from "../extension/profile-resolver.js";
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { ResearchStateMachine } from "../extension/state-machine.js";
+import { describe, it } from "node:test";
 import type { ResearchPlan } from "../extension/prefilter.js";
+import { ProfileResolver } from "../extension/profile-resolver.js";
+import type { ScrapedPage, Scraper } from "../extension/scraper.js";
 import type { WebSearchResult } from "../extension/search/web-search.js";
-import type { Scraper, ScrapedPage } from "../extension/scraper.js";
+import { ResearchStateMachine } from "../extension/state-machine.js";
 
 const MOCK_PLAN: ResearchPlan = {
   topic: "State machines in TypeScript",
@@ -21,14 +21,20 @@ const MOCK_RESULTS: WebSearchResult[] = [
   { title: "Robot", url: "https://thisrobot.life", snippet: "Lightweight FSM.", engine: "duckduckgo" },
 ];
 
-function mockSearchFn() { return async () => MOCK_RESULTS; }
+function mockSearchFn() {
+  return async () => MOCK_RESULTS;
+}
 function mockScraper(): Scraper {
   const pages = new Map<string, ScrapedPage>();
   pages.set("https://xstate.js.org", { url: "https://xstate.js.org", title: "XState", content: "State machines." });
   pages.set("https://thisrobot.life", { url: "https://thisrobot.life", title: "Robot", content: "Lightweight FSM." });
-  return { async scrape(url: string) {
-    const p = pages.get(url); if (!p) throw new Error(`No mock for ${url}`); return p;
-  }};
+  return {
+    async scrape(url: string) {
+      const p = pages.get(url);
+      if (!p) throw new Error(`No mock for ${url}`);
+      return p;
+    },
+  };
 }
 
 describe("ResearchStateMachine", () => {
@@ -37,26 +43,42 @@ describe("ResearchStateMachine", () => {
     let s = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
     assert.equal(s.phase, "searching");
 
-    let r = await machine.next(s, MOCK_PLAN); assert.equal(r.phase, "extracting"); s = r.snapshot;
+    let r = await machine.next(s, MOCK_PLAN);
+    assert.equal(r.phase, "extracting");
+    s = r.snapshot;
     assert.equal(s.currentDepth, 1);
 
-    r = await machine.next(s, MOCK_PLAN); assert.equal(r.phase, "questioning"); s = r.snapshot;
+    r = await machine.next(s, MOCK_PLAN);
+    assert.equal(r.phase, "questioning");
+    s = r.snapshot;
 
-    r = await machine.next(s, MOCK_PLAN); assert.equal(r.phase, "extracting"); s = r.snapshot;
+    r = await machine.next(s, MOCK_PLAN);
+    assert.equal(r.phase, "extracting");
+    s = r.snapshot;
     assert.equal(s.currentDepth, 2);
 
-    r = await machine.next(s, MOCK_PLAN); assert.equal(r.phase, "drafting"); s = r.snapshot;
+    r = await machine.next(s, MOCK_PLAN);
+    assert.equal(r.phase, "drafting");
+    s = r.snapshot;
 
-    r = await machine.next(s, MOCK_PLAN, "# Research Report\n\nThis is a comprehensive research report with detailed findings."); assert.equal(r.phase, "saving"); s = r.snapshot;
+    r = await machine.next(
+      s,
+      MOCK_PLAN,
+      "# Research Report\n\nThis is a comprehensive research report with detailed findings.",
+    );
+    assert.equal(r.phase, "saving");
+    s = r.snapshot;
 
-    r = await machine.next(s, MOCK_PLAN); assert.equal(r.phase, "done");
+    r = await machine.next(s, MOCK_PLAN);
+    assert.equal(r.phase, "done");
 
-    r = await machine.next(r.snapshot, MOCK_PLAN); assert.equal(r.phase, "done");
+    r = await machine.next(r.snapshot, MOCK_PLAN);
+    assert.equal(r.phase, "done");
   });
 
   it("accumulates search calls across iterations", async () => {
     const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper() });
-    let s = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
+    const s = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
     let r = await machine.next(s, MOCK_PLAN);
     const after = r.snapshot.searchCalls;
     assert.ok(after >= 2);
@@ -68,10 +90,14 @@ describe("ResearchStateMachine", () => {
   it("generates inject prompts at each phase", async () => {
     const machine = new ResearchStateMachine({ searchFn: mockSearchFn(), scraper: mockScraper() });
     const s = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
-    let r = await machine.next(s, MOCK_PLAN); assert.ok(r.inject!.includes("Extraction"));
-    r = await machine.next(r.snapshot, MOCK_PLAN); assert.ok(r.inject!.includes("Deepening"));
-    r = await machine.next(r.snapshot, MOCK_PLAN); assert.ok(r.inject!.includes("Extraction"));
-    r = await machine.next(r.snapshot, MOCK_PLAN); assert.ok(r.inject!.includes("Final Report"));
+    let r = await machine.next(s, MOCK_PLAN);
+    assert.ok(r.inject!.includes("Extraction"));
+    r = await machine.next(r.snapshot, MOCK_PLAN);
+    assert.ok(r.inject!.includes("Deepening"));
+    r = await machine.next(r.snapshot, MOCK_PLAN);
+    assert.ok(r.inject!.includes("Extraction"));
+    r = await machine.next(r.snapshot, MOCK_PLAN);
+    assert.ok(r.inject!.includes("Final Report"));
   });
 
   it("stays in done on repeated calls", async () => {
@@ -82,7 +108,13 @@ describe("ResearchStateMachine", () => {
     let s = ResearchStateMachine.init(depth1Plan, new ProfileResolver({}, "default"));
     s = (await machine.next(s, depth1Plan)).snapshot;
     s = (await machine.next(s, depth1Plan)).snapshot;
-    s = (await machine.next(s, depth1Plan, "# Research Report\n\nThis is a comprehensive detailed research report with all findings.")).snapshot;
+    s = (
+      await machine.next(
+        s,
+        depth1Plan,
+        "# Research Report\n\nThis is a comprehensive detailed research report with all findings.",
+      )
+    ).snapshot;
     s = (await machine.next(s, depth1Plan)).snapshot;
     assert.equal(s.phase, "done");
     const r = await machine.next(s, depth1Plan);

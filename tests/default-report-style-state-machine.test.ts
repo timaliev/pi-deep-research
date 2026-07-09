@@ -1,7 +1,7 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { ResearchStateMachine } from "../extension/state-machine.js";
+import { describe, it } from "node:test";
 import { ProfileResolver } from "../extension/profile-resolver.js";
+import { ResearchStateMachine } from "../extension/state-machine.js";
 
 function makePlan(overrides?: Partial<any>): any {
   return {

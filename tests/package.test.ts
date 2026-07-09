@@ -1,7 +1,7 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { describe, it } from "node:test";
 
 const repoRoot = join(import.meta.dirname ?? ".", "..");
 
@@ -16,13 +16,13 @@ describe("Package installation", () => {
     assert.ok(pkg.pi.extensions.length > 0, "must have at least one extension entry");
     assert.ok(
       pkg.pi.extensions.some((e: string) => e.includes("index.ts")),
-      "must point to an index.ts file"
+      "must point to an index.ts file",
     );
     assert.ok(Array.isArray(pkg.pi.skills), "pi.skills must be an array");
     assert.ok(pkg.pi.skills.length > 0, "must have at least one skill entry");
     assert.ok(
       pkg.pi.skills.some((s: string) => s.includes("skill")),
-      "must point to the skill directory"
+      "must point to the skill directory",
     );
   });
 
@@ -32,7 +32,7 @@ describe("Package installation", () => {
     assert.equal(
       pkg.dependencies?.["duck-duck-scrape"],
       undefined,
-      "duck-duck-scrape should not be a dependency (unused since unified search)"
+      "duck-duck-scrape should not be a dependency (unused since unified search)",
     );
   });
 });

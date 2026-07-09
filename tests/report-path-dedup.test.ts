@@ -1,5 +1,5 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import { topicToSlug } from "../extension/slug.js";
 
 describe("topicToSlug", () => {
@@ -57,8 +57,7 @@ describe("report path consistency", () => {
     const autoSaveSlug = topicToSlug(planTopic);
     const saveReportSlug = topicToSlug(saveReportTopic);
 
-    assert.notEqual(autoSaveSlug, saveReportSlug,
-      "abbreviated topic must produce different slug than full plan topic");
+    assert.notEqual(autoSaveSlug, saveReportSlug, "abbreviated topic must produce different slug than full plan topic");
   });
 });
 
@@ -70,17 +69,14 @@ describe("resolveSaveReportPath", () => {
   it("uses stored reportPath from state, ignoring params.topic", () => {
     const storedReportPath = "/tmp/reports/2026-06-26-rynok-bytovyh-trenazhyorov-v-rf.md";
 
-    const mockEntries = [
-      { customType: STATE_KEY, data: { path: storedReportPath } },
-    ];
+    const mockEntries = [{ customType: STATE_KEY, data: { path: storedReportPath } }];
 
     const paramsTopic = "эллиптические тренажеры РФ"; // different from plan
     const runId = "20260630-191202";
 
     const resolved = resolveSaveReportPath(paramsTopic, runId, mockEntries);
 
-    assert.equal(resolved, storedReportPath,
-      "must use stored reportPath from state, not derive from params.topic");
+    assert.equal(resolved, storedReportPath, "must use stored reportPath from state, not derive from params.topic");
   });
 
   it("falls back to runId-based filename when no state entry exists", () => {
@@ -90,8 +86,7 @@ describe("resolveSaveReportPath", () => {
 
     const resolved = resolveSaveReportPath(paramsTopic, runId, []);
 
-    assert.ok(resolved.endsWith(`${runId}-${expectedSlug}.md`),
-      `must use runId-slug format, got: ${resolved}`);
+    assert.ok(resolved.endsWith(`${runId}-${expectedSlug}.md`), `must use runId-slug format, got: ${resolved}`);
     assert.ok(resolved.includes(expectedSlug));
   });
 

@@ -1,8 +1,8 @@
-import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, rmSync, writeFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, it } from "node:test";
 
 // Real env keys (must match settings-context.ts)
 const ENV_KEYS = {
@@ -156,9 +156,9 @@ describe("SettingsContext — unified settings cascade", () => {
     const { SettingsContext } = await import("../extension/settings-context.js");
     const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
 
-    assert.equal(ctx.profiles.custom.breadth, 5);  // from global
-    assert.equal(ctx.profiles.custom.depth, 10);    // from local (wins over global 5)
-    assert.equal(ctx.profiles.fast.breadth, 3);     // from global
+    assert.equal(ctx.profiles.custom.breadth, 5); // from global
+    assert.equal(ctx.profiles.custom.depth, 10); // from local (wins over global 5)
+    assert.equal(ctx.profiles.fast.breadth, 3); // from global
     assert.equal(ctx.profiles.experimental.breadth, 8); // new profile from local
   });
 

@@ -16,10 +16,7 @@ export interface QueuedSearch {
 }
 
 /** Build a queue of search requests, round-robining engines across questions. */
-export function buildSearchQueue(
-  questions: string[],
-  engines: string[],
-): QueuedSearch[] {
+export function buildSearchQueue(questions: string[], engines: string[]): QueuedSearch[] {
   const now = new Date().toISOString();
   const queue: QueuedSearch[] = [];
 

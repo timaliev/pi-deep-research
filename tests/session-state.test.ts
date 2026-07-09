@@ -1,15 +1,23 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { ResearchDraft } from "../extension/research-draft.js";
 import { SessionState } from "../extension/session-state.js";
 import type { ResearchSnapshot } from "../extension/state-machine.js";
-import { ResearchDraft } from "../extension/research-draft.js";
 
 describe("SessionState — persistence seam", () => {
   function makeSnapshot(): ResearchSnapshot {
     return {
-      phase: "saving", runId: "r1", currentDepth: 1, totalDepth: 2,
-      allFindings: [], allVisitedUrls: [], draft: new ResearchDraft("long report...".repeat(10)),
-      reportPath: "", searchCalls: 5, scrapeCalls: 8, startedAt: Date.now(),
+      phase: "saving",
+      runId: "r1",
+      currentDepth: 1,
+      totalDepth: 2,
+      allFindings: [],
+      allVisitedUrls: [],
+      draft: new ResearchDraft("long report...".repeat(10)),
+      reportPath: "",
+      searchCalls: 5,
+      scrapeCalls: 8,
+      startedAt: Date.now(),
       softLimitTriggered: false,
     };
   }

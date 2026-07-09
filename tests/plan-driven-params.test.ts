@@ -1,10 +1,10 @@
-import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { afterEach, beforeEach, describe, it } from "node:test";
 import { PrefilterManager } from "../extension/prefilter.js";
+import type { ScrapedPage, Scraper } from "../extension/scraper.js";
 import type { WebSearchResult } from "../extension/search/web-search.js";
-import type { Scraper, ScrapedPage } from "../extension/scraper.js";
 
 const TEST_ARTIFACTS = join(import.meta.dirname ?? ".", "..", "test-artifacts-params");
 
@@ -23,20 +23,37 @@ function mockScraper(pages: Map<string, ScrapedPage>): Scraper {
 }
 
 const MOCK_RESULTS: WebSearchResult[] = [
-  { title: "XState Docs", url: "https://xstate.js.org/docs/", snippet: "State machines for JS/TS.", engine: "duckduckgo" },
+  {
+    title: "XState Docs",
+    url: "https://xstate.js.org/docs/",
+    snippet: "State machines for JS/TS.",
+    engine: "duckduckgo",
+  },
   { title: "Refactoring.Guru", url: "https://refactoring.guru/", snippet: "Design patterns.", engine: "duckduckgo" },
 ];
 
 function mockScrapedPages(): Map<string, ScrapedPage> {
   const m = new Map<string, ScrapedPage>();
-  m.set("https://xstate.js.org/docs/", { url: "https://xstate.js.org/docs/", title: "XState", content: "State machines..." });
-  m.set("https://refactoring.guru/", { url: "https://refactoring.guru/", title: "Refactoring", content: "Design patterns..." });
+  m.set("https://xstate.js.org/docs/", {
+    url: "https://xstate.js.org/docs/",
+    title: "XState",
+    content: "State machines...",
+  });
+  m.set("https://refactoring.guru/", {
+    url: "https://refactoring.guru/",
+    title: "Refactoring",
+    content: "Design patterns...",
+  });
   return m;
 }
 
 describe("PrefilterManager — plan-driven params", () => {
-  beforeEach(() => { mkdirSync(TEST_ARTIFACTS, { recursive: true }); });
-  afterEach(() => { if (existsSync(TEST_ARTIFACTS)) rmSync(TEST_ARTIFACTS, { recursive: true, force: true }); });
+  beforeEach(() => {
+    mkdirSync(TEST_ARTIFACTS, { recursive: true });
+  });
+  afterEach(() => {
+    if (existsSync(TEST_ARTIFACTS)) rmSync(TEST_ARTIFACTS, { recursive: true, force: true });
+  });
 
   it("start() returns awaiting_params with params inject prompt", async () => {
     const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
@@ -68,8 +85,10 @@ describe("PrefilterManager — plan-driven params", () => {
     assert.ok(r1.inject!.includes("breadth"), "must show breadth");
     assert.ok(r1.inject!.includes("depth"), "must show depth");
     assert.ok(r1.inject!.includes("concurrency"), "must show concurrency");
-    assert.ok(r1.inject!.includes("change") || r1.inject!.includes("override") || r1.inject!.includes("adjust"),
-      "must indicate profile can be changed");
+    assert.ok(
+      r1.inject!.includes("change") || r1.inject!.includes("override") || r1.inject!.includes("adjust"),
+      "must indicate profile can be changed",
+    );
 
     // Test with custom profile
     const r2 = await manager.withParams("test", ["duckduckgo"], { name: "custom", breadth: 8, depth: 3 });
@@ -97,7 +116,9 @@ describe("PrefilterManager — plan-driven params", () => {
 
     // Missing engines
     const badPlan = JSON.stringify({
-      topic: "test", goal: "test", researchQuestions: ["q"],
+      topic: "test",
+      goal: "test",
+      researchQuestions: ["q"],
       scope: { include: "a", exclude: "b" },
       profile: { name: "default" },
       estimatedCost: { searchCalls: 1, scrapeCalls: 1, description: "" },
@@ -112,7 +133,9 @@ describe("PrefilterManager — plan-driven params", () => {
     const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
 
     const badPlan = JSON.stringify({
-      topic: "test", goal: "test", researchQuestions: ["q"],
+      topic: "test",
+      goal: "test",
+      researchQuestions: ["q"],
       engines: ["duckduckgo"],
       scope: { include: "a", exclude: "b" },
       profile: { name: "invalid" },
@@ -128,7 +151,9 @@ describe("PrefilterManager — plan-driven params", () => {
     const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
 
     const badPlan = JSON.stringify({
-      topic: "test", goal: "test", researchQuestions: ["q"],
+      topic: "test",
+      goal: "test",
+      researchQuestions: ["q"],
       engines: ["duckduckgo"],
       scope: { include: "a", exclude: "b" },
       profile: { name: "custom" },
@@ -146,7 +171,9 @@ describe("PrefilterManager — plan-driven params", () => {
     await manager.start("test");
 
     const validPlan = JSON.stringify({
-      topic: "test", goal: "test goal", researchQuestions: ["q1", "q2", "q3"],
+      topic: "test",
+      goal: "test goal",
+      researchQuestions: ["q1", "q2", "q3"],
       engines: ["duckduckgo"],
       scope: { include: "a", exclude: "b" },
       profile: { name: "deep" },

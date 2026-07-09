@@ -1,7 +1,7 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { WebScraper } from "../extension/scraper.js";
+import { describe, it } from "node:test";
 import type { ScrapedPage } from "../extension/scraper.js";
+import { WebScraper } from "../extension/scraper.js";
 
 const MOCK_HTML = `<!DOCTYPE html>
 <html lang="en">
@@ -47,10 +47,7 @@ describe("Scraper", () => {
 
       assert.ok(page.title.includes("State Machine Pattern"));
       assert.ok(page.title.includes("TypeScript"));
-      assert.ok(
-        !page.title.includes("<"),
-        "title should not contain HTML tags"
-      );
+      assert.ok(!page.title.includes("<"), "title should not contain HTML tags");
     });
 
     it("extracts readable text content", async () => {
@@ -58,14 +55,8 @@ describe("Scraper", () => {
       const page = await scraper.scrape("https://refactoring.guru/state");
 
       // Should contain article text
-      assert.ok(
-        page.content.includes("State pattern allows an object"),
-        "should contain article paragraph text"
-      );
-      assert.ok(
-        page.content.includes("Gang of Four"),
-        "should contain blockquote text"
-      );
+      assert.ok(page.content.includes("State pattern allows an object"), "should contain article paragraph text");
+      assert.ok(page.content.includes("Gang of Four"), "should contain blockquote text");
     });
 
     it("strips HTML tags from content", async () => {
@@ -104,50 +95,149 @@ describe("Scraper", () => {
       await assert.rejects(
         () => scraper.scrape("https://example.com"),
         /Network error/,
-        "should propagate fetch errors"
+        "should propagate fetch errors",
       );
     });
 
     it("throws on non-200 status", async () => {
-      const notFound = async () =>
-        new Response("Not Found", { status: 404 });
+      const notFound = async () => new Response("Not Found", { status: 404 });
       const scraper = new WebScraper(notFound);
 
-      await assert.rejects(
-        () => scraper.scrape("https://example.com/missing"),
-        /404/,
-        "should throw on 404"
-      );
+      await assert.rejects(() => scraper.scrape("https://example.com/missing"), /404/, "should throw on 404");
     });
 
     it("decodes windows-1251 Cyrillic when charset only in meta tag", async () => {
       // Real windows-1251 encoded HTML (Cyrillic: Тест = test, Привет мир = hello world)
       // Build windows-1251 byte sequence manually
       const html1251 = Buffer.from([
-        0x3C, 0x21, 0x44, 0x4F, 0x43, 0x54, 0x59, 0x50, 0x45, 0x20, // <!DOCTYPE
-        0x68, 0x74, 0x6D, 0x6C, 0x3E, 0x3C, 0x68, 0x74, 0x6D, 0x6C, // html><html
-        0x3E, 0x3C, 0x68, 0x65, 0x61, 0x64, 0x3E, // ><head>
-        0x3C, 0x6D, 0x65, 0x74, 0x61, 0x20, 0x63, 0x68, 0x61, 0x72, 0x73, 0x65, 0x74, 0x3D, 0x22, 0x77, 0x69, 0x6E, 0x64, 0x6F, 0x77, 0x73, 0x2D, 0x31, 0x32, 0x35, 0x31, 0x22, 0x3E, // <meta charset="windows-1251">
-        0x3C, 0x74, 0x69, 0x74, 0x6C, 0x65, 0x3E, // <title>
-        0xD2, 0xE5, 0xF1, 0xF2, // Тест (windows-1251)
-        0x3C, 0x2F, 0x74, 0x69, 0x74, 0x6C, 0x65, 0x3E, // </title>
-        0x3C, 0x2F, 0x68, 0x65, 0x61, 0x64, 0x3E, 0x3C, 0x62, 0x6F, 0x64, 0x79, 0x3E, // </head><body>
-        0xCF, 0xF0, 0xE8, 0xE2, 0xE5, 0xF2, 0x20, 0xEC, 0xE8, 0xF0, // Привет мир (windows-1251)
-        0x3C, 0x2F, 0x62, 0x6F, 0x64, 0x79, 0x3E, 0x3C, 0x2F, 0x68, 0x74, 0x6D, 0x6C, 0x3E, // </body></html>
+        0x3c,
+        0x21,
+        0x44,
+        0x4f,
+        0x43,
+        0x54,
+        0x59,
+        0x50,
+        0x45,
+        0x20, // <!DOCTYPE
+        0x68,
+        0x74,
+        0x6d,
+        0x6c,
+        0x3e,
+        0x3c,
+        0x68,
+        0x74,
+        0x6d,
+        0x6c, // html><html
+        0x3e,
+        0x3c,
+        0x68,
+        0x65,
+        0x61,
+        0x64,
+        0x3e, // ><head>
+        0x3c,
+        0x6d,
+        0x65,
+        0x74,
+        0x61,
+        0x20,
+        0x63,
+        0x68,
+        0x61,
+        0x72,
+        0x73,
+        0x65,
+        0x74,
+        0x3d,
+        0x22,
+        0x77,
+        0x69,
+        0x6e,
+        0x64,
+        0x6f,
+        0x77,
+        0x73,
+        0x2d,
+        0x31,
+        0x32,
+        0x35,
+        0x31,
+        0x22,
+        0x3e, // <meta charset="windows-1251">
+        0x3c,
+        0x74,
+        0x69,
+        0x74,
+        0x6c,
+        0x65,
+        0x3e, // <title>
+        0xd2,
+        0xe5,
+        0xf1,
+        0xf2, // Тест (windows-1251)
+        0x3c,
+        0x2f,
+        0x74,
+        0x69,
+        0x74,
+        0x6c,
+        0x65,
+        0x3e, // </title>
+        0x3c,
+        0x2f,
+        0x68,
+        0x65,
+        0x61,
+        0x64,
+        0x3e,
+        0x3c,
+        0x62,
+        0x6f,
+        0x64,
+        0x79,
+        0x3e, // </head><body>
+        0xcf,
+        0xf0,
+        0xe8,
+        0xe2,
+        0xe5,
+        0xf2,
+        0x20,
+        0xec,
+        0xe8,
+        0xf0, // Привет мир (windows-1251)
+        0x3c,
+        0x2f,
+        0x62,
+        0x6f,
+        0x64,
+        0x79,
+        0x3e,
+        0x3c,
+        0x2f,
+        0x68,
+        0x74,
+        0x6d,
+        0x6c,
+        0x3e, // </body></html>
       ]);
 
       const fetchFn = async () =>
         new Response(new Uint8Array(html1251), {
           status: 200,
-          headers: { "Content-Type": "text/html" },  // no charset — bytes are windows-1251 but server doesn't say
+          headers: { "Content-Type": "text/html" }, // no charset — bytes are windows-1251 but server doesn't say
         });
 
       const scraper = new WebScraper(fetchFn);
       const page = await scraper.scrape("https://example.com/cyrillic");
 
       assert.equal(page.title, "Тест", `title must decode, got: ${page.title}`);
-      assert.ok(page.content.includes("Привет мир"),
-        `content must contain decoded Cyrillic, got: ${page.content.slice(0, 80)}`);
+      assert.ok(
+        page.content.includes("Привет мир"),
+        `content must contain decoded Cyrillic, got: ${page.content.slice(0, 80)}`,
+      );
     });
   });
 });

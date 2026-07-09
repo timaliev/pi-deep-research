@@ -1,8 +1,8 @@
-import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, rmSync, writeFileSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, it } from "node:test";
 
 // ─── Settings: mindMap ───────────────────────────────────────
 describe("mindMap setting", () => {
@@ -32,24 +32,15 @@ describe("mindMap setting", () => {
   });
 
   it("reads from global settings", async () => {
-    writeFileSync(
-      join(tmpHome, ".pi", "agent", "settings.json"),
-      JSON.stringify({ deepResearch: { mindMap: true } }),
-    );
+    writeFileSync(join(tmpHome, ".pi", "agent", "settings.json"), JSON.stringify({ deepResearch: { mindMap: true } }));
     const { SettingsContext } = await import("../extension/settings-context.js");
     const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
     assert.equal(ctx.mindMap, true);
   });
 
   it("local settings override global", async () => {
-    writeFileSync(
-      join(tmpHome, ".pi", "agent", "settings.json"),
-      JSON.stringify({ deepResearch: { mindMap: true } }),
-    );
-    writeFileSync(
-      join(tmpCwd, ".pi", "settings.json"),
-      JSON.stringify({ deepResearch: { mindMap: false } }),
-    );
+    writeFileSync(join(tmpHome, ".pi", "agent", "settings.json"), JSON.stringify({ deepResearch: { mindMap: true } }));
+    writeFileSync(join(tmpCwd, ".pi", "settings.json"), JSON.stringify({ deepResearch: { mindMap: false } }));
     const { SettingsContext } = await import("../extension/settings-context.js");
     const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
     assert.equal(ctx.mindMap, false);
@@ -57,10 +48,7 @@ describe("mindMap setting", () => {
 
   it("env DEEP_RESEARCH_MIND_MAP overrides all", async () => {
     process.env.DEEP_RESEARCH_MIND_MAP = "true";
-    writeFileSync(
-      join(tmpCwd, ".pi", "settings.json"),
-      JSON.stringify({ deepResearch: { mindMap: false } }),
-    );
+    writeFileSync(join(tmpCwd, ".pi", "settings.json"), JSON.stringify({ deepResearch: { mindMap: false } }));
     const { SettingsContext } = await import("../extension/settings-context.js");
     const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
     assert.equal(ctx.mindMap, true);
@@ -69,10 +57,8 @@ describe("mindMap setting", () => {
 
 // ─── mind_map tool registration ─────────────────────────────
 describe("mind_map tool", () => {
-  const readIndex = () => readFileSync(
-    join(import.meta.dirname ?? ".", "..", "extension", "tools", "mind-map.ts"),
-    "utf-8",
-  );
+  const readIndex = () =>
+    readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "mind-map.ts"), "utf-8");
 
   it("tool is registered as createMindMapTool in tools/mind-map.ts", () => {
     const src = readIndex();
@@ -88,10 +74,7 @@ describe("mind_map tool", () => {
 
   it("tool sends injection prompt via pi.sendUserMessage", () => {
     const src = readIndex();
-    assert.ok(
-      src.includes("sendUserMessage"),
-      "must inject prompt via pi.sendUserMessage",
-    );
+    assert.ok(src.includes("sendUserMessage"), "must inject prompt via pi.sendUserMessage");
   });
 
   it("injection prompt includes Mermaid graph TD instruction", () => {
@@ -105,25 +88,17 @@ describe("mind_map tool", () => {
 
 // ─── Auto mind-map after run_research done ──────────────────
 describe("auto mind-map after run_research done", () => {
-  const readRunResearch = () => readFileSync(
-    join(import.meta.dirname ?? ".", "..", "extension", "tools", "run-research.ts"),
-    "utf-8",
-  );
+  const readRunResearch = () =>
+    readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "run-research.ts"), "utf-8");
 
   it("run-research tool checks mindMap setting on done", () => {
     const src = readRunResearch();
-    assert.ok(
-      src.includes("mindMap"),
-      "run-research done handler must check mindMap setting",
-    );
+    assert.ok(src.includes("mindMap"), "run-research done handler must check mindMap setting");
   });
 
   it("run-research tool imports settings for mindMap check", () => {
     const src = readRunResearch();
-    assert.ok(
-      src.includes("settings"),
-      "createRunResearchTool receives settings param",
-    );
+    assert.ok(src.includes("settings"), "createRunResearchTool receives settings param");
   });
 
   it("auto mind-map injects prompt via pi.sendUserMessage", () => {

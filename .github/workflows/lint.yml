@@ -1,0 +1,21 @@
+name: Lint & Format
+
+on:
+  pull_request:
+    branches: [develop, master, release]
+  push:
+    branches: [develop]
+
+jobs:
+  biome:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Lint
+        run: npx biome lint extension/ tests/ --max-diagnostics=50
+      - name: Format check
+        run: npx biome format extension/ tests/

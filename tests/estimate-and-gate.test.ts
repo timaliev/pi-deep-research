@@ -1,13 +1,13 @@
-import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, rmSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { ResearchStateMachine } from "../extension/state-machine.js";
-import { ProfileResolver } from "../extension/profile-resolver.js";
+import { afterEach, beforeEach, describe, it } from "node:test";
+import type { PrefilterArtifact, ResearchPlan } from "../extension/prefilter.js";
 import { PrefilterManager } from "../extension/prefilter.js";
-import type { ResearchPlan, PrefilterArtifact } from "../extension/prefilter.js";
+import { ProfileResolver } from "../extension/profile-resolver.js";
+import type { ScrapedPage, Scraper } from "../extension/scraper.js";
 import type { WebSearchResult } from "../extension/search/web-search.js";
-import type { Scraper, ScrapedPage } from "../extension/scraper.js";
+import { ResearchStateMachine } from "../extension/state-machine.js";
 
 const TEST_DIR = join(import.meta.dirname ?? ".", "..", "test-estimate-and-gate");
 
@@ -24,9 +24,7 @@ function mockScraper(pages: Map<string, ScrapedPage>): Scraper {
   };
 }
 
-const MOCK_RESULTS: WebSearchResult[] = [
-  { title: "A", url: "https://a.com", snippet: "...", engine: "duckduckgo" },
-];
+const MOCK_RESULTS: WebSearchResult[] = [{ title: "A", url: "https://a.com", snippet: "...", engine: "duckduckgo" }];
 
 // ─── Fix 1: scrape estimate formula ──────────────────────────────
 
@@ -36,7 +34,8 @@ describe("estimate_research_cost scrape ratio", () => {
     // Real data (12 searches → 17 scrapes = 1.42x)
     // New formula must be ≤ 1.5x to avoid scaring users with 288 scrape estimates
     const plan: ResearchPlan = {
-      topic: "test", goal: "test",
+      topic: "test",
+      goal: "test",
       researchQuestions: ["q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8"],
       engines: ["duckduckgo"],
       profile: { name: "deep" },
@@ -52,13 +51,16 @@ describe("estimate_research_cost scrape ratio", () => {
 
     const estScrapes = estimateScrapeCalls(estSearches, profile.breadth, profile.depth);
     assert.ok(estScrapes < estSearches * 2, `scrapes=${estScrapes} must be < ${estSearches * 2}`);
-    assert.ok(estScrapes <= Math.ceil(estSearches * 1.5),
-      `scrapes=${estScrapes} must be ≤ ${Math.ceil(estSearches * 1.5)}`);
+    assert.ok(
+      estScrapes <= Math.ceil(estSearches * 1.5),
+      `scrapes=${estScrapes} must be ≤ ${Math.ceil(estSearches * 1.5)}`,
+    );
   });
 
   it("low breadth+questions still scales reasonably", () => {
     const plan: ResearchPlan = {
-      topic: "test", goal: "test",
+      topic: "test",
+      goal: "test",
       researchQuestions: ["q1", "q2", "q3"],
       engines: ["duckduckgo"],
       profile: { name: "fast" },
@@ -80,15 +82,20 @@ describe("estimate_research_cost scrape ratio", () => {
 // ─── Fix 2: confirmation gate ────────────────────────────────────
 
 describe("run_research confirmation gate", () => {
-  beforeEach(() => { mkdirSync(TEST_DIR, { recursive: true }); });
-  afterEach(() => { if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true }); });
+  beforeEach(() => {
+    mkdirSync(TEST_DIR, { recursive: true });
+  });
+  afterEach(() => {
+    if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true });
+  });
 
   function createArtifact(planOverrides?: Partial<ResearchPlan>): string {
     const artifactsDir = join(TEST_DIR, "artifacts");
     mkdirSync(artifactsDir, { recursive: true });
 
     const plan: ResearchPlan = {
-      topic: "test", goal: "test",
+      topic: "test",
+      goal: "test",
       researchQuestions: ["q1"],
       engines: ["duckduckgo"],
       profile: { name: "default" },
@@ -118,7 +125,7 @@ describe("run_research confirmation gate", () => {
     assert.equal(confirmed, false, "no entries → not confirmed");
 
     const confirmedEntries = [
-      { customType: "deep-research:plan-confirmed", data: { planArtifactPath: "/tmp/test.json" } }
+      { customType: "deep-research:plan-confirmed", data: { planArtifactPath: "/tmp/test.json" } },
     ];
     assert.equal(checkConfirmationState(confirmedEntries), true);
   });
@@ -129,15 +136,15 @@ describe("run_research confirmation gate", () => {
 
     const result = validateRunResearchGate(artifactPath, entries);
     assert.equal(result.allowed, false, "must reject unconfirmed plan");
-    assert.ok(result.reason!.includes("confirm") || result.reason!.includes("user"),
-      `reason must mention confirmation, got: ${result.reason}`);
+    assert.ok(
+      result.reason!.includes("confirm") || result.reason!.includes("user"),
+      `reason must mention confirmation, got: ${result.reason}`,
+    );
   });
 
   it("validateRunResearch allows confirmed plan", () => {
     const artifactPath = createArtifact();
-    const entries = [
-      { customType: "deep-research:plan-confirmed", data: { planArtifactPath: artifactPath } }
-    ];
+    const entries = [{ customType: "deep-research:plan-confirmed", data: { planArtifactPath: artifactPath } }];
 
     const result = validateRunResearchGate(artifactPath, entries);
     assert.equal(result.allowed, true);
@@ -145,9 +152,7 @@ describe("run_research confirmation gate", () => {
 
   it("validateRunResearch rejects when confirmed for different plan", () => {
     const artifactPath = createArtifact();
-    const entries = [
-      { customType: "deep-research:plan-confirmed", data: { planArtifactPath: "/other/plan.json" } }
-    ];
+    const entries = [{ customType: "deep-research:plan-confirmed", data: { planArtifactPath: "/other/plan.json" } }];
 
     const result = validateRunResearchGate(artifactPath, entries);
     assert.equal(result.allowed, false, "must reject — confirmation is for different plan");
@@ -165,9 +170,7 @@ function estimateScrapeCalls(estSearches: number, breadth: number, depth: number
 
 const CONFIRMATION_KEY = "deep-research:plan-confirmed";
 
-function checkConfirmationState(
-  entries: Array<{ customType?: string; data?: Record<string, unknown> }>,
-): boolean {
+function checkConfirmationState(entries: Array<{ customType?: string; data?: Record<string, unknown> }>): boolean {
   return entries.some((e) => e.customType === CONFIRMATION_KEY);
 }
 
@@ -177,7 +180,11 @@ function validateRunResearchGate(
 ): { allowed: boolean; reason?: string } {
   const confirmation = [...entries].reverse().find((e) => e.customType === CONFIRMATION_KEY);
   if (!confirmation) {
-    return { allowed: false, reason: "Research plan not confirmed by user. Present the plan and cost estimate, ask for explicit approval, then call confirm_research before run_research." };
+    return {
+      allowed: false,
+      reason:
+        "Research plan not confirmed by user. Present the plan and cost estimate, ask for explicit approval, then call confirm_research before run_research.",
+    };
   }
   const confirmedPath = confirmation.data?.planArtifactPath as string | undefined;
   if (confirmedPath && confirmedPath !== planArtifactPath) {

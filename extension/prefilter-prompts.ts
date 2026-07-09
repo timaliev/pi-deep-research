@@ -4,9 +4,9 @@
  * Pure functions — no state, no side effects.
  * Extracted from PrefilterManager to enable isolated testing and iteration.
  */
-import type { SearchEngine } from "../search/web-search.js";
-import type { WebSearchResult } from "../search/web-search.js";
+
 import type { ScrapedPage } from "../scraper.js";
+import type { SearchEngine, WebSearchResult } from "../search/web-search.js";
 import type { SearchProviderCredentials } from "../settings-context.js";
 
 /** Build the seed search query from a topic string. */

@@ -1,17 +1,15 @@
 /**
- * Test that web_search tool StringEnum includes all supported search engines.
+ * Test that deep_web_search tool StringEnum includes all supported search engines.
  */
-import { describe, it } from "node:test";
+
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { describe, it } from "node:test";
 
-const indexCode = readFileSync(
-  join(import.meta.dirname ?? ".", "..", "extension", "tools", "web-search.ts"),
-  "utf-8"
-);
+const indexCode = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "web-search.ts"), "utf-8");
 
-describe("web_search tool registration", () => {
+describe("deep_web_search tool registration", () => {
   it("StringEnum includes duckduckgo, brave, searxng, tavily, yandex", () => {
     const match = indexCode.match(/StringEnum\(\[([^\]]+)\]/);
     assert.ok(match, "StringEnum for engines must exist");

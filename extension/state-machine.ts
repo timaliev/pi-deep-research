@@ -1,20 +1,19 @@
-import type { ResearchPlan, ResearchPlanProfile } from "./prefilter.js";
+import { mkdirSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { ConcurrencySemaphore } from "./concurrency.js";
 import { generateRunId } from "./ids.js";
 import type { Logger } from "./logger.js";
-import type { searchWeb as SearchWebFn } from "./search/web-search.js";
-import type { SearchEngine } from "./search/web-search.js";
-import type { Scraper } from "./scraper.js";
-import { mkdirSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-import type { SearchProviderCredentials } from "./settings-context.js";
-import { createReportStyle } from "./report-styles.js";
-import type { ReportStyle } from "./report-styles.js";
-import type { ProfileResolver } from "./profile-resolver.js";
 import { JsonlLogger } from "./logger.js";
+import type { ResearchPlan, ResearchPlanProfile } from "./prefilter.js";
+import type { ProfileResolver } from "./profile-resolver.js";
+import type { ReportStyle } from "./report-styles.js";
+import { createReportStyle } from "./report-styles.js";
 import { ResearchDraft } from "./research-draft.js";
-import { ConcurrencySemaphore } from "./concurrency.js";
 import { executeResearchRound } from "./research-round.js";
+import type { Scraper } from "./scraper.js";
+import type { SearchEngine, searchWeb as SearchWebFn } from "./search/web-search.js";
+import type { SearchProviderCredentials } from "./settings-context.js";
 
 /** Parameters controlling research depth and breadth. */
 export interface ResearchProfile {
@@ -133,12 +132,18 @@ export class ResearchStateMachine {
     }
     // Agent response already parsed by orchestrator — phase handlers receive clean text or undefined
     switch (snapshot.phase) {
-      case "searching":  return this.doSearching(snapshot, plan);
-      case "extracting": return this.doExtracting(snapshot, plan);
-      case "questioning": return this.doQuestioning(snapshot, plan, agentResponse);
-      case "drafting":   return this.doDrafting(snapshot, plan, agentResponse);
-      case "saving":     return this.doSaving(snapshot, agentResponse);
-      case "done":       return { phase: "done", snapshot };
+      case "searching":
+        return this.doSearching(snapshot, plan);
+      case "extracting":
+        return this.doExtracting(snapshot, plan);
+      case "questioning":
+        return this.doQuestioning(snapshot, plan, agentResponse);
+      case "drafting":
+        return this.doDrafting(snapshot, plan, agentResponse);
+      case "saving":
+        return this.doSaving(snapshot, agentResponse);
+      case "done":
+        return { phase: "done", snapshot };
     }
   }
 
@@ -149,8 +154,7 @@ export class ResearchStateMachine {
     const maxSec = prof.maxElapsedSeconds ?? 0;
     if (
       !snapshot.softLimitTriggered &&
-      ((maxCalls > 0 && snapshot.searchCalls >= maxCalls) ||
-       (maxSec > 0 && elapsed >= maxSec))
+      ((maxCalls > 0 && snapshot.searchCalls >= maxCalls) || (maxSec > 0 && elapsed >= maxSec))
     ) {
       snapshot.softLimitTriggered = true;
       this.logger?.event("soft_limit_triggered", {
@@ -162,10 +166,7 @@ export class ResearchStateMachine {
     }
   }
 
-  private async doSearching(
-    snapshot: ResearchSnapshot,
-    plan: ResearchPlan
-  ): Promise<ResearchStateResult> {
+  private async doSearching(snapshot: ResearchSnapshot, plan: ResearchPlan): Promise<ResearchStateResult> {
     const prof = snapshot.profile!;
     // Use plan research questions for iteration 0, agent's follow-up questions for later iterations
     const questions =
@@ -177,9 +178,7 @@ export class ResearchStateMachine {
 
     // When soft-limited: fewer queries, fewer results per query
     const maxResultsPerQuery = snapshot.softLimitTriggered ? 2 : 3;
-    const breadth = snapshot.softLimitTriggered
-      ? Math.min(2, prof.breadth)
-      : prof.breadth;
+    const breadth = snapshot.softLimitTriggered ? Math.min(2, prof.breadth) : prof.breadth;
 
     const activeQuestions = questions.slice(0, breadth);
     const semaphore = new ConcurrencySemaphore(prof.concurrency);
@@ -248,7 +247,11 @@ export class ResearchStateMachine {
     return { phase: "drafting", snapshot: { ...snapshot, phase: "drafting" }, inject };
   }
 
-  private async doQuestioning(snapshot: ResearchSnapshot, plan: ResearchPlan, parsedResponse?: string): Promise<ResearchStateResult> {
+  private async doQuestioning(
+    snapshot: ResearchSnapshot,
+    plan: ResearchPlan,
+    parsedResponse?: string,
+  ): Promise<ResearchStateResult> {
     if (parsedResponse) {
       const questions = this.extractQuestions(parsedResponse);
       snapshot.pendingQuestions = questions.length > 0 ? questions : plan.researchQuestions;
@@ -307,7 +310,6 @@ export function phaseRouter(snapshot: ResearchSnapshot): "questioning" | "drafti
   const shouldDeepen = !snapshot.softLimitTriggered && snapshot.currentDepth < snapshot.totalDepth;
   return shouldDeepen ? "questioning" : "drafting";
 }
-
 
 const stateMachineDir = dirname(fileURLToPath(import.meta.url));
 const defaultArtifactsDir = () => join(stateMachineDir, "..", "..", "deep-research", "artifacts");

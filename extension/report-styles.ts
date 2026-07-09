@@ -1,7 +1,7 @@
 import type { ResearchPlan } from "./prefilter.js";
-import type { Finding } from "./state-machine.js";
-import type { WebSearchResult } from "./search/web-search.js";
 import type { ScrapedPage } from "./scraper.js";
+import type { WebSearchResult } from "./search/web-search.js";
+import type { Finding } from "./state-machine.js";
 
 /** Format search results and scraped content as markdown — shared by both styles. */
 function formatSearchResults(

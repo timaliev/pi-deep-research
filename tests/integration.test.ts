@@ -1,15 +1,14 @@
+import assert from "node:assert/strict";
+import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, it } from "node:test";
+import type { ResearchPlan } from "../extension/prefilter.js";
+import { PrefilterManager } from "../extension/prefilter.js";
 import { ProfileResolver } from "../extension/profile-resolver.js";
 import { ResearchDraft } from "../extension/research-draft.js";
-import { describe, it, beforeEach, afterEach } from "node:test";
-import assert from "node:assert/strict";
-import { existsSync, mkdirSync, rmSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-
-import { PrefilterManager } from "../extension/prefilter.js";
-import { ResearchStateMachine } from "../extension/state-machine.js";
-import type { ResearchPlan } from "../extension/prefilter.js";
+import type { ScrapedPage, Scraper } from "../extension/scraper.js";
 import type { WebSearchResult } from "../extension/search/web-search.js";
-import type { Scraper, ScrapedPage } from "../extension/scraper.js";
+import { ResearchStateMachine } from "../extension/state-machine.js";
 
 const TEST_DIR = join(import.meta.dirname ?? ".", "../test-integration");
 
@@ -19,11 +18,21 @@ const DEFAULT_RESULTS: WebSearchResult[] = [
 ];
 
 const DEFAULT_SCRAPED: Record<string, ScrapedPage> = {
-  "https://xstate.js.org": { url: "https://xstate.js.org", title: "XState Docs", content: "XState is a library for finite state machines." },
-  "https://thisrobot.life": { url: "https://thisrobot.life", title: "Robot FSM", content: "Robot is a lightweight state machine library." },
+  "https://xstate.js.org": {
+    url: "https://xstate.js.org",
+    title: "XState Docs",
+    content: "XState is a library for finite state machines.",
+  },
+  "https://thisrobot.life": {
+    url: "https://thisrobot.life",
+    title: "Robot FSM",
+    content: "Robot is a lightweight state machine library.",
+  },
 };
 
-function mockSearchFn() { return async () => DEFAULT_RESULTS; }
+function mockSearchFn() {
+  return async () => DEFAULT_RESULTS;
+}
 function mockScraper(): Scraper {
   return {
     async scrape(url: string) {
@@ -43,8 +52,12 @@ const VALID_PLAN_JSON = JSON.stringify({
 });
 
 describe("Integration: full research pipeline", () => {
-  beforeEach(() => { mkdirSync(TEST_DIR, { recursive: true }); });
-  afterEach(() => { if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true }); });
+  beforeEach(() => {
+    mkdirSync(TEST_DIR, { recursive: true });
+  });
+  afterEach(() => {
+    if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true });
+  });
 
   it("three-step prefilter: start → withParams → finalize → artifact saved", async () => {
     const artifactsDir = join(TEST_DIR, "artifacts");
@@ -115,8 +128,11 @@ describe("Integration: full research pipeline", () => {
 
   it("drafting phase re-injects prompt when agent response is empty", async () => {
     const plan: ResearchPlan = {
-      topic: "test", goal: "test", researchQuestions: ["q"],
-      engines: ["duckduckgo"], profile: { name: "default" },
+      topic: "test",
+      goal: "test",
+      researchQuestions: ["q"],
+      engines: ["duckduckgo"],
+      profile: { name: "default" },
       scope: { include: "", exclude: "" },
       estimatedCost: { searchCalls: 1, scrapeCalls: 1, description: "" },
     };
@@ -134,10 +150,14 @@ describe("Integration: full research pipeline", () => {
     r = await machine.next(r.snapshot, plan, "");
     assert.equal(r.phase, "drafting", "must stay in drafting when response is empty");
     assert.ok(r.inject, "must re-inject drafting prompt");
-    assert.ok(r.inject!.includes("Write the final report") || r.inject!.includes("Write the report"),
-      "re-injection must ask for report");
-    assert.ok(r.inject!.includes("Do NOT call") || r.inject!.includes("not call"),
-      "re-injection must say not to call tools");
+    assert.ok(
+      r.inject!.includes("Write the final report") || r.inject!.includes("Write the report"),
+      "re-injection must ask for report",
+    );
+    assert.ok(
+      r.inject!.includes("Do NOT call") || r.inject!.includes("not call"),
+      "re-injection must say not to call tools",
+    );
   });
 
   it("end-to-end: plan → run → done", async () => {
@@ -159,9 +179,10 @@ describe("Integration: full research pipeline", () => {
     let totalInjectCount = 0;
     for (let i = 0; i < 10; i++) {
       // Provide mock report text when drafting phase expects it
-      const agentResponse = snapshot.phase === "drafting"
-        ? "# Test Report\n\nThis is a comprehensive research report about state machines. It covers all key findings and analysis."
-        : undefined;
+      const agentResponse =
+        snapshot.phase === "drafting"
+          ? "# Test Report\n\nThis is a comprehensive research report about state machines. It covers all key findings and analysis."
+          : undefined;
       const r = await machine.next(snapshot, plan, agentResponse);
       snapshot = r.snapshot;
       if (r.inject) totalInjectCount++;

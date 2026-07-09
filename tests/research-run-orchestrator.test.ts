@@ -1,10 +1,10 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { ResearchDraft } from "../extension/research-draft.js";
+import { join } from "node:path";
+import { describe, it } from "node:test";
 import { ProfileResolver } from "../extension/profile-resolver.js";
+import { ResearchDraft } from "../extension/research-draft.js";
 
 const defaultResolver = new ProfileResolver({}, "default");
 
@@ -42,21 +42,24 @@ describe("ResearchRunOrchestrator", () => {
     const artifactsDir = join(tmpDir, "artifacts");
     mkdirSync(artifactsDir, { recursive: true });
     const planPath = join(artifactsDir, "prefilter.json");
-    writeFileSync(planPath, JSON.stringify({
-      version: 1,
-      runId: "test-run",
-      createdAt: new Date().toISOString(),
-      inputTopic: "Test",
-      plan: {
-        topic: "Test",
-        goal: "Test goal",
-        researchQuestions: ["Q1", "Q2"],
-        engines: ["duckduckgo"],
-        profile: { name: "default" },
-        scope: { include: "", exclude: "" },
-        estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" },
-      },
-    }));
+    writeFileSync(
+      planPath,
+      JSON.stringify({
+        version: 1,
+        runId: "test-run",
+        createdAt: new Date().toISOString(),
+        inputTopic: "Test",
+        plan: {
+          topic: "Test",
+          goal: "Test goal",
+          researchQuestions: ["Q1", "Q2"],
+          engines: ["duckduckgo"],
+          profile: { name: "default" },
+          scope: { include: "", exclude: "" },
+          estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" },
+        },
+      }),
+    );
 
     try {
       const { ResearchRunOrchestrator } = await import("../extension/research-run-orchestrator.js");
@@ -64,7 +67,7 @@ describe("ResearchRunOrchestrator", () => {
       const orch = new ResearchRunOrchestrator({
         searchFn: async () => mockResults,
         profileResolver: defaultResolver,
-      scraper: { scrape: async (url: string) => ({ url, title: url, content: "mock" }) },
+        scraper: { scrape: async (url: string) => ({ url, title: url, content: "mock" }) },
         artifactsDir,
         saveState: () => {},
       });
@@ -90,25 +93,45 @@ describe("ResearchRunOrchestrator", () => {
 
     // Plan A — already completed
     const planPathA = join(artifactsDir, "prefilter-a.json");
-    writeFileSync(planPathA, JSON.stringify({
-      version: 1, runId: "run-a", createdAt: new Date().toISOString(),
-      inputTopic: "Plan A",
-      plan: { topic: "Plan A", goal: "A", researchQuestions: ["QA"],
-        engines: ["duckduckgo"], profile: { name: "default" },
-        scope: { include: "", exclude: "" },
-        estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" } },
-    }));
+    writeFileSync(
+      planPathA,
+      JSON.stringify({
+        version: 1,
+        runId: "run-a",
+        createdAt: new Date().toISOString(),
+        inputTopic: "Plan A",
+        plan: {
+          topic: "Plan A",
+          goal: "A",
+          researchQuestions: ["QA"],
+          engines: ["duckduckgo"],
+          profile: { name: "default" },
+          scope: { include: "", exclude: "" },
+          estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" },
+        },
+      }),
+    );
 
     // Plan B — new, different plan
     const planPathB = join(artifactsDir, "prefilter-b.json");
-    writeFileSync(planPathB, JSON.stringify({
-      version: 1, runId: "run-b", createdAt: new Date().toISOString(),
-      inputTopic: "Plan B",
-      plan: { topic: "Plan B", goal: "B", researchQuestions: ["QB"],
-        engines: ["duckduckgo", "brave"], profile: { name: "deep" },
-        scope: { include: "", exclude: "" },
-        estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" } },
-    }));
+    writeFileSync(
+      planPathB,
+      JSON.stringify({
+        version: 1,
+        runId: "run-b",
+        createdAt: new Date().toISOString(),
+        inputTopic: "Plan B",
+        plan: {
+          topic: "Plan B",
+          goal: "B",
+          researchQuestions: ["QB"],
+          engines: ["duckduckgo", "brave"],
+          profile: { name: "deep" },
+          scope: { include: "", exclude: "" },
+          estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" },
+        },
+      }),
+    );
 
     try {
       const { ResearchRunOrchestrator } = await import("../extension/research-run-orchestrator.js");
@@ -123,20 +146,31 @@ describe("ResearchRunOrchestrator", () => {
       });
 
       // Simulate: plan A was completed earlier, state stored in session
-      const entriesWithOldState = [{
-        customType: STATE_KEY,
-        data: {
-          runId: "run-a", phase: "done", currentDepth: 2, totalDepth: 2,
-          searchCalls: 10, scrapeCalls: 5,
-          plan: { topic: "Plan A", goal: "A", researchQuestions: ["QA"],
-            engines: ["duckduckgo"], profile: { name: "default" },
-            scope: { include: "", exclude: "" },
-            estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" } },
-          planArtifactPath: planPathA,
-          deepResearchBase: tmpDir,
-          draft: new ResearchDraft("Old report content for plan A with enough text to pass threshold."),
+      const entriesWithOldState = [
+        {
+          customType: STATE_KEY,
+          data: {
+            runId: "run-a",
+            phase: "done",
+            currentDepth: 2,
+            totalDepth: 2,
+            searchCalls: 10,
+            scrapeCalls: 5,
+            plan: {
+              topic: "Plan A",
+              goal: "A",
+              researchQuestions: ["QA"],
+              engines: ["duckduckgo"],
+              profile: { name: "default" },
+              scope: { include: "", exclude: "" },
+              estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" },
+            },
+            planArtifactPath: planPathA,
+            deepResearchBase: tmpDir,
+            draft: new ResearchDraft("Old report content for plan A with enough text to pass threshold."),
+          },
         },
-      }];
+      ];
 
       // Now: user calls run_research with NEW plan B
       const result = await orch.handle({
@@ -160,21 +194,24 @@ describe("ResearchRunOrchestrator", () => {
     const artifactsDir = join(tmpDir, "artifacts");
     mkdirSync(artifactsDir, { recursive: true });
     const planPath = join(artifactsDir, "prefilter.json");
-    writeFileSync(planPath, JSON.stringify({
-      version: 1,
-      runId: "test-draft-run",
-      createdAt: new Date().toISOString(),
-      inputTopic: "Test",
-      plan: {
-        topic: "Test",
-        goal: "Test goal",
-        researchQuestions: ["Q1"],
-        engines: ["duckduckgo"],
-        profile: { name: "fast" },
-        scope: { include: "", exclude: "" },
-        estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" },
-      },
-    }));
+    writeFileSync(
+      planPath,
+      JSON.stringify({
+        version: 1,
+        runId: "test-draft-run",
+        createdAt: new Date().toISOString(),
+        inputTopic: "Test",
+        plan: {
+          topic: "Test",
+          goal: "Test goal",
+          researchQuestions: ["Q1"],
+          engines: ["duckduckgo"],
+          profile: { name: "fast" },
+          scope: { include: "", exclude: "" },
+          estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" },
+        },
+      }),
+    );
 
     try {
       const { ResearchRunOrchestrator } = await import("../extension/research-run-orchestrator.js");
@@ -184,7 +221,7 @@ describe("ResearchRunOrchestrator", () => {
       const orch = new ResearchRunOrchestrator({
         searchFn: async () => mockResults,
         profileResolver: defaultResolver,
-      scraper: { scrape: async (url: string) => ({ url, title: url, content: "mock content" }) },
+        scraper: { scrape: async (url: string) => ({ url, title: url, content: "mock content" }) },
         artifactsDir,
         saveState: () => {},
       });
@@ -230,7 +267,7 @@ describe("ResearchRunOrchestrator", () => {
           customType: STATE_KEY,
           data: {
             ...result2.snapshot,
-            draftEncoded: result2.snapshot.draft.encode(),  // encode draft for session restore
+            draftEncoded: result2.snapshot.draft.encode(), // encode draft for session restore
             plan: result2.plan,
             planArtifactPath: result2.planArtifactPath,
             deepResearchBase: tmpDir,

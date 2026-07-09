@@ -4,9 +4,9 @@
  */
 
 import { request as httpsRequest } from "node:https";
-import type { WebSearchOptions, WebSearchResult } from "../web-search.js";
 import type { SearchProviderCredentials } from "../../settings-context.js";
-import { sleep, decodeHtmlEntities, rateLimiter } from "../web-search.js";
+import type { WebSearchOptions, WebSearchResult } from "../web-search.js";
+import { decodeHtmlEntities, rateLimiter, sleep } from "../web-search.js";
 
 const YANDEX_SEARCH_URL = "https://searchapi.api.cloud.yandex.net/v2/web/searchAsync";
 const YANDEX_OPERATION_URL = "https://operation.api.cloud.yandex.net/operations/";
@@ -50,7 +50,10 @@ async function yandexGetIamToken(oauthToken: string): Promise<string> {
         });
       },
     );
-    req.on("timeout", () => { req.destroy(); reject(new Error("IAM token timeout")); });
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error("IAM token timeout"));
+    });
     req.on("error", reject);
     req.write(body);
     req.end();
@@ -97,7 +100,10 @@ async function yandexSearchSubmit(
         });
       },
     );
-    req.on("timeout", () => { req.destroy(); reject(new Error("Search submit timeout")); });
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error("Search submit timeout"));
+    });
     req.on("error", reject);
     req.write(body);
     req.end();
@@ -135,7 +141,10 @@ async function yandexPollOperation(iamToken: string, operationId: string): Promi
         });
       },
     );
-    req.on("timeout", () => { req.destroy(); reject(new Error("Poll timeout")); });
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error("Poll timeout"));
+    });
     req.on("error", reject);
     req.end();
   });
@@ -167,10 +176,7 @@ function parseYandexXml(xml: string, maxResults: number): WebSearchResult[] {
   return results;
 }
 
-export async function searchYandex(
-  query: string,
-  maxResults: number,
-): Promise<WebSearchResult[]> {
+export async function searchYandex(query: string, maxResults: number): Promise<WebSearchResult[]> {
   const oauthToken = process.env.YANDEX_OAUTH_TOKEN;
   const folderId = process.env.YANDEX_FOLDER_ID;
   if (!oauthToken || !folderId) return [];

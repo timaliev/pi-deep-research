@@ -99,10 +99,7 @@ export class RateLimiter {
       try {
         return await fn();
       } catch (err) {
-        if (
-          err instanceof RateLimitError &&
-          isRateLimited(err.status, err.body, retryConfig.rateLimitIndicators)
-        ) {
+        if (err instanceof RateLimitError && isRateLimited(err.status, err.body, retryConfig.rateLimitIndicators)) {
           if (attempt < retryConfig.maxRetries) continue;
           throw new Error(`DuckDuckGo rate-limited after ${retryConfig.maxRetries + 1} attempts`);
         }
@@ -111,8 +108,11 @@ export class RateLimiter {
           // Also check raw error shape for backward compat (status + body properties)
           const status = (err as any)?.status;
           const body = (err as any)?.body;
-          if (typeof status === 'number' && typeof body === 'string' &&
-              isRateLimited(status, body, retryConfig.rateLimitIndicators)) {
+          if (
+            typeof status === "number" &&
+            typeof body === "string" &&
+            isRateLimited(status, body, retryConfig.rateLimitIndicators)
+          ) {
             continue;
           }
         }
@@ -131,7 +131,7 @@ export class RateLimiter {
   // ── private ──
 
   private calcBackoff(attempt: number, retry: RetryConfig): number {
-    let delay = retry.baseDelayMs * Math.pow(retry.backoffMultiplier, attempt);
+    let delay = retry.baseDelayMs * retry.backoffMultiplier ** attempt;
     if (delay > retry.maxDelayMs) delay = retry.maxDelayMs;
     delay += Math.random() * 500; // jitter
     return Math.floor(delay);
@@ -150,15 +150,21 @@ export const DEFAULT_RATE_LIMIT_CONFIGS: Record<string, EngineRateLimitConfig> =
       maxDelayMs: 30_000,
       backoffMultiplier: 2.0,
       rateLimitIndicators: [
-        "captcha", "rate limit", "too many requests", "blocked",
-        "automated", "bots use duckduckgo", "challenge", "anomaly",
+        "captcha",
+        "rate limit",
+        "too many requests",
+        "blocked",
+        "automated",
+        "bots use duckduckgo",
+        "challenge",
+        "anomaly",
       ],
     },
   },
-  searxng:  { minDelayMs: 2000 },
-  brave:    { minDelayMs: 500 },
-  tavily:   { minDelayMs: 200 },
-  yandex:   { minDelayMs: 500 },
+  searxng: { minDelayMs: 2000 },
+  brave: { minDelayMs: 500 },
+  tavily: { minDelayMs: 200 },
+  yandex: { minDelayMs: 500 },
 };
 
 /** Singleton RateLimiter used by engine adapters and searchAllEngines. */

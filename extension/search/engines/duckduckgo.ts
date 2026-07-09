@@ -4,15 +4,10 @@
  * Retry logic delegated to RateLimiter.retryOnRateLimit.
  */
 
-import type { WebSearchOptions, WebSearchResult } from "../web-search.js";
 import type { SearchProviderCredentials } from "../../settings-context.js";
-import {
-  DDG_USER_AGENT,
-  postForm,
-  decodeHtmlEntities,
-  rateLimiter,
-} from "../web-search.js";
 import { RateLimitError } from "../rate-limiter.js";
+import type { WebSearchOptions, WebSearchResult } from "../web-search.js";
+import { DDG_USER_AGENT, decodeHtmlEntities, postForm, rateLimiter } from "../web-search.js";
 
 // ─── DDG-specific constants ────────────────────────────────────
 const DDG_BASE_URL = "https://html.duckduckgo.com/html";
@@ -42,10 +37,8 @@ function isRateLimited(status: number, body: string): boolean {
 function parseDdgHtml(body: string, maxResults: number): WebSearchResult[] {
   const results: WebSearchResult[] = [];
 
-  const linkRegex =
-    /<a[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
-  const snippetRegex =
-    /<[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/[^>]+>/gi;
+  const linkRegex = /<a[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
+  const snippetRegex = /<[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/[^>]+>/gi;
 
   const links: Array<{ href: string; title: string }> = [];
   const snippets: string[] = [];
@@ -54,17 +47,13 @@ function parseDdgHtml(body: string, maxResults: number): WebSearchResult[] {
   while ((linkMatch = linkRegex.exec(body)) !== null) {
     links.push({
       href: linkMatch[1],
-      title: decodeHtmlEntities(
-        linkMatch[2].replace(/<[^>]*>/g, "").trim(),
-      ),
+      title: decodeHtmlEntities(linkMatch[2].replace(/<[^>]*>/g, "").trim()),
     });
   }
 
   let snipMatch;
   while ((snipMatch = snippetRegex.exec(body)) !== null) {
-    snippets.push(
-      decodeHtmlEntities(snipMatch[1].replace(/<[^>]*>/g, "").trim()),
-    );
+    snippets.push(decodeHtmlEntities(snipMatch[1].replace(/<[^>]*>/g, "").trim()));
   }
 
   for (let i = 0; i < links.length && results.length < maxResults; i++) {
@@ -94,10 +83,7 @@ function parseDdgHtml(body: string, maxResults: number): WebSearchResult[] {
 }
 
 // ─── Search (thin — retry delegated to RateLimiter) ────────────
-export async function searchDuckDuckGo(
-  query: string,
-  maxResults: number,
-): Promise<WebSearchResult[]> {
+export async function searchDuckDuckGo(query: string, maxResults: number): Promise<WebSearchResult[]> {
   const { status, body } = await postForm(
     DDG_BASE_URL,
     { q: query },
@@ -121,9 +107,7 @@ export async function search(
   _cred?: SearchProviderCredentials,
 ): Promise<WebSearchResult[]> {
   await rateLimiter.waitIfNeeded("duckduckgo");
-  const results = await rateLimiter.retryOnRateLimit("duckduckgo", () =>
-    searchDuckDuckGo(query, opts.maxResults ?? 5)
-  );
+  const results = await rateLimiter.retryOnRateLimit("duckduckgo", () => searchDuckDuckGo(query, opts.maxResults ?? 5));
   rateLimiter.recordCall("duckduckgo");
   return results;
 }

@@ -2,10 +2,11 @@
  * Test that RateLimiter owns stagger/backoff logic
  * and adapters use rateLimiter instead of deprecated engineLastCall/waitIfNeeded.
  */
-import { describe, it } from "node:test";
+
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { describe, it } from "node:test";
 
 const RL_CODE_PATH = join(import.meta.dirname ?? ".", "..", "extension", "search", "rate-limiter.ts");
 const DDG_CODE_PATH = join(import.meta.dirname ?? ".", "..", "extension", "search", "engines", "duckduckgo.ts");
@@ -19,38 +20,23 @@ describe("RateLimiter config", () => {
   it("DDG min delay >= 2000ms in default configs", () => {
     const match = rlCode.match(/duckduckgo[\s\S]*?minDelayMs:\s*(\d+)/);
     assert.ok(match, "DDG minDelayMs must exist in DEFAULT_RATE_LIMIT_CONFIGS");
-    assert.ok(
-      Number(match[1]) >= 2000,
-      `DDG min delay must be >= 2000ms, got ${match[1]}`
-    );
+    assert.ok(Number(match[1]) >= 2000, `DDG min delay must be >= 2000ms, got ${match[1]}`);
   });
 
   it("DDG has preStaggerMs configured", () => {
     const match = rlCode.match(/duckduckgo[\s\S]*?preStaggerMs:\s*(\d+)/);
     assert.ok(match, "DDG must have preStaggerMs in config");
-    assert.ok(
-      Number(match[1]) >= 1000,
-      `preStaggerMs must be >= 1000ms, got ${match[1]}`
-    );
+    assert.ok(Number(match[1]) >= 1000, `preStaggerMs must be >= 1000ms, got ${match[1]}`);
   });
 
   it("DDG has retry config with backoff multiplier", () => {
-    assert.ok(
-      rlCode.includes("maxRetries:"),
-      "DDG retry config must include maxRetries"
-    );
-    assert.ok(
-      rlCode.includes("backoffMultiplier:"),
-      "DDG retry config must include backoffMultiplier"
-    );
+    assert.ok(rlCode.includes("maxRetries:"), "DDG retry config must include maxRetries");
+    assert.ok(rlCode.includes("backoffMultiplier:"), "DDG retry config must include backoffMultiplier");
   });
 
   it("all 5 engines have configs in DEFAULT_RATE_LIMIT_CONFIGS", () => {
     for (const engine of ["duckduckgo", "brave", "tavily", "yandex", "searxng"]) {
-      assert.ok(
-        rlCode.includes(`${engine}:`),
-        `${engine} must be in DEFAULT_RATE_LIMIT_CONFIGS`
-      );
+      assert.ok(rlCode.includes(`${engine}:`), `${engine} must be in DEFAULT_RATE_LIMIT_CONFIGS`);
     }
   });
 });

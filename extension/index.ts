@@ -1,13 +1,12 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-
-import { searchWeb } from "./search/web-search.js";
-import { WebScraper } from "./scraper.js";
-import { SettingsContext } from "./settings-context.js";
 import { ProfileResolver } from "./profile-resolver.js";
-import { SessionState } from "./session-state.js";
 import { ResearchRunOrchestrator } from "./research-run-orchestrator.js";
+import { WebScraper } from "./scraper.js";
+import { searchWeb } from "./search/web-search.js";
+import { SessionState } from "./session-state.js";
+import { SettingsContext } from "./settings-context.js";
 import { registerAllTools } from "./tools/deps.js";
 
 const baseDir = dirname(fileURLToPath(import.meta.url));

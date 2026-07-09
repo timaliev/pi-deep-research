@@ -1,7 +1,7 @@
-import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, rmSync, writeFileSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { afterEach, beforeEach, describe, it } from "node:test";
 import { mergeProfiles, ProfileResolver } from "../extension/profile-resolver.js";
 
 const TEST_DIR = join(import.meta.dirname ?? ".", "..", "test-settings-merge");
@@ -9,20 +9,32 @@ const TEST_DIR = join(import.meta.dirname ?? ".", "..", "test-settings-merge");
 // ─── Candidate 2: settings loaded from file ──────────────────────
 
 describe("settings loading from disk", () => {
-  beforeEach(() => { mkdirSync(TEST_DIR, { recursive: true }); });
-  afterEach(() => { if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true }); });
+  beforeEach(() => {
+    mkdirSync(TEST_DIR, { recursive: true });
+  });
+  afterEach(() => {
+    if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true });
+  });
 
   it("loadSettings reads deepResearch.profiles from JSON file", () => {
     const settingsPath = join(TEST_DIR, "settings.json");
-    writeFileSync(settingsPath, JSON.stringify({
-      deepResearch: {
-        profiles: {
-          deep: { breadth: 8, depth: 4, concurrency: 6 },
-          exhaustive: { breadth: 10, depth: 5, concurrency: 8 },
+    writeFileSync(
+      settingsPath,
+      JSON.stringify(
+        {
+          deepResearch: {
+            profiles: {
+              deep: { breadth: 8, depth: 4, concurrency: 6 },
+              exhaustive: { breadth: 10, depth: 5, concurrency: 8 },
+            },
+            defaultProfile: "deep",
+          },
         },
-        defaultProfile: "deep",
-      },
-    }, null, 2), "utf-8");
+        null,
+        2,
+      ),
+      "utf-8",
+    );
 
     const loaded = loadSettingsFromFile(settingsPath);
 

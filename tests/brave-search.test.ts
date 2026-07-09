@@ -1,6 +1,6 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { resolveBraveApiKey, buildBraveSearchParams, parseBraveResponse } from "../extension/search/engines/brave.js";
+import { describe, it } from "node:test";
+import { buildBraveSearchParams, parseBraveResponse, resolveBraveApiKey } from "../extension/search/engines/brave.js";
 import type { SearchProviderCredentials } from "../extension/settings-context.js";
 
 describe("searchBrave credentials", () => {
@@ -22,7 +22,8 @@ describe("searchBrave credentials", () => {
     const cred = { get: () => "bsa-from-settings" } as any as SearchProviderCredentials;
     const key = resolveBraveApiKey(cred);
     assert.equal(key, "bsa-from-env");
-    if (prev) process.env.BRAVE_API_KEY = prev; else delete process.env.BRAVE_API_KEY;
+    if (prev) process.env.BRAVE_API_KEY = prev;
+    else delete process.env.BRAVE_API_KEY;
   });
 
   it("returns undefined when no source has key", () => {

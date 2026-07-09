@@ -1,12 +1,12 @@
-import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { SettingsContext } from "../extension/settings-context.js";
-import { ProfileResolver } from "../extension/profile-resolver.js";
+import { afterEach, beforeEach, describe, it } from "node:test";
 import { PrefilterManager } from "../extension/prefilter.js";
+import { ProfileResolver } from "../extension/profile-resolver.js";
+import type { ScrapedPage, Scraper } from "../extension/scraper.js";
 import type { WebSearchResult } from "../extension/search/web-search.js";
-import type { Scraper, ScrapedPage } from "../extension/scraper.js";
+import { SettingsContext } from "../extension/settings-context.js";
 
 const TEST_DIR = join(import.meta.dirname ?? ".", "..", "test-settings-merge-int");
 const TEST_HOME = join(TEST_DIR, "home", ".pi", "agent");
@@ -24,9 +24,7 @@ function mockScraper(pages: Map<string, ScrapedPage>): Scraper {
     },
   };
 }
-const MOCK_RESULTS: WebSearchResult[] = [
-  { title: "A", url: "https://a.com", snippet: "...", engine: "duckduckgo" },
-];
+const MOCK_RESULTS: WebSearchResult[] = [{ title: "A", url: "https://a.com", snippet: "...", engine: "duckduckgo" }];
 const MOCK_PAGES = new Map<string, ScrapedPage>();
 MOCK_PAGES.set("https://a.com", { url: "https://a.com", title: "A", content: "..." });
 
@@ -38,23 +36,33 @@ describe("SettingsContext global + local merge", () => {
     mkdirSync(TEST_CWD, { recursive: true });
     (SettingsContext as any)._reset();
   });
-  afterEach(() => { if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true }); });
+  afterEach(() => {
+    if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true });
+  });
 
   it("merges global and local, local wins on conflict", () => {
     mkdirSync(join(TEST_CWD, ".pi"), { recursive: true });
-    writeFileSync(join(TEST_HOME, "settings.json"), JSON.stringify({
-      deepResearch: {
-        profiles: { deep: { breadth: 8 } },
-        defaultProfile: "deep",
-      },
-    }), "utf-8");
+    writeFileSync(
+      join(TEST_HOME, "settings.json"),
+      JSON.stringify({
+        deepResearch: {
+          profiles: { deep: { breadth: 8 } },
+          defaultProfile: "deep",
+        },
+      }),
+      "utf-8",
+    );
 
-    writeFileSync(join(TEST_CWD, ".pi", "settings.json"), JSON.stringify({
-      deepResearch: {
-        profiles: { deep: { breadth: 10, depth: 5 }, exhaustive: { breadth: 12 } },
-        defaultProfile: "exhaustive",
-      },
-    }), "utf-8");
+    writeFileSync(
+      join(TEST_CWD, ".pi", "settings.json"),
+      JSON.stringify({
+        deepResearch: {
+          profiles: { deep: { breadth: 10, depth: 5 }, exhaustive: { breadth: 12 } },
+          defaultProfile: "exhaustive",
+        },
+      }),
+      "utf-8",
+    );
 
     const ctx = SettingsContext.init({ cwd: TEST_CWD, homeAgentDir: TEST_HOME });
 
@@ -73,11 +81,15 @@ describe("SettingsContext global + local merge", () => {
   });
 
   it("global only — no local file", () => {
-    writeFileSync(join(TEST_HOME, "settings.json"), JSON.stringify({
-      deepResearch: {
-        profiles: { deep: { breadth: 7 } },
-      },
-    }), "utf-8");
+    writeFileSync(
+      join(TEST_HOME, "settings.json"),
+      JSON.stringify({
+        deepResearch: {
+          profiles: { deep: { breadth: 7 } },
+        },
+      }),
+      "utf-8",
+    );
 
     const ctx = SettingsContext.init({ cwd: join(TEST_DIR, "no-project"), homeAgentDir: TEST_HOME });
 
@@ -90,17 +102,22 @@ describe("SettingsContext global + local merge", () => {
 // ─── Slice 2: buildParamsPrompt lists merged profiles ────────────
 
 describe("buildParamsPrompt with ProfileResolver", () => {
-  beforeEach(() => { mkdirSync(TEST_CWD, { recursive: true }); });
-  afterEach(() => { if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true }); });
+  beforeEach(() => {
+    mkdirSync(TEST_CWD, { recursive: true });
+  });
+  afterEach(() => {
+    if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true });
+  });
 
   it("lists user-added profile names in prompt", async () => {
-    const resolver = new ProfileResolver(
-      { exhaustive: { breadth: 10, depth: 5, concurrency: 8 } },
-      "default",
-    );
+    const resolver = new ProfileResolver({ exhaustive: { breadth: 10, depth: 5, concurrency: 8 } }, "default");
 
     const manager = new PrefilterManager(
-      mockSearchFn(MOCK_RESULTS), mockScraper(MOCK_PAGES), TEST_CWD, undefined, resolver,
+      mockSearchFn(MOCK_RESULTS),
+      mockScraper(MOCK_PAGES),
+      TEST_CWD,
+      undefined,
+      resolver,
     );
 
     const result = await manager.start("test");
@@ -114,7 +131,11 @@ describe("buildParamsPrompt with ProfileResolver", () => {
     const resolver = new ProfileResolver({}, "deep");
 
     const manager = new PrefilterManager(
-      mockSearchFn(MOCK_RESULTS), mockScraper(MOCK_PAGES), TEST_CWD, undefined, resolver,
+      mockSearchFn(MOCK_RESULTS),
+      mockScraper(MOCK_PAGES),
+      TEST_CWD,
+      undefined,
+      resolver,
     );
 
     const result = await manager.start("test");
@@ -126,17 +147,22 @@ describe("buildParamsPrompt with ProfileResolver", () => {
 // ─── Slice 3: buildPlanPrompt resolves via ProfileResolver ───────
 
 describe("buildPlanPrompt with ProfileResolver", () => {
-  beforeEach(() => { mkdirSync(TEST_CWD, { recursive: true }); });
-  afterEach(() => { if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true }); });
+  beforeEach(() => {
+    mkdirSync(TEST_CWD, { recursive: true });
+  });
+  afterEach(() => {
+    if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true });
+  });
 
   it("shows resolved breadth/depth/concurrency from merged profile", async () => {
-    const resolver = new ProfileResolver(
-      { deep: { breadth: 8, depth: 4 } },
-      "default",
-    );
+    const resolver = new ProfileResolver({ deep: { breadth: 8, depth: 4 } }, "default");
 
     const manager = new PrefilterManager(
-      mockSearchFn(MOCK_RESULTS), mockScraper(MOCK_PAGES), TEST_CWD, undefined, resolver,
+      mockSearchFn(MOCK_RESULTS),
+      mockScraper(MOCK_PAGES),
+      TEST_CWD,
+      undefined,
+      resolver,
     );
 
     const result = await manager.withParams("test", ["duckduckgo"], { name: "deep" });
@@ -147,13 +173,14 @@ describe("buildPlanPrompt with ProfileResolver", () => {
   });
 
   it("lists merged profile names in plan prompt", async () => {
-    const resolver = new ProfileResolver(
-      { exhaustive: { breadth: 10, depth: 5, concurrency: 8 } },
-      "default",
-    );
+    const resolver = new ProfileResolver({ exhaustive: { breadth: 10, depth: 5, concurrency: 8 } }, "default");
 
     const manager = new PrefilterManager(
-      mockSearchFn(MOCK_RESULTS), mockScraper(MOCK_PAGES), TEST_CWD, undefined, resolver,
+      mockSearchFn(MOCK_RESULTS),
+      mockScraper(MOCK_PAGES),
+      TEST_CWD,
+      undefined,
+      resolver,
     );
 
     const result = await manager.withParams("test", ["duckduckgo"], { name: "default" });

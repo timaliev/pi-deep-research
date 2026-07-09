@@ -1,10 +1,9 @@
-import type { Logger } from "./logger.js";
-import type { searchWeb as SearchWebFn } from "./search/web-search.js";
-import type { WebSearchResult, SearchEngine } from "./search/web-search.js";
-import type { Scraper, ScrapedPage } from "./scraper.js";
-import { buildSearchQueue, saveQueue } from "./search-queue.js";
 import { join } from "node:path";
-import { ConcurrencySemaphore } from "./concurrency.js";
+import type { ConcurrencySemaphore } from "./concurrency.js";
+import type { Logger } from "./logger.js";
+import type { ScrapedPage, Scraper } from "./scraper.js";
+import type { SearchEngine, searchWeb as SearchWebFn, WebSearchResult } from "./search/web-search.js";
+import { buildSearchQueue, saveQueue } from "./search-queue.js";
 
 export interface ResearchRoundParams {
   searchFn: typeof SearchWebFn;
@@ -31,8 +30,18 @@ export interface ResearchRoundResult {
 
 export async function executeResearchRound(params: ResearchRoundParams): Promise<ResearchRoundResult> {
   const {
-    searchFn, scraper, logger, activeQuestions, maxResultsPerQuery,
-    engines, semaphore, visitedUrls, artifactsDir, runId, currentDepth, searchCred,
+    searchFn,
+    scraper,
+    logger,
+    activeQuestions,
+    maxResultsPerQuery,
+    engines,
+    semaphore,
+    visitedUrls,
+    artifactsDir,
+    runId,
+    currentDepth,
+    searchCred,
   } = params;
 
   if (activeQuestions.length === 0 || engines.length === 0) {
@@ -52,7 +61,9 @@ export async function executeResearchRound(params: ResearchRoundParams): Promise
         entries: queue.length,
         engines: engines.join(","),
       });
-    } catch { /* non-critical */ }
+    } catch {
+      /* non-critical */
+    }
   }
 
   // Concurrent searches
@@ -69,8 +80,8 @@ export async function executeResearchRound(params: ResearchRoundParams): Promise
         });
         searchCalls++;
         return { question, results };
-      })
-    )
+      }),
+    ),
   );
 
   // Collect URLs for scraping
@@ -105,13 +116,11 @@ export async function executeResearchRound(params: ResearchRoundParams): Promise
           logger?.event("scrape_failed", { url, error: err.message, depth: currentDepth });
           return null;
         }
-      })
-    )
+      }),
+    ),
   );
 
-  const scrapedPages: ScrapedPage[] = scrapedResults.filter(
-    (p): p is ScrapedPage => p !== null
-  );
+  const scrapedPages: ScrapedPage[] = scrapedResults.filter((p): p is ScrapedPage => p !== null);
 
   return { searchResults, scrapedPages, newVisitedUrls: newVisited, searchCalls, scrapeCalls };
 }

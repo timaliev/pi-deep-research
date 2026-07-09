@@ -1,12 +1,15 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createReportStyle } from "../extension/report-styles.js";
+import { describe, it } from "node:test";
 import type { ResearchPlan } from "../extension/prefilter.js";
+import { createReportStyle } from "../extension/report-styles.js";
 
 describe("NarrativeStyle", () => {
   const plan: ResearchPlan = {
-    topic: "test", goal: "test goal", researchQuestions: ["q1"],
-    engines: ["duckduckgo"], profile: { name: "default" },
+    topic: "test",
+    goal: "test goal",
+    researchQuestions: ["q1"],
+    engines: ["duckduckgo"],
+    profile: { name: "default" },
     scope: { include: "", exclude: "" },
     estimatedCost: { searchCalls: 1, scrapeCalls: 1, description: "" },
     reportStyle: "narrative",
@@ -14,9 +17,7 @@ describe("NarrativeStyle", () => {
 
   it("extraction prompt mentions findings and citations", () => {
     const style = createReportStyle("narrative");
-    const prompt = style.buildExtractionPrompt(
-      [{ question: "q1", results: [] }], [], 1, 2,
-    );
+    const prompt = style.buildExtractionPrompt([{ question: "q1", results: [] }], [], 1, 2);
     assert.ok(prompt.includes("Extract"));
     assert.ok(prompt.includes("source URL"));
   });
@@ -38,8 +39,11 @@ describe("NarrativeStyle", () => {
 
 describe("SubtopicStyle", () => {
   const plan: ResearchPlan = {
-    topic: "test", goal: "test goal", researchQuestions: ["q1"],
-    engines: ["duckduckgo"], profile: { name: "default" },
+    topic: "test",
+    goal: "test goal",
+    researchQuestions: ["q1"],
+    engines: ["duckduckgo"],
+    profile: { name: "default" },
     scope: { include: "", exclude: "" },
     estimatedCost: { searchCalls: 1, scrapeCalls: 1, description: "" },
     reportStyle: "subtopics",
@@ -47,9 +51,7 @@ describe("SubtopicStyle", () => {
 
   it("extraction prompt instructs thematic grouping", () => {
     const style = createReportStyle("subtopics");
-    const prompt = style.buildExtractionPrompt(
-      [{ question: "q1", results: [] }], [], 1, 2,
-    );
+    const prompt = style.buildExtractionPrompt([{ question: "q1", results: [] }], [], 1, 2);
     assert.ok(prompt.includes("theme"));
   });
 
@@ -68,8 +70,12 @@ describe("SubtopicStyle", () => {
 
 describe("createReportStyle dispatch", () => {
   const plan: ResearchPlan = {
-    topic: "t", goal: "g", researchQuestions: [], engines: [],
-    profile: { name: "default" }, scope: { include: "", exclude: "" },
+    topic: "t",
+    goal: "g",
+    researchQuestions: [],
+    engines: [],
+    profile: { name: "default" },
+    scope: { include: "", exclude: "" },
     estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" },
   };
 

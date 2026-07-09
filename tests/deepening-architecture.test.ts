@@ -1,5 +1,5 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 
 describe("Candidate 1 — DEFAULT_PRESETS + ProfileResolver → profile-resolver", () => {
   it("DEFAULT_PRESETS is exported from profile-resolver", async () => {
@@ -30,14 +30,8 @@ describe("Candidate 1 — DEFAULT_PRESETS + ProfileResolver → profile-resolver
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "state-machine.ts"), "utf-8");
-    assert.ok(
-      src.includes("profileResolver: ProfileResolver"),
-      "state-machine must use ProfileResolver",
-    );
-    assert.ok(
-      !src.includes("profilePresets"),
-      "state-machine must not use raw profilePresets",
-    );
+    assert.ok(src.includes("profileResolver: ProfileResolver"), "state-machine must use ProfileResolver");
+    assert.ok(!src.includes("profilePresets"), "state-machine must not use raw profilePresets");
   });
 
   it("state-machine no longer exports resolveProfile or DEFAULT_PRESETS", async () => {
@@ -51,10 +45,7 @@ describe("Candidate 1 — DEFAULT_PRESETS + ProfileResolver → profile-resolver
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "prefilter.ts"), "utf-8");
-    assert.ok(
-      src.includes('from "./profile-resolver.js"'),
-      "prefilter must import from profile-resolver",
-    );
+    assert.ok(src.includes('from "./profile-resolver.js"'), "prefilter must import from profile-resolver");
   });
 });
 
@@ -64,10 +55,7 @@ describe("Candidate 2 — logger locality in ResearchStateMachine", () => {
     const { join } = await import("node:path");
     const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "state-machine.ts"), "utf-8");
     // Logger should be created inside the module, not injected
-    assert.ok(
-      src.includes("new JsonlLogger"),
-      "state-machine should create logger internally",
-    );
+    assert.ok(src.includes("new JsonlLogger"), "state-machine should create logger internally");
   });
 
   it("ResearchContext includes optional logger (ADR-0011)", async () => {
@@ -85,7 +73,10 @@ describe("Candidate 2 — logger locality in ResearchStateMachine", () => {
     const { join } = await import("node:path");
     const srcIdx = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "index.ts"), "utf-8");
     const srcDeps = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "deps.ts"), "utf-8");
-    const srcTool = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "run-research.ts"), "utf-8");
+    const srcTool = readFileSync(
+      join(import.meta.dirname ?? ".", "..", "extension", "tools", "run-research.ts"),
+      "utf-8",
+    );
     // index.ts delegates to registerAllTools
     assert.ok(srcIdx.includes("registerAllTools"), "index.ts must use registerAllTools");
     // deps.ts imports createRunResearchTool

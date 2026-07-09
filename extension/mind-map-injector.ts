@@ -7,15 +7,8 @@
  * Replaces the duplicated prompt template previously embedded in both
  * index.ts and tools/run-research.ts.
  */
-export function buildMindMapPrompt(
-  topic: string,
-  findings?: string,
-  rawContent?: string,
-  savePath?: string,
-): string {
-  const saveHint = savePath
-    ? `\nSave the diagram block to: ${savePath}`
-    : "";
+export function buildMindMapPrompt(topic: string, findings?: string, rawContent?: string, savePath?: string): string {
+  const saveHint = savePath ? `\nSave the diagram block to: ${savePath}` : "";
 
   const contentBlock = findings
     ? `**Key findings:**\n${findings}`

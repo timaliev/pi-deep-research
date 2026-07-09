@@ -1,10 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { homedir } from "node:os";
-import { DEFAULT_PRESETS } from "./profile-resolver.js";
-import type { ResearchProfile } from "./state-machine.js";
-import { mergeProfiles } from "./profile-resolver.js";
+import { join } from "node:path";
 import type { ResearchPlanProfile } from "./prefilter.js";
+import { DEFAULT_PRESETS, mergeProfiles } from "./profile-resolver.js";
+import type { ResearchProfile } from "./state-machine.js";
 
 /** Resolve credentials: settings.json base, process.env override. */
 export class SearchProviderCredentials {
@@ -83,32 +82,37 @@ export class SettingsContext implements SettingsContextData {
     const localDr = (local?.deepResearch ?? {}) as Record<string, unknown>;
 
     // ─── String settings: env → local → global → built-in ────
-    this.reportsDir = envString(ENV.reportsDir)
-      ?? (localDr.reportsDir as string | undefined)
-      ?? (globalDr.reportsDir as string | undefined)
-      ?? join(params.cwd, "deep-research", "reports");
+    this.reportsDir =
+      envString(ENV.reportsDir) ??
+      (localDr.reportsDir as string | undefined) ??
+      (globalDr.reportsDir as string | undefined) ??
+      join(params.cwd, "deep-research", "reports");
 
-    this.artifactsDir = envString(ENV.artifactsDir)
-      ?? (localDr.artifactsDir as string | undefined)
-      ?? (globalDr.artifactsDir as string | undefined)
-      ?? join(params.cwd, "deep-research", "artifacts");
+    this.artifactsDir =
+      envString(ENV.artifactsDir) ??
+      (localDr.artifactsDir as string | undefined) ??
+      (globalDr.artifactsDir as string | undefined) ??
+      join(params.cwd, "deep-research", "artifacts");
 
-    this.defaultProfile = envString(ENV.defaultProfile)
-      ?? (localDr.defaultProfile as string | undefined)
-      ?? (globalDr.defaultProfile as string | undefined)
-      ?? BUILTIN.defaultProfile;
+    this.defaultProfile =
+      envString(ENV.defaultProfile) ??
+      (localDr.defaultProfile as string | undefined) ??
+      (globalDr.defaultProfile as string | undefined) ??
+      BUILTIN.defaultProfile;
 
     // ─── pdfExport: env → local → global → built-in false ──
-    this.pdfExport = envBool(ENV.pdfExport)
-      ?? (localDr.pdfExport as boolean | undefined)
-      ?? (globalDr.pdfExport as boolean | undefined)
-      ?? false;
+    this.pdfExport =
+      envBool(ENV.pdfExport) ??
+      (localDr.pdfExport as boolean | undefined) ??
+      (globalDr.pdfExport as boolean | undefined) ??
+      false;
 
     // ─── mindMap: env → local → global → built-in false ─────
-    this.mindMap = envBool(ENV.mindMap)
-      ?? (localDr.mindMap as boolean | undefined)
-      ?? (globalDr.mindMap as boolean | undefined)
-      ?? false;
+    this.mindMap =
+      envBool(ENV.mindMap) ??
+      (localDr.mindMap as boolean | undefined) ??
+      (globalDr.mindMap as boolean | undefined) ??
+      false;
 
     // ─── reportStyle: env → local → global → built-in narrative ──
     this.reportStyle = resolveReportStyle(
@@ -120,16 +124,16 @@ export class SettingsContext implements SettingsContextData {
     // ─── Profiles: local → global → built-in (no env) ────────
     const globalProfiles = (globalDr.profiles ?? {}) as Record<string, Partial<ResearchProfile>>;
     const localProfiles = (localDr.profiles ?? {}) as Record<string, Partial<ResearchProfile>>;
-    this.profiles = mergeProfiles(
-      mergeProfiles(BUILTIN.profiles, globalProfiles),
-      localProfiles,
-    );
+    this.profiles = mergeProfiles(mergeProfiles(BUILTIN.profiles, globalProfiles), localProfiles);
 
     // ─── Search providers: local → global (env handled inside cred) ──
     const globalProvidersRaw = globalDr.searchProviders;
     const localProvidersRaw = localDr.searchProviders;
     // Merge raw, then normalize — handles array format and field casing
-    const mergedProvidersRaw = { ...(globalProvidersRaw as Record<string, unknown> ?? {}), ...(localProvidersRaw as Record<string, unknown> ?? {}) };
+    const mergedProvidersRaw = {
+      ...((globalProvidersRaw as Record<string, unknown>) ?? {}),
+      ...((localProvidersRaw as Record<string, unknown>) ?? {}),
+    };
     const mergedProviders = normalizeSearchProviders(mergedProvidersRaw);
     this.credentials = new SearchProviderCredentials(mergedProviders);
   }

@@ -3,8 +3,8 @@
  * Queries public SearXNG instances with automatic failover.
  */
 
-import type { WebSearchOptions, WebSearchResult } from "../web-search.js";
 import type { SearchProviderCredentials } from "../../settings-context.js";
+import type { WebSearchOptions, WebSearchResult } from "../web-search.js";
 import { DDG_USER_AGENT, fetchUrl, rateLimiter } from "../web-search.js";
 
 const SEARXNG_INSTANCES = ["https://searx.be", "https://search.sapti.me"];

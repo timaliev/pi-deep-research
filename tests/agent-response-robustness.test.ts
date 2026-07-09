@@ -1,22 +1,33 @@
-import { ProfileResolver } from "../extension/profile-resolver.js";
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { ResearchStateMachine } from "../extension/state-machine.js";
-import { extractTextContent } from "../extension/research-run-orchestrator.js";
+import { describe, it } from "node:test";
 import type { ResearchPlan } from "../extension/prefilter.js";
-import type { WebSearchResult } from "../extension/search/web-search.js";
+import { ProfileResolver } from "../extension/profile-resolver.js";
+import { extractTextContent } from "../extension/research-run-orchestrator.js";
 import type { Scraper } from "../extension/scraper.js";
+import type { WebSearchResult } from "../extension/search/web-search.js";
+import { ResearchStateMachine } from "../extension/state-machine.js";
 
 const PLAN: ResearchPlan = {
-  topic: "Test", goal: "Test", researchQuestions: ["Q1", "Q2"],
-  engines: ["duckduckgo"], profile: { name: "default" },
+  topic: "Test",
+  goal: "Test",
+  researchQuestions: ["Q1", "Q2"],
+  engines: ["duckduckgo"],
+  profile: { name: "default" },
   scope: { include: "", exclude: "" },
   estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" },
 };
 
 const RESULTS: WebSearchResult[] = [{ title: "R", url: "https://a.com", snippet: "s", engine: "duckduckgo" }];
-function mockSearchFn() { return async () => RESULTS; }
-function mockScraper(): Scraper { return { async scrape(url: string) { return { url, title: url, content: "mock" }; } }; }
+function mockSearchFn() {
+  return async () => RESULTS;
+}
+function mockScraper(): Scraper {
+  return {
+    async scrape(url: string) {
+      return { url, title: url, content: "mock" };
+    },
+  };
+}
 
 describe("ResearchStateMachine — agentResponse robustness", () => {
   it("extractQuestions handles string input", async () => {
