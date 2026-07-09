@@ -1,6 +1,6 @@
 import { Type } from "typebox";
-import { existsSync } from "node:fs";
 import type { SessionState } from "../session-state.js";
+import { readPlanArtifact } from "./shared.js";
 
 export function createConfirmPlanTool(session: SessionState) {
   return {
@@ -11,8 +11,9 @@ export function createConfirmPlanTool(session: SessionState) {
       plan_artifact_path: Type.String({ description: "Path to the prefilter.json artifact to confirm" }),
     }),
     async execute(_toolCallId: string, params: any) {
-      if (!existsSync(params.plan_artifact_path)) {
-        return { content: [{ type: "text", text: `Error: artifact not found at ${params.plan_artifact_path}` }], details: { error: "artifact_not_found" } };
+      const result = readPlanArtifact(params.plan_artifact_path);
+      if (!result.ok) {
+        return { content: [{ type: "text", text: `Error: ${result.error} — ${result.path}` }], details: { error: result.error } };
       }
       session.saveConfirmation(params.plan_artifact_path);
       return {

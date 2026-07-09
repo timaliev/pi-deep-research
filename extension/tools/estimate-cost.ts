@@ -1,7 +1,6 @@
 import { Type } from "typebox";
-import { existsSync, readFileSync } from "node:fs";
 import type { ProfileResolver } from "../profile-resolver.js";
-import type { PrefilterArtifact } from "../prefilter.js";
+import { readPlanArtifact } from "./shared.js";
 
 export function createEstimateCostTool(profileResolver: ProfileResolver) {
   return {
@@ -12,11 +11,11 @@ export function createEstimateCostTool(profileResolver: ProfileResolver) {
       plan_artifact_path: Type.String({ description: "Path to the prefilter.json artifact" }),
     }),
     async execute(_toolCallId: string, params: any) {
-      if (!existsSync(params.plan_artifact_path)) {
-        return { content: [{ type: "text", text: `Error: artifact not found at ${params.plan_artifact_path}` }], details: { error: "artifact_not_found" } };
+      const result = readPlanArtifact(params.plan_artifact_path);
+      if (!result.ok) {
+        return { content: [{ type: "text", text: `Error: ${result.error} — ${result.path}` }], details: { error: result.error } };
       }
-      const raw = readFileSync(params.plan_artifact_path, "utf-8");
-      const artifact: PrefilterArtifact = JSON.parse(raw);
+      const artifact = result.artifact;
       const profile = profileResolver.resolve(artifact.plan.profile);
       const estSearches = profile.breadth * profile.depth * artifact.plan.researchQuestions.length;
       const estScrapes = Math.ceil(estSearches * 1.5);
