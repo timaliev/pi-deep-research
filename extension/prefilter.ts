@@ -86,6 +86,7 @@ export class PrefilterManager {
   private readonly profileResolver?: ProfileResolver;
   private readonly searchCred?: SearchProviderCredentials;
   private readonly sharedRunId?: string;
+  private readonly defaultReportStyle: "narrative" | "subtopics";
   private lastSearchResultCount = 0;
   private lastScrapedUrls: string[] = [];
   private finalized = false;
@@ -98,6 +99,7 @@ export class PrefilterManager {
     profileResolver?: ProfileResolver,
     searchCred?: SearchProviderCredentials,
     sharedRunId?: string,
+    defaultReportStyle?: "narrative" | "subtopics",
   ) {
     this.searchFn = searchFn;
     this.scraper = scraper;
@@ -106,6 +108,7 @@ export class PrefilterManager {
     this.profileResolver = profileResolver ?? new ProfileResolver({}, "default");
     this.searchCred = searchCred;
     this.sharedRunId = sharedRunId;
+    this.defaultReportStyle = defaultReportStyle ?? "narrative";
   }
 
   private runId(): string { return this.sharedRunId ?? generateRunId(); }
@@ -119,6 +122,7 @@ export class PrefilterManager {
       this.profileResolver.getPresets(),
       this.profileResolver?.defaultProfileName ?? "default",
       buildEngineStatus(this.searchCred),
+      this.defaultReportStyle,
     );
     return { phase: "awaiting_params", runId, inject };
   }
@@ -280,6 +284,7 @@ export class PrefilterSession {
     private readonly searchCred?: SearchProviderCredentials,
     private readonly searchFn: typeof SearchWebFn = searchWeb,
     private readonly scraper: Scraper = new WebScraper(),
+    private readonly defaultReportStyle?: "narrative" | "subtopics",
   ) {}
 
   /** Get existing manager or create a new one. Session entry lookup handled internally. */
@@ -305,6 +310,7 @@ export class PrefilterSession {
     const manager = new PrefilterManager(
       this.searchFn, this.scraper, this.artifactsDir,
       logger, this.profileResolver, this.searchCred, runId,
+      this.defaultReportStyle,
     );
     this.managers.set(runId, manager);
     persist(runId);

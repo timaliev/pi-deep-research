@@ -72,6 +72,7 @@ export class ResearchRunOrchestrator {
       artifactsDir,
       searchCred: this.searchCred,
       logger,
+      defaultReportStyle: this.settings?.reportStyle,
     });
   }
 

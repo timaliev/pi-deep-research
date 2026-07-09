@@ -32,12 +32,14 @@ const ENV = {
   defaultProfile: "DEEP_RESEARCH_DEFAULT_PROFILE",
   pdfExport: "DEEP_RESEARCH_PDF_EXPORT",
   mindMap: "DEEP_RESEARCH_MIND_MAP",
+  reportStyle: "DEEP_RESEARCH_REPORT_STYLE",
 } as const;
 
 // ─── Built-in defaults ─────────────────────────────────────────
 const BUILTIN = {
   defaultProfile: "default",
   profiles: DEFAULT_PRESETS,
+  reportStyle: "narrative" as "narrative" | "subtopics",
 };
 
 // ─── Interface ─────────────────────────────────────────────────
@@ -49,6 +51,7 @@ export interface SettingsContextData {
   credentials: SearchProviderCredentials;
   pdfExport: boolean;
   mindMap: boolean;
+  reportStyle: "narrative" | "subtopics";
 }
 
 export interface InitParams {
@@ -67,6 +70,7 @@ export class SettingsContext implements SettingsContextData {
   readonly credentials: SearchProviderCredentials;
   readonly pdfExport: boolean;
   readonly mindMap: boolean;
+  readonly reportStyle: "narrative" | "subtopics";
 
   private constructor(params: InitParams) {
     const homeAgentDir = params.homeAgentDir ?? join(homedir(), ".pi", "agent");
@@ -106,6 +110,13 @@ export class SettingsContext implements SettingsContextData {
       ?? (globalDr.mindMap as boolean | undefined)
       ?? false;
 
+    // ─── reportStyle: env → local → global → built-in narrative ──
+    this.reportStyle = resolveReportStyle(
+      envString(ENV.reportStyle),
+      localDr.defaultReportStyle as string | undefined,
+      globalDr.defaultReportStyle as string | undefined,
+    );
+
     // ─── Profiles: local → global → built-in (no env) ────────
     const globalProfiles = (globalDr.profiles ?? {}) as Record<string, Partial<ResearchProfile>>;
     const localProfiles = (localDr.profiles ?? {}) as Record<string, Partial<ResearchProfile>>;
@@ -142,6 +153,14 @@ export class SettingsContext implements SettingsContextData {
 }
 
 // ─── Helpers ────────────────────────────────────────────────────
+
+/** Resolve report style: env → local → global → "narrative". Invalid values fall back to "narrative". */
+function resolveReportStyle(env?: string, local?: string, global?: string): "narrative" | "subtopics" {
+  const valid = ["narrative", "subtopics"];
+  const value = env ?? local ?? global;
+  if (value && valid.includes(value)) return value as "narrative" | "subtopics";
+  return "narrative";
+}
 
 /** Normalize searchProviders from settings.json into the canonical
  *  Record&lt;engine, Record&lt;key, value&gt;&gt; shape expected by SearchProviderCredentials.

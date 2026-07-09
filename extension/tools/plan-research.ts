@@ -20,6 +20,7 @@ export function createPlanResearchTool(
 ) {
   const session = new PrefilterSession(
     settings.artifactsDir, profileResolver, searchCred, searchFn, scraper,
+    settings.reportStyle,
   );
 
   return {

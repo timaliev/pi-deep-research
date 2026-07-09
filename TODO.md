@@ -61,12 +61,12 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 - DONE: **C4** — Orphaned setting loaders deleted.
 - DONE: **C5** — PrefilterManager scoped to Map keyed by runId, concurrent plans safe.
 
-### Configurable default report style (designed 2026-07-07)
+### Configurable default report style (designed 2026-07-07, implemented 2026-07-09)
 
-- TODO: add `reportStyle` field to `SettingsContext` — cascade: env `DEEP_RESEARCH_REPORT_STYLE` → local settings.json `deepResearch.defaultReportStyle` → global settings.json → `"narrative"`.
-- TODO: add `defaultReportStyle` field to `ResearchContext` interface and `ResearchStateMachine` constructor.
-- TODO: update `state-machine.ts` fallback: `plan.reportStyle ?? this.defaultReportStyle ?? "narrative"` (4 call sites).
-- TODO: wire `settings.reportStyle` through `index.ts` → `ResearchRunOrchestrator` → `ResearchStateMachine`.
-- TODO: update `prefilter.ts` prompt — show configured default marked with `(default)`, instruct LLM to advise narrative vs subtopics based on topic complexity.
-- TODO: add `"reportStyle"` to `buildParamsPrompt` expected JSON template.
-- TODO: add tests for settings cascade, env override, state machine fallback, prefilter prompt advisory.
+- DONE: add `reportStyle` field to `SettingsContext` — cascade: env `DEEP_RESEARCH_REPORT_STYLE` → local settings.json `deepResearch.defaultReportStyle` → global settings.json → `"narrative"`.
+- DONE: add `defaultReportStyle` field to `ResearchContext` interface and `ResearchStateMachine` constructor.
+- DONE: update `state-machine.ts` fallback: `plan.reportStyle ?? this.defaultReportStyle ?? "narrative"` (4 call sites).
+- DONE: wire `settings.reportStyle` through `index.ts` → `ResearchRunOrchestrator` → `ResearchStateMachine`.
+- DONE: update `prefilter.ts` prompt — show configured default marked with `(default)`, instruct LLM to advise narrative vs subtopics based on topic complexity.
+- DONE: add `"reportStyle"` to `buildParamsPrompt` expected JSON template.
+- DONE: add tests for settings cascade, env override, state machine fallback, prefilter prompt advisory.

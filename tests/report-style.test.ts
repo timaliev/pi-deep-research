@@ -181,4 +181,18 @@ describe("prefilter prompts mention reportStyle", () => {
     assert.ok(result.inject!.includes("reportStyle") || result.inject!.includes("report_style"),
       "plan prompt JSON template must include reportStyle field");
   });
+
+  it("buildParamsPrompt shows (default) next to configured report style", async () => {
+    const resolver = new (await import("../extension/profile-resolver.js")).ProfileResolver({});
+    const manager = new PrefilterManager(
+      mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS,
+      undefined, resolver,
+    );
+    const result = await manager.start("test");
+
+    // Prompt must have "narrative (default)" to mark the default report style
+    // Not just "narrative" which always appears in the styles list
+    assert.ok(result.inject!.includes("narrative (default)"),
+      "params prompt must mark default report style with '(default)'");
+  });
 });

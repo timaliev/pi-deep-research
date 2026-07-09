@@ -73,12 +73,15 @@ export interface ResearchContext {
   searchCred?: SearchProviderCredentials;
   /** Optional logger — when provided, the machine uses it instead of creating one lazily. */
   logger?: Logger;
+  /** Default report style when plan has no reportStyle. Falls back to "narrative". */
+  defaultReportStyle?: "narrative" | "subtopics";
 }
 
 export class ResearchStateMachine {
   private readonly searchFn: typeof SearchWebFn;
   private readonly scraper: Scraper;
   private readonly profileResolver: ProfileResolver;
+  private readonly defaultReportStyle: "narrative" | "subtopics";
   private logger?: Logger;
   private readonly artifactsDir?: string;
   private readonly searchCred?: SearchProviderCredentials;
@@ -91,6 +94,7 @@ export class ResearchStateMachine {
     this.artifactsDir = ctx.artifactsDir ?? defaultArtifactsDir();
     this.searchCred = ctx.searchCred;
     this.logger = ctx.logger;
+    this.defaultReportStyle = ctx.defaultReportStyle ?? "narrative";
   }
 
   static init(plan: ResearchPlan, resolver: ProfileResolver, runId?: string): ResearchSnapshot {
@@ -125,7 +129,7 @@ export class ResearchStateMachine {
     }
     // Resolve report style once per run
     if (!this.style) {
-      this.style = createReportStyle(plan.reportStyle ?? "narrative");
+      this.style = createReportStyle(plan.reportStyle ?? this.defaultReportStyle ?? "narrative");
     }
     // Agent response already parsed by orchestrator — phase handlers receive clean text or undefined
     switch (snapshot.phase) {
