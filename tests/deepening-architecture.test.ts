@@ -84,9 +84,12 @@ describe("Candidate 2 — logger locality in ResearchStateMachine", () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const srcIdx = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "index.ts"), "utf-8");
+    const srcDeps = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "deps.ts"), "utf-8");
     const srcTool = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "run-research.ts"), "utf-8");
-    // index.ts delegates to createRunResearchTool
-    assert.ok(srcIdx.includes("createRunResearchTool"), "index.ts must use tool factory");
+    // index.ts delegates to registerAllTools
+    assert.ok(srcIdx.includes("registerAllTools"), "index.ts must use registerAllTools");
+    // deps.ts imports createRunResearchTool
+    assert.ok(srcDeps.includes("createRunResearchTool"), "deps.ts must use tool factory");
     // tools/run-research.ts uses ResearchRunOrchestrator
     assert.ok(srcTool.includes("ResearchRunOrchestrator"), "run-research tool must use orchestrator");
   });

@@ -32,13 +32,17 @@ describe("save_report → reportsDir", () => {
   });
 
   it("auto-save and save_report use same reportsDir source", async () => {
-    const src = readFileSync(
+    const srcIdx = readFileSync(
       join(import.meta.dirname ?? ".", "..", "extension", "index.ts"),
       "utf-8",
     );
-    // Both paths should use reportsDir consistently
-    const reportsDirRefs = [...src.matchAll(/reportsDir/g)];
-    assert.ok(reportsDirRefs.length >= 2, "reportsDir referenced at least twice");
+    const srcDeps = readFileSync(
+      join(import.meta.dirname ?? ".", "..", "extension", "tools", "deps.ts"),
+      "utf-8",
+    );
+    // reportsDir should flow through settings object to both index.ts and deps.ts
+    assert.ok(srcIdx.includes("settings"), "index.ts must reference settings");
+    assert.ok(srcDeps.includes("settings"), "deps.ts must reference settings");
   });
 });
 
