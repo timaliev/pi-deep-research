@@ -130,7 +130,11 @@ export class PrefilterManager {
 
     // Cached params from a prior withParams() → route to next step
     if (this.cachedTopic && this.cachedEngines && this.cachedProfile) {
-      return { phase: "error", runId: this.runId(), error: "continue() after withParams — search+merge not yet implemented (ADR-0017)" };
+      return {
+        phase: "error",
+        runId: this.runId(),
+        error: "continue() after withParams — search+merge not yet implemented (ADR-0017)",
+      };
     }
 
     // No topic, no cached state → error

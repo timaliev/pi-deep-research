@@ -23,18 +23,24 @@ const MOCK_RESULTS: WebSearchResult[] = [
   { title: "Test 2", url: "https://b.com", snippet: "Snippet 2", engine: "duckduckgo" },
 ];
 
-const MOCK_PAGES: ScrapedPage[] = [
-  { url: "https://a.com", title: "Page A", content: "Content A" },
-];
+const MOCK_PAGES: ScrapedPage[] = [{ url: "https://a.com", title: "Page A", content: "Content A" }];
 
 describe("PrefilterManager.continue()", () => {
-  beforeEach(() => { mkdirSync(TEST_DIR, { recursive: true }); });
-  afterEach(() => { if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true }); });
+  beforeEach(() => {
+    mkdirSync(TEST_DIR, { recursive: true });
+  });
+  afterEach(() => {
+    if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true });
+  });
 
   it("continue() dispatches to start() when no cached params and topic provided", async () => {
     const resolver = new ProfileResolver({});
     const manager = new PrefilterManager(
-      mockSearchFn(MOCK_RESULTS), mockScraper(MOCK_PAGES), TEST_DIR, undefined, resolver,
+      mockSearchFn(MOCK_RESULTS),
+      mockScraper(MOCK_PAGES),
+      TEST_DIR,
+      undefined,
+      resolver,
     );
     // Fresh manager — continue() should behave like start() when given a topic
     const result = await manager.continue("test topic");
@@ -45,7 +51,11 @@ describe("PrefilterManager.continue()", () => {
   it("continue() returns error when no cached params and no topic", async () => {
     const resolver = new ProfileResolver({});
     const manager = new PrefilterManager(
-      mockSearchFn(MOCK_RESULTS), mockScraper(MOCK_PAGES), TEST_DIR, undefined, resolver,
+      mockSearchFn(MOCK_RESULTS),
+      mockScraper(MOCK_PAGES),
+      TEST_DIR,
+      undefined,
+      resolver,
     );
     // Fresh manager with no topic — should error
     const result = await manager.continue();
@@ -56,7 +66,11 @@ describe("PrefilterManager.continue()", () => {
   it("continue() routes to search after withParams completes", async () => {
     const resolver = new ProfileResolver({});
     const manager = new PrefilterManager(
-      mockSearchFn(MOCK_RESULTS), mockScraper(MOCK_PAGES), TEST_DIR, undefined, resolver,
+      mockSearchFn(MOCK_RESULTS),
+      mockScraper(MOCK_PAGES),
+      TEST_DIR,
+      undefined,
+      resolver,
     );
     // First: withParams() runs the search
     const wpResult = await manager.withParams("test", ["duckduckgo"], { name: "default" });

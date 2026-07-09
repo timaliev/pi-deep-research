@@ -113,7 +113,9 @@ export function createPlanResearchTool(
           return { content: [{ type: "text", text: `Error: ${result.error}` }], details: { error: result.error } };
         }
         return {
-          content: [{ type: "text", text: `## Research Planning — Phase: ${result.phase}\n\nContinuing prefilter flow.` }],
+          content: [
+            { type: "text", text: `## Research Planning — Phase: ${result.phase}\n\nContinuing prefilter flow.` },
+          ],
           details: { phase: result.phase, run_id: result.runId },
         };
       }
