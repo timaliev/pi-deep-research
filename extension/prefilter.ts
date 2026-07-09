@@ -1,14 +1,19 @@
+import { join } from "node:path";
 import { generateRunId } from "./ids.js";
 import type { Logger } from "./logger.js";
 import { JsonlLogger } from "./logger.js";
-import { join } from "node:path";
-import { searchWeb } from "./search/web-search.js";
-import { WebScraper } from "./scraper.js";
-import type { searchWeb as SearchWebFn } from "./search/web-search.js";
-import type { WebSearchResult } from "./search/web-search.js";
-import type { SearchEngine } from "./search/web-search.js";
-import type { Scraper, ScrapedPage } from "./scraper.js";
+import {
+  buildApiKeyWarning,
+  buildEngineStatus,
+  buildParamsPrompt,
+  buildPlanPrompt,
+  buildSearchQuery,
+} from "./prefilter-prompts.js";
 import { ProfileResolver } from "./profile-resolver.js";
+import type { ScrapedPage, Scraper } from "./scraper.js";
+import { WebScraper } from "./scraper.js";
+import type { SearchEngine, searchWeb as SearchWebFn, WebSearchResult } from "./search/web-search.js";
+import { searchWeb } from "./search/web-search.js";
 import type { SearchProviderCredentials } from "./settings-context.js";
 
 export interface ResearchPlanProfile {
@@ -79,6 +84,7 @@ export class PrefilterManager {
   private readonly profileResolver?: ProfileResolver;
   private readonly searchCred?: SearchProviderCredentials;
   private readonly sharedRunId?: string;
+  private readonly defaultReportStyle: "narrative" | "subtopics";
   private lastSearchResultCount = 0;
   private lastScrapedUrls: string[] = [];
   private finalized = false;
@@ -91,6 +97,7 @@ export class PrefilterManager {
     profileResolver?: ProfileResolver,
     searchCred?: SearchProviderCredentials,
     sharedRunId?: string,
+    defaultReportStyle?: "narrative" | "subtopics",
   ) {
     this.searchFn = searchFn;
     this.scraper = scraper;
@@ -99,15 +106,52 @@ export class PrefilterManager {
     this.profileResolver = profileResolver ?? new ProfileResolver({}, "default");
     this.searchCred = searchCred;
     this.sharedRunId = sharedRunId;
+    this.defaultReportStyle = defaultReportStyle ?? "narrative";
   }
 
-  private runId(): string { return this.sharedRunId ?? generateRunId(); }
+  private runId(): string {
+    return this.sharedRunId ?? generateRunId();
+  }
+
+  // Cache for withParams reuse in continue()
+  private cachedTopic?: string;
+  private cachedEngines?: SearchEngine[];
+  private cachedProfile?: ResearchPlanProfile;
+
+  /**
+   * Handle a zero-params call — internally routes to the appropriate step.
+   * Called by the plan_research tool when no params_json or plan_json are provided.
+   */
+  async continue(topic?: string): Promise<PrefilterResult> {
+    // Fresh state with topic → behave like start()
+    if (topic && this.lastSearchResultCount === 0 && this.lastScrapedUrls.length === 0) {
+      return this.start(topic);
+    }
+
+    // Cached params from a prior withParams() → route to next step
+    if (this.cachedTopic && this.cachedEngines && this.cachedProfile) {
+      return {
+        phase: "error",
+        runId: this.runId(),
+        error: "continue() after withParams — search+merge not yet implemented (ADR-0017)",
+      };
+    }
+
+    // No topic, no cached state → error
+    return { phase: "error", runId: this.runId(), error: "No topic provided and no cached prefilter state." };
+  }
 
   /** Step 1: Ask agent to propose engines + profile. */
   async start(topic: string): Promise<PrefilterResult> {
     const runId = this.runId();
     this.logger?.event("prefilter_started", { topic });
-    const inject = this.buildParamsPrompt(topic);
+    const inject = buildParamsPrompt(
+      topic,
+      this.profileResolver.getPresets(),
+      this.profileResolver?.defaultProfileName ?? "default",
+      buildEngineStatus(this.searchCred),
+      this.defaultReportStyle,
+    );
     return { phase: "awaiting_params", runId, inject };
   }
 
@@ -116,14 +160,22 @@ export class PrefilterManager {
     const runId = this.runId();
     this.logger?.event("prefilter_params_set", { engines, profile });
 
+    // Cache for continue() to route to search+merge later
+    this.cachedTopic = topic;
+    this.cachedEngines = engines;
+    this.cachedProfile = profile;
+
     const missingKeys = this.checkApiKeys(engines);
     if (missingKeys.length > 0) {
-      const inject = this.buildApiKeyWarning(missingKeys);
+      const inject = buildApiKeyWarning(missingKeys);
       return { phase: "awaiting_params", runId, inject, engines, profile };
     }
 
-    const searchQuery = this.buildSearchQuery(topic);
-    const searchResults = await this.searchFn(searchQuery, 3, engines, { logger: this.logger, credentials: this.searchCred });
+    const searchQuery = buildSearchQuery(topic);
+    const searchResults = await this.searchFn(searchQuery, 3, engines, {
+      logger: this.logger,
+      credentials: this.searchCred,
+    });
     this.lastSearchResultCount = searchResults.length;
 
     const scrapedContent: ScrapedPage[] = [];
@@ -133,22 +185,36 @@ export class PrefilterManager {
         const page = await this.scraper.scrape(result.url);
         scrapedContent.push(page);
         this.lastScrapedUrls.push(result.url);
-      } catch { /* skip */ }
+      } catch {
+        /* skip */
+      }
     }
 
-    const inject = this.buildPlanPrompt(topic, engines, profile, searchResults, scrapedContent);
+    const resolved = this.profileResolver.resolve(profile);
+    const inject = buildPlanPrompt(
+      topic,
+      engines,
+      profile.name,
+      resolved.breadth,
+      resolved.depth,
+      resolved.concurrency,
+      this.profileResolver.getPresets(),
+      searchResults,
+      scrapedContent,
+    );
     return { phase: "awaiting_plan", runId, inject, engines, profile, searchResults, scrapedContent };
   }
 
   /**
    * Second call: validate agent's JSON plan and save as artifact.
    */
-  async finalize(
-    topic: string,
-    planJson: string
-  ): Promise<PrefilterResult> {
+  async finalize(topic: string, planJson: string): Promise<PrefilterResult> {
     if (this.finalized) {
-      return { phase: "error", runId: this.runId(), error: "Prefilter already finalized — plan_research called twice with plan_json" };
+      return {
+        phase: "error",
+        runId: this.runId(),
+        error: "Prefilter already finalized — plan_research called twice with plan_json",
+      };
     }
     const runId = this.runId();
 
@@ -185,7 +251,7 @@ export class PrefilterManager {
       inputTopic: topic,
       plan,
       preliminarySearch: {
-        query: this.buildSearchQuery(topic),
+        query: buildSearchQuery(topic),
         resultsCount: this.lastSearchResultCount,
         scrapedUrls: this.lastScrapedUrls,
       },
@@ -206,19 +272,16 @@ export class PrefilterManager {
     };
   }
 
-  private buildSearchQuery(topic: string): string {
-    // Normalize topic into a web search query
-    return topic.trim().replace(/\s+/g, " ").substring(0, 300);
-  }
-
   private validatePlan(plan: unknown): string | null {
     if (!plan || typeof plan !== "object") return "Plan must be a JSON object";
     const p = plan as Record<string, unknown>;
 
     if (!p.topic || typeof p.topic !== "string" || !p.topic.trim()) return "Plan must include 'topic'";
     if (!p.goal || typeof p.goal !== "string" || !p.goal.trim()) return "Plan must include 'goal'";
-    if (!Array.isArray(p.researchQuestions) || p.researchQuestions.length === 0) return "Plan must include researchQuestions";
-    if (!Array.isArray(p.engines) || p.engines.length === 0) return "Plan must include 'engines' array with at least one engine";
+    if (!Array.isArray(p.researchQuestions) || p.researchQuestions.length === 0)
+      return "Plan must include researchQuestions";
+    if (!Array.isArray(p.engines) || p.engines.length === 0)
+      return "Plan must include 'engines' array with at least one engine";
     if (!p.scope || typeof p.scope !== "object") return "Plan must include 'scope'";
     if (!p.estimatedCost || typeof p.estimatedCost !== "object") return "Plan must include 'estimatedCost'";
     if (!p.profile || typeof p.profile !== "object") return "Plan must include 'profile'";
@@ -236,8 +299,10 @@ export class PrefilterManager {
       return `profile.name must be one of: ${validNames.join(", ")}`;
     }
     if (prof.name === "custom") {
-      if (typeof prof.breadth !== "number" || (prof.breadth as number) < 1) return "Custom profile must include 'breadth' >= 1";
-      if (typeof prof.depth !== "number" || (prof.depth as number) < 1) return "Custom profile must include 'depth' >= 1";
+      if (typeof prof.breadth !== "number" || (prof.breadth as number) < 1)
+        return "Custom profile must include 'breadth' >= 1";
+      if (typeof prof.depth !== "number" || (prof.depth as number) < 1)
+        return "Custom profile must include 'depth' >= 1";
     }
 
     return null;
@@ -246,60 +311,16 @@ export class PrefilterManager {
   private checkApiKeys(engines: SearchEngine[]): string[] {
     const cred = this.searchCred;
     const missing: string[] = [];
-    if (engines.includes("brave") && !cred?.get("brave", "apiKey") && !process.env.BRAVE_API_KEY) missing.push("BRAVE_API_KEY");
-    if (engines.includes("tavily") && !cred?.get("tavily", "apiKey") && !process.env.TAVILY_API_KEY) missing.push("TAVILY_API_KEY");
+    if (engines.includes("brave") && !cred?.get("brave", "apiKey") && !process.env.BRAVE_API_KEY)
+      missing.push("BRAVE_API_KEY");
+    if (engines.includes("tavily") && !cred?.get("tavily", "apiKey") && !process.env.TAVILY_API_KEY)
+      missing.push("TAVILY_API_KEY");
     if (engines.includes("yandex")) {
       const hasToken = cred?.get("yandex", "oauthToken") || process.env.YANDEX_OAUTH_TOKEN;
       const hasFolder = cred?.get("yandex", "folderId") || process.env.YANDEX_FOLDER_ID;
       if (!hasToken || !hasFolder) missing.push("YANDEX_OAUTH_TOKEN, YANDEX_FOLDER_ID");
     }
     return missing;
-  }
-
-  private buildParamsPrompt(topic: string): string {
-    const presets = Object.entries(this.profileResolver.getPresets())
-        .map(([name, p]) => `  ${name}: breadth=${p.breadth}, depth=${p.depth}, concurrency=${p.concurrency}`)
-        .join("\n");
-    const defaultName = this.profileResolver?.defaultProfileName ?? "default";
-
-    // Check which engines have API keys configured
-    const engineStatus = this.buildEngineStatus();
-
-    return `## Research Parameters\n\nTopic: ${topic}\n\nChoose search engines, profile, and report style. Reply with JSON:\n\`\`\`json\n{"engines":["duckduckgo"],"profile":{"name":"${defaultName}"},"reportStyle":"narrative"}\n\`\`\`\n\nEngine availability:\n${engineStatus}\n\nAvailable profiles (default: **${defaultName}**):\n${presets}\n  custom: specify breadth, depth, concurrency\n\nReport styles:\n  narrative — fixed 5-section template (Introduction/Findings/Analysis/Recommendations/Sources)\n  subtopics — LLM discovers 5–10 thematic sections from findings\n\nYou may change the profile or report style later during plan creation.`;
-  }
-
-  private buildEngineStatus(): string {
-    const engines: Array<{ name: string; key: string; available: boolean }> = [
-      { name: "duckduckgo", key: "none", available: true },
-      { name: "brave", key: "BRAVE_API_KEY", available: this.searchCred?.get("brave", "apiKey") != null },
-      { name: "tavily", key: "TAVILY_API_KEY", available: this.searchCred?.get("tavily", "apiKey") != null },
-      { name: "yandex", key: "YANDEX_OAUTH_TOKEN", available: this.searchCred?.get("yandex", "oauthToken") != null },
-      { name: "searxng", key: "none", available: true },
-    ];
-    return engines
-      .map((e) => `  ${e.available ? "✅" : "❌"} ${e.name}${e.key !== "none" ? ` (needs ${e.key})` : ""}`)
-      .join("\n");
-  }
-
-  private buildApiKeyWarning(missing: string[]): string {
-    return `## API Key Required\n\nMissing: ${missing.join(", ")}. Set env vars and retry, or switch to duckduckgo.`;
-  }
-
-  private buildPlanPrompt(
-    topic: string, engines: SearchEngine[], profile: ResearchPlanProfile,
-    searchResults: WebSearchResult[], scrapedContent: ScrapedPage[],
-  ): string {
-    const resolved = this.profileResolver.resolve(profile);
-    const profileNames = this.profileResolver.listNames().join("/");
-    let p = `## Research Planning\n\nTopic: ${topic}\nEngines: [${engines.join(", ")}]\nProfile: ${profile.name} (breadth=${resolved.breadth}, depth=${resolved.depth}, concurrency=${resolved.concurrency})\n\nYou may change the profile in the plan JSON — use any named preset (${profileNames}) or custom with breadth/depth/concurrency. Pick the profile that best fits this research.\n\n### Preliminary Search\n\n`;
-    for (const r of searchResults) p += `- [${r.title}](${r.url}): ${r.snippet}\n`;
-    if (scrapedContent.length > 0) {
-      p += `\n### Scraped Content\n\n`;
-      for (const sp of scrapedContent) p += `**${sp.title}** (${sp.url})\n\n${sp.content.substring(0, 800)}\n\n---\n`;
-    }
-    p += `\n### Instructions\n\nProduce research plan JSON:
-\`\`\`json\n{"topic":"${topic}","goal":"...","researchQuestions":["Q1"],"engines":${JSON.stringify(engines)},"profile":${JSON.stringify(profile)},"scope":{"include":"...","exclude":"..."},"estimatedCost":{"searchCalls":12,"scrapeCalls":8,"description":"~12 searches"}}\n\`\`\`\n\nSet reportStyle to \"narrative\" (fixed 5-section) or \"subtopics\" (LLM discovers thematic sections). Output ONLY JSON.`;
-    return p;
   }
 }
 
@@ -313,6 +334,7 @@ export class PrefilterSession {
     private readonly searchCred?: SearchProviderCredentials,
     private readonly searchFn: typeof SearchWebFn = searchWeb,
     private readonly scraper: Scraper = new WebScraper(),
+    private readonly defaultReportStyle?: "narrative" | "subtopics",
   ) {}
 
   /** Get existing manager or create a new one. Session entry lookup handled internally. */
@@ -321,9 +343,9 @@ export class PrefilterSession {
     sessionEntries: Array<{ customType?: string; data?: unknown }>,
     persist: (runId: string) => void,
   ): PrefilterManager {
-    const prefilterEntry = [...sessionEntries].reverse().find(
-      (e: any) => e.customType === "deep-research:prefilter-run"
-    );
+    const prefilterEntry = [...sessionEntries]
+      .reverse()
+      .find((e: any) => e.customType === "deep-research:prefilter-run");
     const existingRunId = prefilterEntry?.data?.runId as string | undefined;
 
     if (existingRunId && this.managers.has(existingRunId)) {
@@ -336,8 +358,14 @@ export class PrefilterSession {
     const logsDir = join(this.artifactsDir, "..", "logs");
     const logger = new JsonlLogger(runId, join(logsDir, `${runId}-prefilter.log`));
     const manager = new PrefilterManager(
-      this.searchFn, this.scraper, this.artifactsDir,
-      logger, this.profileResolver, this.searchCred, runId,
+      this.searchFn,
+      this.scraper,
+      this.artifactsDir,
+      logger,
+      this.profileResolver,
+      this.searchCred,
+      runId,
+      this.defaultReportStyle,
     );
     this.managers.set(runId, manager);
     persist(runId);

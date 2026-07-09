@@ -1,11 +1,11 @@
-import type { ResearchProfile } from "./state-machine.js";
 import type { ResearchPlanProfile } from "./prefilter.js";
+import type { ResearchProfile } from "./state-machine.js";
 
 /** Built-in profile presets. Owned here — not in state-machine.ts. */
 export const DEFAULT_PRESETS: Record<string, ResearchProfile> = {
   default: { breadth: 4, depth: 2, concurrency: 4 },
-  fast:    { breadth: 2, depth: 1, concurrency: 2 },
-  deep:    { breadth: 6, depth: 3, concurrency: 4 },
+  fast: { breadth: 2, depth: 1, concurrency: 2 },
+  deep: { breadth: 6, depth: 3, concurrency: 4 },
 };
 
 /** Shallow-merge user profile overrides into built-in presets. */

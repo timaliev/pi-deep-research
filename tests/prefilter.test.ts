@@ -1,10 +1,10 @@
-import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { afterEach, beforeEach, describe, it } from "node:test";
 import { PrefilterManager } from "../extension/prefilter.js";
+import type { ScrapedPage, Scraper } from "../extension/scraper.js";
 import type { WebSearchResult } from "../extension/search/web-search.js";
-import type { Scraper, ScrapedPage } from "../extension/scraper.js";
 
 const TEST_ARTIFACTS = join(import.meta.dirname ?? ".", "..", "test-artifacts");
 
@@ -29,8 +29,16 @@ const MOCK_RESULTS: WebSearchResult[] = [
 
 function mockScrapedPages(): Map<string, ScrapedPage> {
   const m = new Map<string, ScrapedPage>();
-  m.set("https://xstate.js.org/docs/", { url: "https://xstate.js.org/docs/", title: "XState Docs", content: "State machines and statecharts." });
-  m.set("https://refactoring.guru/", { url: "https://refactoring.guru/", title: "Refactoring", content: "The State pattern." });
+  m.set("https://xstate.js.org/docs/", {
+    url: "https://xstate.js.org/docs/",
+    title: "XState Docs",
+    content: "State machines and statecharts.",
+  });
+  m.set("https://refactoring.guru/", {
+    url: "https://refactoring.guru/",
+    title: "Refactoring",
+    content: "The State pattern.",
+  });
   return m;
 }
 
@@ -45,8 +53,12 @@ const VALID_PLAN = JSON.stringify({
 });
 
 describe("PrefilterManager", () => {
-  beforeEach(() => { mkdirSync(TEST_ARTIFACTS, { recursive: true }); });
-  afterEach(() => { if (existsSync(TEST_ARTIFACTS)) rmSync(TEST_ARTIFACTS, { recursive: true, force: true }); });
+  beforeEach(() => {
+    mkdirSync(TEST_ARTIFACTS, { recursive: true });
+  });
+  afterEach(() => {
+    if (existsSync(TEST_ARTIFACTS)) rmSync(TEST_ARTIFACTS, { recursive: true, force: true });
+  });
 
   describe("start", () => {
     it("returns awaiting_params with engines+profile prompt", async () => {
@@ -109,29 +121,46 @@ describe("PrefilterManager", () => {
     it("rejects JSON missing required fields", async () => {
       const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
       await manager.start("test");
-      const result = await manager.finalize("test", JSON.stringify({
-        topic: "test", researchQuestions: [], scope: { include: "", exclude: "" },
-        estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" },
-      }));
+      const result = await manager.finalize(
+        "test",
+        JSON.stringify({
+          topic: "test",
+          researchQuestions: [],
+          scope: { include: "", exclude: "" },
+          estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" },
+        }),
+      );
       assert.equal(result.phase, "error");
     });
 
     it("rejects plan with empty research questions", async () => {
       const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
       await manager.start("test");
-      const result = await manager.finalize("test", JSON.stringify({
-        topic: "test", goal: "goal", researchQuestions: [], engines: ["duckduckgo"],
-        profile: { name: "default" }, scope: { include: "a", exclude: "b" },
-        estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" },
-      }));
+      const result = await manager.finalize(
+        "test",
+        JSON.stringify({
+          topic: "test",
+          goal: "goal",
+          researchQuestions: [],
+          engines: ["duckduckgo"],
+          profile: { name: "default" },
+          scope: { include: "a", exclude: "b" },
+          estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" },
+        }),
+      );
       assert.equal(result.phase, "error");
     });
 
     it("uses shared runId across all three steps when set via constructor", async () => {
       const sharedRunId = "shared-run-001";
       const manager = new PrefilterManager(
-        mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS,
-        undefined, undefined, undefined, sharedRunId
+        mockSearchFn(MOCK_RESULTS),
+        mockScraper(mockScrapedPages()),
+        TEST_ARTIFACTS,
+        undefined,
+        undefined,
+        undefined,
+        sharedRunId,
       );
 
       const r1 = await manager.start("state machines");
@@ -160,12 +189,16 @@ describe("PrefilterManager", () => {
       const finalResult = await manager.finalize("state machines", VALID_PLAN);
 
       const artifact = JSON.parse(readFileSync(finalResult.planArtifactPath!, "utf-8"));
-      assert.equal(artifact.preliminarySearch.resultsCount, paramsResult.searchResults!.length,
-        "resultsCount must match actual search result count");
-      assert.equal(artifact.preliminarySearch.scrapedUrls.length, 2,
-        "scrapedUrls must contain scraped URLs");
-      assert.ok(artifact.preliminarySearch.scrapedUrls.includes("https://xstate.js.org/docs/"),
-        "scrapedUrls must include xstate URL");
+      assert.equal(
+        artifact.preliminarySearch.resultsCount,
+        paramsResult.searchResults!.length,
+        "resultsCount must match actual search result count",
+      );
+      assert.equal(artifact.preliminarySearch.scrapedUrls.length, 2, "scrapedUrls must contain scraped URLs");
+      assert.ok(
+        artifact.preliminarySearch.scrapedUrls.includes("https://xstate.js.org/docs/"),
+        "scrapedUrls must include xstate URL",
+      );
     });
 
     it("fresh instance starts with empty results (caller must reuse same instance)", async () => {
@@ -173,10 +206,8 @@ describe("PrefilterManager", () => {
       // Skip withParams — results are empty without it
       const result = await manager.finalize("state machines", VALID_PLAN);
       const artifact = JSON.parse(readFileSync(result.planArtifactPath!, "utf-8"));
-      assert.equal(artifact.preliminarySearch.resultsCount, 0,
-        "fresh instance has no prior search results");
-      assert.equal(artifact.preliminarySearch.scrapedUrls.length, 0,
-        "fresh instance has no scraped URLs");
+      assert.equal(artifact.preliminarySearch.resultsCount, 0, "fresh instance has no prior search results");
+      assert.equal(artifact.preliminarySearch.scrapedUrls.length, 0, "fresh instance has no scraped URLs");
     });
 
     it("rejects duplicate finalize (idempotency guard)", async () => {

@@ -1,72 +1,89 @@
 /**
- * Test that DDG searches are staggered with random pre-delay
- * to avoid simultaneous requests that trigger rate limiting.
+ * Test that RateLimiter owns stagger/backoff logic
+ * and adapters use rateLimiter instead of deprecated engineLastCall/waitIfNeeded.
  */
-import { describe, it } from "node:test";
+
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { describe, it } from "node:test";
 
-const SEARCH_CODE_PATH = join(import.meta.dirname ?? ".", "..", "extension", "search", "engines", "duckduckgo.ts");
-const WEB_SEARCH_PATH = join(import.meta.dirname ?? ".", "..", "extension", "search", "web-search.ts");
-const searchCode = readFileSync(SEARCH_CODE_PATH, "utf-8");
-const webSearchCode = readFileSync(WEB_SEARCH_PATH, "utf-8");
+const RL_CODE_PATH = join(import.meta.dirname ?? ".", "..", "extension", "search", "rate-limiter.ts");
+const DDG_CODE_PATH = join(import.meta.dirname ?? ".", "..", "extension", "search", "engines", "duckduckgo.ts");
+const BRAVE_CODE_PATH = join(import.meta.dirname ?? ".", "..", "extension", "search", "engines", "brave.ts");
 
-describe("DDG search stagger", () => {
-  it("engineLastCall is updated BEFORE HTTP request, not after", () => {
-    // Find searchDuckDuckGo function body
-    const fnMatch = searchCode.match(/async function searchDuckDuckGo[\s\S]*?^}/m);
-    assert.ok(fnMatch, "searchDuckDuckGo function must exist");
-    const fnBody = fnMatch[0];
+const rlCode = readFileSync(RL_CODE_PATH, "utf-8");
+const ddgCode = readFileSync(DDG_CODE_PATH, "utf-8");
+const braveCode = readFileSync(BRAVE_CODE_PATH, "utf-8");
 
-    // Find all occurrences of engineLastCall["duckduckgo"] or engineLastCall["duckduckgo"] =
-    const lastCallUpdates = [...fnBody.matchAll(/engineLastCall\[["']duckduckgo["']\]\s*=\s*Date\.now\(\)/g)];
-    
-    // Must have at least one update
-    assert.ok(lastCallUpdates.length >= 1, "engineLastCall must be updated for duckduckgo");
-    
-    // The first update must happen BEFORE the postForm/fetchUrl HTTP call
-    const firstUpdatePos = lastCallUpdates[0].index!;
-    const httpCallPos = fnBody.search(/postForm\(|fetchUrl\(/);
-    
-    assert.ok(
-      firstUpdatePos < httpCallPos,
-      `engineLastCall update (pos ${firstUpdatePos}) must be BEFORE HTTP call (pos ${httpCallPos})`
-    );
+describe("RateLimiter config", () => {
+  it("DDG min delay >= 2000ms in default configs", () => {
+    const match = rlCode.match(/duckduckgo[\s\S]*?minDelayMs:\s*(\d+)/);
+    assert.ok(match, "DDG minDelayMs must exist in DEFAULT_RATE_LIMIT_CONFIGS");
+    assert.ok(Number(match[1]) >= 2000, `DDG min delay must be >= 2000ms, got ${match[1]}`);
   });
 
-  it("searchDuckDuckGo has pre-request random delay", () => {
-    // searchDuckDuckGo must have a random pre-delay before the HTTP request
-    // to stagger concurrent requests
-    const fnMatch = searchCode.match(/async function searchDuckDuckGo[\s\S]*?^}/m);
-    assert.ok(fnMatch, "searchDuckDuckGo function must exist");
-    const fnBody = fnMatch[0];
-    
-    // Find the retry loop and check what happens before first HTTP call
-    // Should have Math.random() used for pre-delay, not just backoff
-    const hasPreDelayRandom = fnBody.includes("Math.random()");
-    assert.ok(hasPreDelayRandom, "Must use Math.random() for delay jitter");
+  it("DDG has preStaggerMs configured", () => {
+    const match = rlCode.match(/duckduckgo[\s\S]*?preStaggerMs:\s*(\d+)/);
+    assert.ok(match, "DDG must have preStaggerMs in config");
+    assert.ok(Number(match[1]) >= 1000, `preStaggerMs must be >= 1000ms, got ${match[1]}`);
   });
 
-  it("DDG min delay between requests is >= 2000ms", () => {
-    const match = webSearchCode.match(/duckduckgo["']?\s*:\s*(\d+)/);
-    assert.ok(match, "Must have DDG min delay configured");
-    assert.ok(
-      Number(match[1]) >= 2000,
-      `DDG min delay must be >= 2000ms to avoid rate limits, got ${match[1]}`
-    );
+  it("DDG has retry config with backoff multiplier", () => {
+    assert.ok(rlCode.includes("maxRetries:"), "DDG retry config must include maxRetries");
+    assert.ok(rlCode.includes("backoffMultiplier:"), "DDG retry config must include backoffMultiplier");
   });
 
-  it("waitIfNeeded is called BEFORE the HTTP request in engine loop", () => {
-    // In the engine loop (searchAllEngines), waitIfNeeded must be called before the HTTP call
-    const waitPos = webSearchCode.search(/await waitIfNeeded/);
-    const fnCallPos = webSearchCode.search(/const results = await fn\(/);
-    
-    assert.ok(waitPos >= 0, "waitIfNeeded must exist in web-search.ts");
-    assert.ok(fnCallPos >= 0, "engine fn call must exist in web-search.ts");
-    assert.ok(
-      waitPos < fnCallPos,
-      `waitIfNeeded (pos ${waitPos}) must be BEFORE engine call (pos ${fnCallPos})`
-    );
+  it("all 5 engines have configs in DEFAULT_RATE_LIMIT_CONFIGS", () => {
+    for (const engine of ["duckduckgo", "brave", "tavily", "yandex", "searxng"]) {
+      assert.ok(rlCode.includes(`${engine}:`), `${engine} must be in DEFAULT_RATE_LIMIT_CONFIGS`);
+    }
+  });
+});
+
+describe("Adapter rate-limit usage", () => {
+  it("DDG adapter search() uses rateLimiter.waitIfNeeded + rateLimiter.retryOnRateLimit + rateLimiter.recordCall", () => {
+    const fnMatch = ddgCode.match(/export async function search\([\s\S]*?^}/m);
+    assert.ok(fnMatch, "search function must exist in duckduckgo.ts");
+    const body = fnMatch[0];
+
+    assert.ok(body.includes("rateLimiter.waitIfNeeded"), "search() must call rateLimiter.waitIfNeeded");
+    assert.ok(body.includes("rateLimiter.retryOnRateLimit"), "search() must call rateLimiter.retryOnRateLimit");
+    assert.ok(body.includes("rateLimiter.recordCall"), "search() must call rateLimiter.recordCall");
+
+    // waitIfNeeded must be called before rateLimiter.retryOnRateLimit
+    const waitPos = body.indexOf("rateLimiter.waitIfNeeded");
+    const retryPos = body.indexOf("rateLimiter.retryOnRateLimit");
+    const recordPos = body.indexOf("rateLimiter.recordCall");
+    assert.ok(waitPos < retryPos, "waitIfNeeded must be BEFORE retryOnRateLimit");
+    assert.ok(retryPos < recordPos, "retryOnRateLimit must be BEFORE recordCall");
+  });
+
+  it("DDG adapter no longer imports engineLastCall or waitIfNeeded", () => {
+    assert.ok(!ddgCode.includes("engineLastCall"), "DDG adapter must not use engineLastCall");
+    // waitIfNeeded might appear as part of rateLimiter.waitIfNeeded — check standalone import
+    assert.ok(!ddgCode.includes("import { waitIfNeeded }"), "DDG adapter must not import waitIfNeeded directly");
+  });
+
+  it("searchDuckDuckGo throws RateLimitError when rate-limited", () => {
+    const fnMatch = ddgCode.match(/export async function searchDuckDuckGo[\s\S]*?^}/m);
+    assert.ok(fnMatch, "searchDuckDuckGo must exist");
+    const body = fnMatch[0];
+    assert.ok(body.includes("RateLimitError"), "searchDuckDuckGo must throw RateLimitError when rate-limited");
+  });
+
+  it("brave adapter search() calls rateLimiter.waitIfNeeded and rateLimiter.recordCall", () => {
+    const fnMatch = braveCode.match(/export async function search\([\s\S]*?^}/m);
+    assert.ok(fnMatch, "search function must exist in brave.ts");
+    const body = fnMatch[0];
+
+    assert.ok(body.includes("rateLimiter.waitIfNeeded"), "brave search() must call rateLimiter.waitIfNeeded");
+    assert.ok(body.includes("rateLimiter.recordCall"), "brave search() must call rateLimiter.recordCall");
+
+    const waitPos = body.indexOf("rateLimiter.waitIfNeeded");
+    const httpPos = body.search(/searchBrave\(/);
+    const recordPos = body.indexOf("rateLimiter.recordCall");
+    assert.ok(waitPos < httpPos, "waitIfNeeded must be BEFORE searchBrave HTTP call");
+    assert.ok(httpPos < recordPos, "recordCall must be AFTER searchBrave HTTP call");
   });
 });

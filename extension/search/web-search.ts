@@ -7,10 +7,12 @@
  * - Rate limit detection via HTTP status + HTML content analysis
  */
 
-import { request as httpsRequest } from "node:https";
 import { request as httpRequest } from "node:http";
-import type { Logger } from "./logger.js";
+import { request as httpsRequest } from "node:https";
 import type { SearchProviderCredentials } from "../settings-context.js";
+import type { Logger } from "./logger.js";
+
+export { rateLimiter } from "./rate-limiter.js";
 
 export const DDG_USER_AGENT = "Mozilla/5.0 (compatible; web-search/1.0)";
 
@@ -43,9 +45,7 @@ function fetchUrlWithMethod(
       Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       "Accept-Language": "en-US,en;q=0.9",
       "Accept-Encoding": "identity",
-      ...Object.fromEntries(
-        Object.entries(opts?.headers ?? {}).filter(([k]) => k !== "User-Agent"),
-      ),
+      ...Object.fromEntries(Object.entries(opts?.headers ?? {}).filter(([k]) => k !== "User-Agent")),
     };
 
     if (method === "POST" && formData) {
@@ -67,9 +67,7 @@ function fetchUrlWithMethod(
           const loc = res.headers.location;
           if (loc) {
             res.resume();
-            const redirectUrl = loc.startsWith("/")
-              ? `${parsedUrl.protocol}//${parsedUrl.host}${loc}`
-              : loc;
+            const redirectUrl = loc.startsWith("/") ? `${parsedUrl.protocol}//${parsedUrl.host}${loc}` : loc;
             fetchUrlWithMethod("GET", redirectUrl, null, opts).then(resolve, reject);
             return;
           }
@@ -120,7 +118,6 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// --- Brave Search API (optional - needs BRAVE_API_KEY env var or settings) ---
 /** Decode HTML entities (shared by engine parsers) */
 export function decodeHtmlEntities(text: string): string {
   return text
@@ -151,26 +148,6 @@ function deduplicateByUrl(results: WebSearchResult[]): WebSearchResult[] {
   return out;
 }
 
-// --- Per-engine rate limiter ---
-export const engineLastCall: Record<string, number> = {};
-const ENGINE_MIN_DELAY: Record<string, number> = {
-  duckduckgo: 2500,
-  searxng: 2000,
-  brave: 500,
-  tavily: 200,
-  yandex: 500,
-};
-
-export async function waitIfNeeded(engine: string): Promise<void> {
-  const last = engineLastCall[engine] ?? 0;
-  const minDelay = ENGINE_MIN_DELAY[engine] ?? 1000;
-  const elapsed = Date.now() - last;
-  if (elapsed < minDelay) {
-    const waitTime = minDelay - elapsed + Math.random() * 500;
-    await sleep(waitTime);
-  }
-}
-
 // --- Public API ---
 
 export type SearchEngine = "duckduckgo" | "brave" | "searxng" | "tavily" | "yandex";
@@ -182,11 +159,11 @@ export type EngineSearchFn = (
 ) => Promise<WebSearchResult[]>;
 
 const ENGINE_LOADERS: Record<SearchEngine, () => Promise<{ search: EngineSearchFn }>> = {
-  duckduckgo: async () => (await import("./engines/duckduckgo.js")),
-  brave: async () => (await import("./engines/brave.js")),
-  tavily: async () => (await import("./engines/tavily.js")),
-  yandex: async () => (await import("./engines/yandex.js")),
-  searxng: async () => (await import("./engines/searxng.js")),
+  duckduckgo: async () => await import("./engines/duckduckgo.js"),
+  brave: async () => await import("./engines/brave.js"),
+  tavily: async () => await import("./engines/tavily.js"),
+  yandex: async () => await import("./engines/yandex.js"),
+  searxng: async () => await import("./engines/searxng.js"),
 };
 
 export function createEngineSearchFn(engine: SearchEngine): EngineSearchFn {
@@ -212,10 +189,7 @@ export interface WebSearchOptions {
   compare?: boolean;
   signal?: AbortSignal;
   credentials?: SearchProviderCredentials;
-  onUpdate?: (update: {
-    content: Array<{ type: string; text: string }>;
-    details: Record<string, unknown>;
-  }) => void;
+  onUpdate?: (update: { content: Array<{ type: string; text: string }>; details: Record<string, unknown> }) => void;
 }
 
 export interface WebSearchOutput {
@@ -233,10 +207,7 @@ export interface WebSearchOutput {
 interface SearchCallbacks {
   signal?: AbortSignal;
   credentials?: SearchProviderCredentials;
-  onUpdate?: (update: {
-    content: Array<{ type: string; text: string }>;
-    details: Record<string, unknown>;
-  }) => void;
+  onUpdate?: (update: { content: Array<{ type: string; text: string }>; details: Record<string, unknown> }) => void;
   logger?: Logger;
 }
 
@@ -270,8 +241,6 @@ async function searchAllEngines(
     const fn = engineFns[engine];
     if (!fn) continue;
 
-    await waitIfNeeded(engine);
-
     try {
       const startMs = Date.now();
       onUpdate?.({
@@ -281,7 +250,6 @@ async function searchAllEngines(
 
       const results = await fn(query, searchOpts, credentials);
       const elapsedMs = Date.now() - startMs;
-      engineLastCall[engine] = Date.now();
       perEngine[engine] = results;
       allResults.push(...results);
 
@@ -365,16 +333,18 @@ export async function searchWeb(
   }
 
   callbacks?.onUpdate?.({
-    content: [
-      { type: "text", text: `Searching "${query}" via [${engines.join(", ")}]...` },
-    ],
+    content: [{ type: "text", text: `Searching "${query}" via [${engines.join(", ")}]...` }],
     details: { phase: "searching", engine: engines[0] },
   });
 
   const { allResults } = await searchAllEngines(
-    query, maxResults, engines,
-    callbacks?.signal, callbacks?.credentials,
-    callbacks?.onUpdate, callbacks?.logger,
+    query,
+    maxResults,
+    engines,
+    callbacks?.signal,
+    callbacks?.credentials,
+    callbacks?.onUpdate,
+    callbacks?.logger,
   );
 
   return deduplicateByUrl(allResults);
@@ -382,11 +352,9 @@ export async function searchWeb(
 
 /**
  * Multi-engine web search with markdown formatting.
- * Used by the web_search tool for user-facing output.
+ * Used by the deep_web_search tool for user-facing output.
  */
-export async function multiEngineWebSearch(
-  opts: WebSearchOptions,
-): Promise<WebSearchOutput> {
+export async function multiEngineWebSearch(opts: WebSearchOptions): Promise<WebSearchOutput> {
   const query = opts.query;
   const maxResults = opts.maxResults ?? 5;
   const engines: SearchEngine[] = opts.engines ?? ["duckduckgo"];
@@ -397,9 +365,13 @@ export async function multiEngineWebSearch(
   }
 
   const { allResults, perEngine, errors } = await searchAllEngines(
-    query, maxResults, engines,
-    opts.signal, opts.credentials,
-    opts.onUpdate, undefined,
+    query,
+    maxResults,
+    engines,
+    opts.signal,
+    opts.credentials,
+    opts.onUpdate,
+    undefined,
   );
 
   const text = formatSearchMarkdown(query, engines, allResults, perEngine, errors, compareMode);

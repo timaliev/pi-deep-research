@@ -10,63 +10,46 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 - DONE: include all artifacts files pertaining to the report as reference links in `## Research Telemetry` section of each report.
 - DONE: read `https://api-dashboard.search.brave.com/app/documentation/web-search/get-started` and implement `brave` web search accordingly.
 - DONE: add GitHub workflow for release, so only after successful tests pass release can be created.
-- TODO: save PDF-version of reports — designed in ADR-0014. Implement `export_pdf` tool with pandoc+weasyprint primary path and agent-injection fallback. Add `deepResearch.pdfExport` setting for auto-export after run.
+- DONE: save PDF-version of reports — designed in ADR-0014. Implement `export_pdf` tool with pandoc+weasyprint primary path and agent-injection fallback. Add `deepResearch.pdfExport` setting for auto-export after run.
 - DONE: add profile name and parameters to Telemetry section of each report.
 - DONE: use runid as file name for prefilter.log
 
-### ADR-0013: Mind-map, MCP/local sources, repository link, profile listing
+### Architecture improvements (from review 2026-07-09)
 
-- TODO: implement standalone `mind_map` tool — injection-based, agent generates Mermaid `graph TD`, saves via `write`/`edit`.
-- TODO: implement `mapping` phase in `ResearchRunOrchestrator` — gated by `deepResearch.mindMap` setting, injects findings-based prompt after `done`, captures agent response, appends `## Mind Map` to `draftReport`.
-- TODO: add `deepResearch.mindMap` boolean setting (default `false`) to `SettingsContext`.
-- TODO: rename `readExtensionVersion()` → `readExtensionMeta()` returning `{ version, repoUrl }` from `package.json`.
-- TODO: add repository link row to Telemetry table in `buildTelemetrySection()`.
+- DONE: Delete utils.ts pass-through module — engines import waitIfNeeded directly from web-search.js.
+- DONE: Remove redundant dual waitIfNeeded calls — searchAllEngines no longer calls waitIfNeeded.
+- DONE: Extract RateLimiter module — single seam for all rate-limiting (waitIfNeeded, retryOnRateLimit, recordCall).
+- DONE: De-duplicate artifact-not-found guard — readPlanArtifact() in shared.ts.
+- DONE: Consolidate tool factory dependency injection — ToolDeps + registerAllTools(pi, deps).
+- DONE: Extract prompt builders from prefilter.ts — prefilter-prompts.ts pure functions.
+- DONE: Fix brave engine waitIfNeeded error (jiti circular dep via utils.ts).
+
+### Remaining (ADR-0013: MCP/local sources)
+
 - TODO: add `Finding.source` field (`"web"` | `"local"` | `"mcp"`) to `Finding` interface.
 - TODO: add optional `sources?: { local?: { paths: string[] }, mcp?: string[] }` to `ResearchPlan` interface.
 - TODO: implement enriched search in `doSearching()` — `searchingEnriched` flag, inject MCP/local prompt after web search, capture raw agent response text, pass to extraction as unstructured context.
 - TODO: extend `buildExtractionPrompt` with optional `localContext` and `mcpContext` params — per-source sections in prompt, machine-tags findings by source section.
 - TODO: add source-type breakdown rows (Web/Local/MCP counts) to `buildTelemetrySection()`.
-- TODO: add profile listing (all presets from `ProfileResolver.getPresets()` with breadth/depth/concurrency) to `buildPlanPrompt` in `PrefilterManager` step 3.
 - TODO: update `buildParamsPrompt` and `buildPlanPrompt` to mention MCP/local sources in prefilter flow.
 
-### ADR-0014: PDF export
+### ADR-0017: LLM introspection + source-tagged questions (designed 2026-07-09)
 
-- TODO: implement `export_pdf` tool — shell-out to pandoc+weasyprint, pre-flight checks (`which pandoc`, `which weasyprint`, `which mermaid-filter`), fallback to agent injection if tools missing.
-- TODO: add `deepResearch.pdfExport` boolean setting (default `false`) to `SettingsContext`.
-- TODO: implement auto-PDF export in `ResearchRunOrchestrator` — after `done` phase, check `pdfExport` setting, invoke conversion on report path.
+- TODO: add `introspectionDone` flag and LLM introspection substate to `PrefilterManager` / `PrefilterSession`.
+- TODO: add LLM introspection injection prompt to `prefilter-prompts.ts` — agent proposes topics from internal knowledge with confidence/importance.
+- TODO: add merge injection prompt to `prefilter-prompts.ts` — merge LLM topics with web search results, tag sources, flag contradictions.
+- TODO: extend `plan_research` tool to dispatch introspection turn (Turn 1: with params_json → inject introspection; Turn 2: no params → run search + inject merge).
+- TODO: add `questionMetadata?: Record<string, {source, confidence, importance, contradictionOf?, debatableFact?}>` to ResearchPlan.
+- TODO: extend subtopics drafting prompt topic tiers: 0-4q → 5-7, 5-7q → 8-12, 8+q → 12-20.
+- TODO: add post-report contradiction analysis in `ResearchRunOrchestrator` — gated by presence of contradiction flags, inject analysis prompt, append `## Contradictions & Debatable Facts` to report.
+- FUTURE: Question 8 — runtime consumption of questionMetadata (priority ordering, prompt enrichment based on confidence).
 
-### Known bugs (diagnosed 2026-07-02)
+### Default report style (implemented 2026-07-09)
 
-- DONE: **B1 (Medium)** — `research-run-orchestrator.ts` uses `extractTextContent()` from state-machine.ts, stripping `<tool_calls>` XML blocks. Fixed.
-- DONE: **B2 (Low)** — unused `parsedUrl` variable removed during tavily adapter extraction (C1).
-
-### Dead code (diagnosed 2026-07-02)
-
-- DONE: **D1** — `buildDraftingPrompt()` removed in C4 refactor.
-- DONE: **D2** — `loadSearchProviders()` removed in C4 refactor.
-- DONE: **D3** — `loadDeepResearchSettings()` removed in C4 refactor.
-
-### Code smells (low priority, diagnosed 2026-07-02)
-
-- DONE: **S2** — Module-level `_prefilterManager` replaced with Map keyed by runId (C5).
-- DONE: **S3** — `reportsDir` shadowing removed in C3.
-- DONE: **S4** — `resolveProfile()` deprecation annotation cleaned up in C2.
-- DONE: **S5** — Engine implementations extracted to `engines/*.ts` adapters (C1).
-
-### Architecture improvements (from review 2026-07-02)
-
-- DONE: **C1** — Engine Adapter seam deepened.
-- DONE: **C2** — Text extraction unified with `extractTextContent()`.
-- DONE: **C3** — Report path consolidated with `resolveReportPath()`.
-- DONE: **C4** — Orphaned setting loaders deleted.
-- DONE: **C5** — PrefilterManager scoped to Map keyed by runId, concurrent plans safe.
-
-### Configurable default report style (designed 2026-07-07)
-
-- TODO: add `reportStyle` field to `SettingsContext` — cascade: env `DEEP_RESEARCH_REPORT_STYLE` → local settings.json `deepResearch.defaultReportStyle` → global settings.json → `"narrative"`.
-- TODO: add `defaultReportStyle` field to `ResearchContext` interface and `ResearchStateMachine` constructor.
-- TODO: update `state-machine.ts` fallback: `plan.reportStyle ?? this.defaultReportStyle ?? "narrative"` (4 call sites).
-- TODO: wire `settings.reportStyle` through `index.ts` → `ResearchRunOrchestrator` → `ResearchStateMachine`.
-- TODO: update `prefilter.ts` prompt — show configured default marked with `(default)`, instruct LLM to advise narrative vs subtopics based on topic complexity.
-- TODO: add `"reportStyle"` to `buildParamsPrompt` expected JSON template.
-- TODO: add tests for settings cascade, env override, state machine fallback, prefilter prompt advisory.
+- DONE: add `reportStyle` field to `SettingsContext` — cascade: env `DEEP_RESEARCH_REPORT_STYLE` → local settings.json `deepResearch.defaultReportStyle` → global settings.json → `"narrative"`.
+- DONE: add `defaultReportStyle` field to `ResearchContext` interface and `ResearchStateMachine` constructor.
+- DONE: update `state-machine.ts` fallback: `plan.reportStyle ?? this.defaultReportStyle ?? "narrative"` (4 call sites).
+- DONE: wire `settings.reportStyle` through `index.ts` → `ResearchRunOrchestrator` → `ResearchStateMachine`.
+- DONE: update `prefilter.ts` prompt — show configured default marked with `(default)`, instruct LLM to advise narrative vs subtopics based on topic complexity.
+- DONE: add `"reportStyle"` to `buildParamsPrompt` expected JSON template.
+- DONE: add tests for settings cascade, env override, state machine fallback, prefilter prompt advisory.

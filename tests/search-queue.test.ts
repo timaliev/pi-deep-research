@@ -1,9 +1,9 @@
-import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, rmSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { afterEach, beforeEach, describe, it } from "node:test";
 
-import { buildSearchQueue, saveQueue, QueuedSearch } from "../extension/search-queue.js";
+import { buildSearchQueue, QueuedSearch, saveQueue } from "../extension/search-queue.js";
 
 const TEST_DIR = join(import.meta.dirname ?? ".", "..", "test-search-queue");
 
@@ -35,8 +35,7 @@ describe("buildSearchQueue", () => {
     assert.ok(queue[0].scheduledDelayMs >= 0, "first request no delay");
     assert.ok(queue[1].scheduledDelayMs >= 2000, "second request delay >= 2s");
     assert.ok(queue[1].scheduledDelayMs <= 4000, "second request delay <= 4s");
-    assert.ok(queue[2].scheduledDelayMs >= queue[1].scheduledDelayMs,
-      "delays increase sequentially");
+    assert.ok(queue[2].scheduledDelayMs >= queue[1].scheduledDelayMs, "delays increase sequentially");
   });
 
   it("no delay for non-rate-limited engines (brave, tavily)", () => {
@@ -55,17 +54,12 @@ describe("buildSearchQueue", () => {
   });
 
   it("delay accumulates for DDG: random 2000-4000ms between requests", () => {
-    const queue = buildSearchQueue(
-      ["q1", "q2", "q3", "q4", "q5"],
-      ["duckduckgo"],
-    );
+    const queue = buildSearchQueue(["q1", "q2", "q3", "q4", "q5"], ["duckduckgo"]);
 
     for (let i = 1; i < queue.length; i++) {
       const gap = queue[i].scheduledDelayMs - queue[i - 1].scheduledDelayMs;
-      assert.ok(gap >= 2000,
-        `gap between ${i - 1} and ${i} must be >= 2000ms, got ${gap}ms`);
-      assert.ok(gap <= 4000,
-        `gap between ${i - 1} and ${i} must be <= 4000ms, got ${gap}ms`);
+      assert.ok(gap >= 2000, `gap between ${i - 1} and ${i} must be >= 2000ms, got ${gap}ms`);
+      assert.ok(gap <= 4000, `gap between ${i - 1} and ${i} must be <= 4000ms, got ${gap}ms`);
     }
   });
 });
@@ -73,8 +67,12 @@ describe("buildSearchQueue", () => {
 // ─── Slice 2: saveQueue ──────────────────────────────────────────
 
 describe("saveQueue", () => {
-  beforeEach(() => { mkdirSync(TEST_DIR, { recursive: true }); });
-  afterEach(() => { if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true }); });
+  beforeEach(() => {
+    mkdirSync(TEST_DIR, { recursive: true });
+  });
+  afterEach(() => {
+    if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true });
+  });
 
   it("saves queue as valid JSON array", () => {
     const queue = buildSearchQueue(["q1", "q2"], ["duckduckgo"]);
@@ -100,8 +98,12 @@ describe("saveQueue", () => {
 // ─── Slice 3: queue round-trip (build → save → load → compare) ──
 
 describe("queue round-trip", () => {
-  beforeEach(() => { mkdirSync(TEST_DIR, { recursive: true }); });
-  afterEach(() => { if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true }); });
+  beforeEach(() => {
+    mkdirSync(TEST_DIR, { recursive: true });
+  });
+  afterEach(() => {
+    if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true });
+  });
 
   it("saved queue matches built queue", () => {
     const questions = ["q1", "q2", "q3"];

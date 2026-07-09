@@ -3,10 +3,9 @@
  * Queries public SearXNG instances with automatic failover.
  */
 
-import type { WebSearchOptions, WebSearchResult } from "../web-search.js";
 import type { SearchProviderCredentials } from "../../settings-context.js";
-import { DDG_USER_AGENT, fetchUrl } from "../web-search.js";
-import { waitIfNeeded } from "./utils.js";
+import type { WebSearchOptions, WebSearchResult } from "../web-search.js";
+import { DDG_USER_AGENT, fetchUrl, rateLimiter } from "../web-search.js";
 
 const SEARXNG_INSTANCES = ["https://searx.be", "https://search.sapti.me"];
 
@@ -49,6 +48,8 @@ export async function search(
   opts: WebSearchOptions,
   _cred?: SearchProviderCredentials,
 ): Promise<WebSearchResult[]> {
-  await waitIfNeeded("searxng");
-  return searchSearXNG(query, opts.maxResults ?? 5);
+  await rateLimiter.waitIfNeeded("searxng");
+  const results = await searchSearXNG(query, opts.maxResults ?? 5);
+  rateLimiter.recordCall("searxng");
+  return results;
 }

@@ -1,10 +1,10 @@
-import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { ResearchDraft } from "../extension/research-draft.js";
-import { join, dirname } from "node:path";
+import { dirname, join } from "node:path";
+import { afterEach, beforeEach, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
-import { buildTelemetrySection, readExtensionVersion } from "../extension/report-assembly.js";
+import { buildTelemetrySection, readExtensionMeta } from "../extension/report-assembly.js";
+import { ResearchDraft } from "../extension/research-draft.js";
 import type { ResearchSnapshot } from "../extension/state-machine.js";
 
 const baseDir = dirname(fileURLToPath(import.meta.url));
@@ -57,30 +57,106 @@ describe("buildTelemetrySection with version", () => {
     assert.ok(versionIdx >= 0, "Pi Extension version row must exist");
     assert.equal(versionIdx, runIdIdx + 1, "Pi Extension version must be right after Run ID");
   });
+
+  it("includes repo URL row when repoUrl provided", () => {
+    const snap = makeSnapshot();
+    const section = buildTelemetrySection(
+      snap,
+      "0.13.1",
+      undefined,
+      undefined,
+      undefined,
+      "https://github.com/timaliev/pi-deep-research",
+    );
+
+    assert.ok(section.includes("| Pi Extension repository |"), "must have Pi Extension repository row");
+    assert.ok(section.includes("https://github.com/timaliev/pi-deep-research"), "must include repo URL");
+  });
+
+  it("omits repo URL row when not provided", () => {
+    const snap = makeSnapshot();
+    const section = buildTelemetrySection(snap, "0.13.1");
+
+    assert.ok(!section.includes("| Pi Extension repository |"), "must NOT have repo row when undefined");
+  });
+
+  it("repo URL row appears right after version row", () => {
+    const snap = makeSnapshot();
+    const section = buildTelemetrySection(
+      snap,
+      "0.13.1",
+      undefined,
+      undefined,
+      undefined,
+      "https://github.com/timaliev/pi-deep-research",
+    );
+
+    const lines = section.split("\n");
+    const versionIdx = lines.findIndex((l) => l.includes("Pi Extension version"));
+    const repoIdx = lines.findIndex((l) => l.includes("Pi Extension repository"));
+
+    assert.ok(versionIdx >= 0);
+    assert.ok(repoIdx >= 0);
+    assert.equal(repoIdx, versionIdx + 1, "repo row must be right after version row");
+  });
 });
 
-describe("readExtensionVersion from package.json", () => {
-  beforeEach(() => { mkdirSync(TEST_DIR, { recursive: true }); });
-  afterEach(() => { if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true }); });
+describe("readExtensionMeta from package.json", () => {
+  beforeEach(() => {
+    mkdirSync(TEST_DIR, { recursive: true });
+  });
+  afterEach(() => {
+    if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true });
+  });
 
   it("reads version from valid package.json", () => {
     const pkgPath = join(TEST_DIR, "package.json");
     writeFileSync(pkgPath, JSON.stringify({ name: "test", version: "2.5.0" }), "utf-8");
 
-    const version = readExtensionVersion(pkgPath);
-    assert.equal(version, "2.5.0");
+    const meta = readExtensionMeta(pkgPath);
+    assert.equal(meta.version, "2.5.0");
   });
 
-  it("returns undefined when package.json missing", () => {
-    const version = readExtensionVersion(join(TEST_DIR, "nonexistent.json"));
-    assert.equal(version, undefined);
+  it("returns undefined version when package.json missing", () => {
+    const meta = readExtensionMeta(join(TEST_DIR, "nonexistent.json"));
+    assert.equal(meta.version, undefined);
   });
 
-  it("returns undefined when package.json has no version field", () => {
+  it("returns undefined version when package.json has no version field", () => {
     const pkgPath = join(TEST_DIR, "package.json");
     writeFileSync(pkgPath, JSON.stringify({ name: "test" }), "utf-8");
 
-    const version = readExtensionVersion(pkgPath);
-    assert.equal(version, undefined);
+    const meta = readExtensionMeta(pkgPath);
+    assert.equal(meta.version, undefined);
+  });
+
+  it("reads repository URL from package.json", () => {
+    const pkgPath = join(TEST_DIR, "package.json");
+    writeFileSync(
+      pkgPath,
+      JSON.stringify({
+        name: "test",
+        version: "1.0.0",
+        repository: { url: "https://github.com/example/repo" },
+      }),
+      "utf-8",
+    );
+
+    const meta = readExtensionMeta(pkgPath);
+    assert.equal(meta.repoUrl, "https://github.com/example/repo");
+  });
+
+  it("returns undefined repoUrl when no repository field", () => {
+    const pkgPath = join(TEST_DIR, "package.json");
+    writeFileSync(pkgPath, JSON.stringify({ name: "test", version: "1.0.0" }), "utf-8");
+
+    const meta = readExtensionMeta(pkgPath);
+    assert.equal(meta.repoUrl, undefined);
+  });
+
+  it("returns empty object when package.json missing", () => {
+    const meta = readExtensionMeta(join(TEST_DIR, "nonexistent.json"));
+    assert.equal(meta.version, undefined);
+    assert.equal(meta.repoUrl, undefined);
   });
 });

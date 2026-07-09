@@ -9,9 +9,7 @@ export function createExportPdfTool(sendUserMessage: (msg: string, opts: any) =>
       "Export a research report as PDF using pandoc+weasyprint. Falls back to agent-based conversion if pandoc not installed.",
     parameters: Type.Object({
       report_path: Type.String({ description: "Path to the markdown report file" }),
-      output_path: Type.Optional(
-        Type.String({ description: "Output PDF path (defaults to same name + .pdf)" }),
-      ),
+      output_path: Type.Optional(Type.String({ description: "Output PDF path (defaults to same name + .pdf)" })),
     }),
     async execute(_toolCallId: string, params: any) {
       const reportPath = params.report_path as string;

@@ -4,18 +4,13 @@
  */
 
 import { request as httpsRequest } from "node:https";
-import type { WebSearchOptions, WebSearchResult } from "../web-search.js";
 import type { SearchProviderCredentials } from "../../settings-context.js";
-import { DDG_USER_AGENT } from "../web-search.js";
-import { waitIfNeeded } from "./utils.js";
+import type { WebSearchOptions, WebSearchResult } from "../web-search.js";
+import { DDG_USER_AGENT, rateLimiter } from "../web-search.js";
 
 const TAVILY_API_URL = "https://api.tavily.com/search";
 
-async function tavilyPostRequest(
-  apiKey: string,
-  query: string,
-  maxResults: number,
-): Promise<WebSearchResult[]> {
+async function tavilyPostRequest(apiKey: string, query: string, maxResults: number): Promise<WebSearchResult[]> {
   const body = JSON.stringify({
     api_key: apiKey,
     query,
@@ -59,17 +54,17 @@ async function tavilyPostRequest(
         });
       },
     );
-    req.on("timeout", () => { req.destroy(); resolve([]); });
+    req.on("timeout", () => {
+      req.destroy();
+      resolve([]);
+    });
     req.on("error", () => resolve([]));
     req.write(body);
     req.end();
   });
 }
 
-export async function searchTavily(
-  query: string,
-  maxResults: number,
-): Promise<WebSearchResult[]> {
+export async function searchTavily(query: string, maxResults: number): Promise<WebSearchResult[]> {
   const apiKey = process.env.TAVILY_API_KEY;
   if (!apiKey) return [];
   return await tavilyPostRequest(apiKey, query, maxResults);
@@ -80,6 +75,8 @@ export async function search(
   opts: WebSearchOptions,
   _cred?: SearchProviderCredentials,
 ): Promise<WebSearchResult[]> {
-  await waitIfNeeded("tavily");
-  return searchTavily(query, opts.maxResults ?? 5);
+  await rateLimiter.waitIfNeeded("tavily");
+  const results = await searchTavily(query, opts.maxResults ?? 5);
+  rateLimiter.recordCall("tavily");
+  return results;
 }

@@ -26,9 +26,7 @@ export class WebScraper implements Scraper {
     const response = await this.fetchFn(url);
 
     if (!response.ok) {
-      throw new Error(
-        `Failed to fetch ${url}: ${response.status} ${response.statusText}`
-      );
+      throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
     }
 
     // Determine encoding: prefer Content-Type charset, fall back to meta tag detection
@@ -79,19 +77,8 @@ export class WebScraper implements Scraper {
     let text = html;
 
     // Remove scripts, styles, and nav/header/footer regions
-    for (const tag of [
-      "script",
-      "style",
-      "nav",
-      "header",
-      "footer",
-      "noscript",
-      "iframe",
-    ]) {
-      text = text.replace(
-        new RegExp(`<${tag}[^>]*>[\\s\\S]*?<\\/${tag}>`, "gi"),
-        ""
-      );
+    for (const tag of ["script", "style", "nav", "header", "footer", "noscript", "iframe"]) {
+      text = text.replace(new RegExp(`<${tag}[^>]*>[\\s\\S]*?<\\/${tag}>`, "gi"), "");
     }
 
     // Remove HTML comments

@@ -1,33 +1,21 @@
-import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { topicToSlug } from "./slug.js";
 import type { ResearchSnapshot } from "./state-machine.js";
 
 /** Compute canonical report path from topic and directory. */
-export function resolveReportPath(
-  topic: string,
-  reportsDir: string,
-  runId?: string,
-): string {
+export function resolveReportPath(topic: string, reportsDir: string, runId?: string): string {
   const date = new Date().toISOString().slice(0, 10);
   const slug = topicToSlug(topic);
-  const filename = runId
-    ? `${runId}-${slug}.md`
-    : `${date}-${slug}.md`;
+  const filename = runId ? `${runId}-${slug}.md` : `${date}-${slug}.md`;
   return join(reportsDir, filename);
 }
 
 /** Write report markdown to file. Appends telemetry section if not already present. */
-export function writeReportFile(
-  path: string,
-  content: string,
-  telemetry?: string,
-): void {
+export function writeReportFile(path: string, content: string, telemetry?: string): void {
   mkdirSync(dirname(path), { recursive: true });
-  const final = (telemetry && !content.includes("## Research Telemetry"))
-    ? `${content}\n\n${telemetry}\n`
-    : content;
+  const final = telemetry && !content.includes("## Research Telemetry") ? `${content}\n\n${telemetry}\n` : content;
   writeFileSync(path, final, "utf-8");
 }
 
@@ -52,11 +40,15 @@ export function assembleReport(params: ReportAssemblyParams): string {
 
   const reportText = snapshot.draft.get();
 
-  const ver = extensionVersion ?? readExtensionVersion();
-  const telemetry = buildTelemetrySection(snapshot, ver, [
-    planArtifactPath,
-    join(logsDir, `${snapshot.runId}.log`),
-  ], profileName);
+  const meta = extensionVersion ? { version: extensionVersion } : readExtensionMeta();
+  const telemetry = buildTelemetrySection(
+    snapshot,
+    meta.version,
+    [planArtifactPath, join(logsDir, `${snapshot.runId}.log`)],
+    profileName,
+    undefined,
+    meta.repoUrl,
+  );
 
   writeReportFile(reportPath, reportText, telemetry);
 
@@ -64,21 +56,24 @@ export function assembleReport(params: ReportAssemblyParams): string {
 }
 
 /** Build a telemetry summary section to append to the final report. */
-export function buildTelemetrySection(snapshot: ResearchSnapshot, extensionVersion?: string, artifactLinks?: string[], profileName?: string, reportStyle?: string): string {
+export function buildTelemetrySection(
+  snapshot: ResearchSnapshot,
+  extensionVersion?: string,
+  artifactLinks?: string[],
+  profileName?: string,
+  reportStyle?: string,
+  extensionRepoUrl?: string,
+): string {
   const durationSec = Math.round((Date.now() - snapshot.startedAt) / 1000);
-  const durationStr =
-    durationSec < 60
-      ? `${durationSec}s`
-      : `${Math.floor(durationSec / 60)}m ${durationSec % 60}s`;
+  const durationStr = durationSec < 60 ? `${durationSec}s` : `${Math.floor(durationSec / 60)}m ${durationSec % 60}s`;
 
   const prof = snapshot.profile;
-  const rows = [
-    `| Metric | Value |`,
-    `| --- | --- |`,
-    `| Run ID | \`${snapshot.runId}\` |`,
-  ];
+  const rows = [`| Metric | Value |`, `| --- | --- |`, `| Run ID | \`${snapshot.runId}\` |`];
   if (extensionVersion) {
     rows.push(`| Pi Extension version | \`${extensionVersion}\` |`);
+  }
+  if (extensionRepoUrl) {
+    rows.push(`| Pi Extension repository | ${extensionRepoUrl} |`);
   }
   if (profileName && prof) {
     rows.push(`| Profile | ${profileName} |`);
@@ -115,14 +110,17 @@ export function buildTelemetrySection(snapshot: ResearchSnapshot, extensionVersi
 const reportAssemblyDir = dirname(fileURLToPath(import.meta.url));
 const rootPkgPath = join(reportAssemblyDir, "..", "package.json");
 
-/** Read extension version from root package.json. Returns undefined if unreadable. */
-export function readExtensionVersion(pkgPath?: string): string | undefined {
+/** Read extension version and repository URL from root package.json. Returns undefined fields if unreadable. */
+export function readExtensionMeta(pkgPath?: string): { version?: string; repoUrl?: string } {
   try {
     const path = pkgPath ?? rootPkgPath;
-    if (!existsSync(path)) return undefined;
+    if (!existsSync(path)) return {};
     const pkg = JSON.parse(readFileSync(path, "utf-8"));
-    return pkg.version || undefined;
+    return {
+      version: pkg.version || undefined,
+      repoUrl: pkg.repository?.url || undefined,
+    };
   } catch {
-    return undefined;
+    return {};
   }
 }

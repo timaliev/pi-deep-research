@@ -1,7 +1,7 @@
 import { Type } from "typebox";
-import { ResearchRunOrchestrator } from "../research-run-orchestrator.js";
-import type { SettingsContext } from "../settings-context.js";
+import type { ResearchRunOrchestrator } from "../research-run-orchestrator.js";
 import type { SessionState } from "../session-state.js";
+import type { SettingsContext } from "../settings-context.js";
 
 export function createRunResearchTool(
   pi: any,
@@ -25,14 +25,24 @@ export function createRunResearchTool(
         const confirmed = [...entries].reverse().find((e: any) => e.customType === "deep-research:plan-confirmed");
         if (!confirmed) {
           return {
-            content: [{ type: "text", text: `## Confirmation Required ⚠️\n\nThe research plan must be confirmed by the user before running.\n\n1. Present the plan and cost estimate to the user\n2. Ask for explicit approval\n3. After approval, call confirm_research with the plan path\n4. Then call run_research` }],
+            content: [
+              {
+                type: "text",
+                text: `## Confirmation Required ⚠️\n\nThe research plan must be confirmed by the user before running.\n\n1. Present the plan and cost estimate to the user\n2. Ask for explicit approval\n3. After approval, call confirm_research with the plan path\n4. Then call run_research`,
+              },
+            ],
             details: { error: "plan_not_confirmed" },
           };
         }
         const confirmedPath = confirmed.data?.planArtifactPath as string | undefined;
         if (confirmedPath && confirmedPath !== params.plan_artifact_path) {
           return {
-            content: [{ type: "text", text: `## Plan Mismatch ⚠️\n\nConfirmation is for a different plan (${confirmedPath}). Present this plan to the user and re-confirm.` }],
+            content: [
+              {
+                type: "text",
+                text: `## Plan Mismatch ⚠️\n\nConfirmation is for a different plan (${confirmedPath}). Present this plan to the user and re-confirm.`,
+              },
+            ],
             details: { error: "plan_mismatch" },
           };
         }
@@ -80,13 +90,23 @@ export function createRunResearchTool(
         }
 
         return {
-          content: [{ type: "text", text: `## Research Complete ✅\n\nReport saved to: ${reportPath}${pdfInfo}${mindMapInfo}\n\nSearch calls: ${result.snapshot.searchCalls}\nScrape calls: ${result.snapshot.scrapeCalls}\nSources visited: ${result.snapshot.allVisitedUrls.length}` }],
+          content: [
+            {
+              type: "text",
+              text: `## Research Complete ✅\n\nReport saved to: ${reportPath}${pdfInfo}${mindMapInfo}\n\nSearch calls: ${result.snapshot.searchCalls}\nScrape calls: ${result.snapshot.scrapeCalls}\nSources visited: ${result.snapshot.allVisitedUrls.length}`,
+            },
+          ],
           details: { phase: "done", report_path: reportPath, run_id: result.snapshot.runId },
         };
       }
 
       return {
-        content: [{ type: "text", text: `## Research In Progress\n\nPhase: ${result.snapshot.phase}\nDepth: ${result.snapshot.currentDepth}/${result.snapshot.totalDepth}\nSearch calls: ${result.snapshot.searchCalls}\nScrape calls: ${result.snapshot.scrapeCalls}\n\n${result.inject ? "I've sent you a prompt. Respond, then call run_research again." : "Call run_research again to continue."}` }],
+        content: [
+          {
+            type: "text",
+            text: `## Research In Progress\n\nPhase: ${result.snapshot.phase}\nDepth: ${result.snapshot.currentDepth}/${result.snapshot.totalDepth}\nSearch calls: ${result.snapshot.searchCalls}\nScrape calls: ${result.snapshot.scrapeCalls}\n\n${result.inject ? "I've sent you a prompt. Respond, then call run_research again." : "Call run_research again to continue."}`,
+          },
+        ],
         details: { phase: result.snapshot.phase, run_id: result.snapshot.runId },
       };
     },

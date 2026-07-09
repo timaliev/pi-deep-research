@@ -1,22 +1,29 @@
-import { ProfileResolver } from "../extension/profile-resolver.js";
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { ResearchStateMachine } from "../extension/state-machine.js";
-import type { ResearchPlan, ResearchPlanProfile } from "../extension/prefilter.js";
-import type { WebSearchResult } from "../extension/search/web-search.js";
-import type { Scraper } from "../extension/scraper.js";
-import { SearchProviderCredentials } from "../extension/settings-context.js";
+import { describe, it } from "node:test";
 import type { Logger } from "../extension/logger.js";
+import type { ResearchPlan, ResearchPlanProfile } from "../extension/prefilter.js";
+import { ProfileResolver } from "../extension/profile-resolver.js";
+import type { Scraper } from "../extension/scraper.js";
+import type { WebSearchResult } from "../extension/search/web-search.js";
+import { SearchProviderCredentials } from "../extension/settings-context.js";
 import type { ResearchProfile } from "../extension/state-machine.js";
+import { ResearchStateMachine } from "../extension/state-machine.js";
 
 // ─── Candidate 1: ResearchContext bundles constructor params ─────
 
 describe("ResearchContext — bundled constructor", () => {
   const mockSearch = async () => [] as WebSearchResult[];
-  const mockScraper: Scraper = { async scrape() { throw new Error("no mock"); } };
+  const mockScraper: Scraper = {
+    async scrape() {
+      throw new Error("no mock");
+    },
+  };
   const mockPlan: ResearchPlan = {
-    topic: "test", goal: "test", researchQuestions: ["q1"],
-    engines: ["duckduckgo"], profile: { name: "default" },
+    topic: "test",
+    goal: "test",
+    researchQuestions: ["q1"],
+    engines: ["duckduckgo"],
+    profile: { name: "default" },
     scope: { include: "", exclude: "" },
     estimatedCost: { searchCalls: 1, scrapeCalls: 1, description: "" },
   };

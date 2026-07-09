@@ -1,31 +1,35 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import { buildTelemetrySection } from "../extension/report-assembly.js";
 import { ResearchDraft } from "../extension/research-draft.js";
 import type { ResearchSnapshot } from "../extension/state-machine.js";
 
 function makeSnapshot(overrides?: Partial<ResearchSnapshot>): ResearchSnapshot {
   return {
-    phase: "done", runId: "test-run", currentDepth: 2, totalDepth: 3,
-    allFindings: [], allVisitedUrls: [], draft: new ResearchDraft(), reportPath: "",
-    searchCalls: 5, scrapeCalls: 7, startedAt: Date.now() - 100_000,
-    softLimitTriggered: false, ...overrides,
+    phase: "done",
+    runId: "test-run",
+    currentDepth: 2,
+    totalDepth: 3,
+    allFindings: [],
+    allVisitedUrls: [],
+    draft: new ResearchDraft(),
+    reportPath: "",
+    searchCalls: 5,
+    scrapeCalls: 7,
+    startedAt: Date.now() - 100_000,
+    softLimitTriggered: false,
+    ...overrides,
   };
 }
 
 describe("buildTelemetrySection artifact links", () => {
   it("renders artifact links section when links provided", () => {
-    const links = [
-      "../artifacts/test-prefilter.json",
-      "../logs/test.log",
-    ];
+    const links = ["../artifacts/test-prefilter.json", "../logs/test.log"];
     const section = buildTelemetrySection(makeSnapshot(), "0.13.3", links);
 
     assert.ok(section.includes("## Artifacts"), "must have Artifacts heading");
-    assert.ok(section.includes("[../artifacts/test-prefilter.json]"),
-      "must link to prefilter artifact");
-    assert.ok(section.includes("[../logs/test.log]"),
-      "must link to log file");
+    assert.ok(section.includes("[../artifacts/test-prefilter.json]"), "must link to prefilter artifact");
+    assert.ok(section.includes("[../logs/test.log]"), "must link to log file");
   });
 
   it("omits artifact section when no links provided", () => {

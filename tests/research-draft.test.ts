@@ -1,5 +1,5 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import { ResearchDraft } from "../extension/research-draft.js";
 
 describe("ResearchDraft", () => {
@@ -48,7 +48,11 @@ describe("ResearchDraft", () => {
   });
 
   it("decode(encode()) round-trips correctly", () => {
-    const original = new ResearchDraft("# Test Report\n\nThis is a comprehensive report with multiple sections.\n\n## Findings\n\n- Finding 1\n- Finding 2\n\n".repeat(10));
+    const original = new ResearchDraft(
+      "# Test Report\n\nThis is a comprehensive report with multiple sections.\n\n## Findings\n\n- Finding 1\n- Finding 2\n\n".repeat(
+        10,
+      ),
+    );
     const encoded = original.encode()!;
     const restored = ResearchDraft.decode(encoded);
     assert.equal(restored.get(), original.get());
@@ -72,7 +76,10 @@ describe("ResearchDraft", () => {
     const d = new ResearchDraft(text);
     const encoded = d.encode()!;
     // Compressed + base64url should be much smaller than original
-    assert.ok(encoded.length < text.length * 0.5, `Expected compressed < 50% of original, got ${Math.round(encoded.length / text.length * 100)}%`);
+    assert.ok(
+      encoded.length < text.length * 0.5,
+      `Expected compressed < 50% of original, got ${Math.round((encoded.length / text.length) * 100)}%`,
+    );
   });
 
   it("multiple set/get cycles are idempotent", () => {

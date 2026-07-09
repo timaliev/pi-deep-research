@@ -3,10 +3,9 @@
  * Uses Brave's Web Search API with subscription-token auth.
  */
 
-import type { WebSearchOptions, WebSearchResult } from "../web-search.js";
 import type { SearchProviderCredentials } from "../../settings-context.js";
-import { DDG_USER_AGENT, fetchUrl } from "../web-search.js";
-import { waitIfNeeded } from "./utils.js";
+import type { WebSearchOptions, WebSearchResult } from "../web-search.js";
+import { DDG_USER_AGENT, fetchUrl, rateLimiter } from "../web-search.js";
 
 // ─── Credential resolution ────────────────────────────────────
 
@@ -25,11 +24,7 @@ interface BraveSearchOptions {
   offset?: number;
 }
 
-export function buildBraveSearchParams(
-  query: string,
-  count: number,
-  opts: BraveSearchOptions,
-): { url: string } {
+export function buildBraveSearchParams(query: string, count: number, opts: BraveSearchOptions): { url: string } {
   const params = new URLSearchParams();
   params.set("q", query);
   params.set("count", String(Math.min(count, 20)));
@@ -90,6 +85,8 @@ export async function search(
   opts: WebSearchOptions,
   cred?: SearchProviderCredentials,
 ): Promise<WebSearchResult[]> {
-  await waitIfNeeded("brave");
-  return searchBrave(query, opts.maxResults ?? 5, cred);
+  await rateLimiter.waitIfNeeded("brave");
+  const results = await searchBrave(query, opts.maxResults ?? 5, cred);
+  rateLimiter.recordCall("brave");
+  return results;
 }

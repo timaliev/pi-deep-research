@@ -1,7 +1,7 @@
 # ADR-0015: ResearchDraft module — collapse triple-path draft handling
 
 **Date:** 2026-07-09
-**Status:** proposed
+**Status:** accepted ✓ (implemented 2026-07-09)
 
 ## Context
 

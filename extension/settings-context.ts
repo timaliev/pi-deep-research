@@ -1,10 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { homedir } from "node:os";
-import { DEFAULT_PRESETS } from "./profile-resolver.js";
-import type { ResearchProfile } from "./state-machine.js";
-import { mergeProfiles } from "./profile-resolver.js";
+import { join } from "node:path";
 import type { ResearchPlanProfile } from "./prefilter.js";
+import { DEFAULT_PRESETS, mergeProfiles } from "./profile-resolver.js";
+import type { ResearchProfile } from "./state-machine.js";
 
 /** Resolve credentials: settings.json base, process.env override. */
 export class SearchProviderCredentials {
@@ -32,12 +31,14 @@ const ENV = {
   defaultProfile: "DEEP_RESEARCH_DEFAULT_PROFILE",
   pdfExport: "DEEP_RESEARCH_PDF_EXPORT",
   mindMap: "DEEP_RESEARCH_MIND_MAP",
+  reportStyle: "DEEP_RESEARCH_REPORT_STYLE",
 } as const;
 
 // ─── Built-in defaults ─────────────────────────────────────────
 const BUILTIN = {
   defaultProfile: "default",
   profiles: DEFAULT_PRESETS,
+  reportStyle: "narrative" as "narrative" | "subtopics",
 };
 
 // ─── Interface ─────────────────────────────────────────────────
@@ -49,6 +50,7 @@ export interface SettingsContextData {
   credentials: SearchProviderCredentials;
   pdfExport: boolean;
   mindMap: boolean;
+  reportStyle: "narrative" | "subtopics";
 }
 
 export interface InitParams {
@@ -67,6 +69,7 @@ export class SettingsContext implements SettingsContextData {
   readonly credentials: SearchProviderCredentials;
   readonly pdfExport: boolean;
   readonly mindMap: boolean;
+  readonly reportStyle: "narrative" | "subtopics";
 
   private constructor(params: InitParams) {
     const homeAgentDir = params.homeAgentDir ?? join(homedir(), ".pi", "agent");
@@ -79,46 +82,58 @@ export class SettingsContext implements SettingsContextData {
     const localDr = (local?.deepResearch ?? {}) as Record<string, unknown>;
 
     // ─── String settings: env → local → global → built-in ────
-    this.reportsDir = envString(ENV.reportsDir)
-      ?? (localDr.reportsDir as string | undefined)
-      ?? (globalDr.reportsDir as string | undefined)
-      ?? join(params.cwd, "deep-research", "reports");
+    this.reportsDir =
+      envString(ENV.reportsDir) ??
+      (localDr.reportsDir as string | undefined) ??
+      (globalDr.reportsDir as string | undefined) ??
+      join(params.cwd, "deep-research", "reports");
 
-    this.artifactsDir = envString(ENV.artifactsDir)
-      ?? (localDr.artifactsDir as string | undefined)
-      ?? (globalDr.artifactsDir as string | undefined)
-      ?? join(params.cwd, "deep-research", "artifacts");
+    this.artifactsDir =
+      envString(ENV.artifactsDir) ??
+      (localDr.artifactsDir as string | undefined) ??
+      (globalDr.artifactsDir as string | undefined) ??
+      join(params.cwd, "deep-research", "artifacts");
 
-    this.defaultProfile = envString(ENV.defaultProfile)
-      ?? (localDr.defaultProfile as string | undefined)
-      ?? (globalDr.defaultProfile as string | undefined)
-      ?? BUILTIN.defaultProfile;
+    this.defaultProfile =
+      envString(ENV.defaultProfile) ??
+      (localDr.defaultProfile as string | undefined) ??
+      (globalDr.defaultProfile as string | undefined) ??
+      BUILTIN.defaultProfile;
 
     // ─── pdfExport: env → local → global → built-in false ──
-    this.pdfExport = envBool(ENV.pdfExport)
-      ?? (localDr.pdfExport as boolean | undefined)
-      ?? (globalDr.pdfExport as boolean | undefined)
-      ?? false;
+    this.pdfExport =
+      envBool(ENV.pdfExport) ??
+      (localDr.pdfExport as boolean | undefined) ??
+      (globalDr.pdfExport as boolean | undefined) ??
+      false;
 
     // ─── mindMap: env → local → global → built-in false ─────
-    this.mindMap = envBool(ENV.mindMap)
-      ?? (localDr.mindMap as boolean | undefined)
-      ?? (globalDr.mindMap as boolean | undefined)
-      ?? false;
+    this.mindMap =
+      envBool(ENV.mindMap) ??
+      (localDr.mindMap as boolean | undefined) ??
+      (globalDr.mindMap as boolean | undefined) ??
+      false;
+
+    // ─── reportStyle: env → local → global → built-in narrative ──
+    this.reportStyle = resolveReportStyle(
+      envString(ENV.reportStyle),
+      localDr.defaultReportStyle as string | undefined,
+      globalDr.defaultReportStyle as string | undefined,
+    );
 
     // ─── Profiles: local → global → built-in (no env) ────────
     const globalProfiles = (globalDr.profiles ?? {}) as Record<string, Partial<ResearchProfile>>;
     const localProfiles = (localDr.profiles ?? {}) as Record<string, Partial<ResearchProfile>>;
-    this.profiles = mergeProfiles(
-      mergeProfiles(BUILTIN.profiles, globalProfiles),
-      localProfiles,
-    );
+    this.profiles = mergeProfiles(mergeProfiles(BUILTIN.profiles, globalProfiles), localProfiles);
 
     // ─── Search providers: local → global (env handled inside cred) ──
     const globalProvidersRaw = globalDr.searchProviders;
     const localProvidersRaw = localDr.searchProviders;
     // Merge raw, then normalize — handles array format and field casing
-    const mergedProvidersRaw = { ...(globalProvidersRaw as Record<string, unknown> ?? {}), ...(localProvidersRaw as Record<string, unknown> ?? {}) };
+    const mergedProvidersRaw = {
+      ...((globalProvidersRaw as Record<string, unknown>) ?? {}),
+      ...((localProvidersRaw as Record<string, unknown>) ?? {}),
+    };
     const mergedProviders = normalizeSearchProviders(mergedProvidersRaw);
     this.credentials = new SearchProviderCredentials(mergedProviders);
   }
@@ -142,6 +157,14 @@ export class SettingsContext implements SettingsContextData {
 }
 
 // ─── Helpers ────────────────────────────────────────────────────
+
+/** Resolve report style: env → local → global → "narrative". Invalid values fall back to "narrative". */
+function resolveReportStyle(env?: string, local?: string, global?: string): "narrative" | "subtopics" {
+  const valid = ["narrative", "subtopics"];
+  const value = env ?? local ?? global;
+  if (value && valid.includes(value)) return value as "narrative" | "subtopics";
+  return "narrative";
+}
 
 /** Normalize searchProviders from settings.json into the canonical
  *  Record&lt;engine, Record&lt;key, value&gt;&gt; shape expected by SearchProviderCredentials.

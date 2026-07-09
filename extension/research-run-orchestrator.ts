@@ -1,17 +1,17 @@
-import { readFileSync, existsSync, mkdirSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { ResearchStateMachine } from "./state-machine.js";
-import type { ResearchSnapshot } from "./state-machine.js";
-import type { ResearchPlan, PrefilterArtifact } from "./prefilter.js";
-import type { searchWeb as SearchWebFn } from "./search/web-search.js";
-import type { Scraper } from "./scraper.js";
-import type { SearchProviderCredentials, SettingsContext } from "./settings-context.js";
-import { JsonlLogger } from "./logger.js";
-import { ProfileResolver } from "./profile-resolver.js";
-import { ResearchDraft } from "./research-draft.js";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { convertToPdf } from "./export-pdf.js";
-import { assembleReport } from "./report-assembly.js";
+import { JsonlLogger } from "./logger.js";
 import { buildMindMapPrompt } from "./mind-map-injector.js";
+import type { PrefilterArtifact, ResearchPlan } from "./prefilter.js";
+import type { ProfileResolver } from "./profile-resolver.js";
+import { assembleReport } from "./report-assembly.js";
+import { ResearchDraft } from "./research-draft.js";
+import type { Scraper } from "./scraper.js";
+import type { searchWeb as SearchWebFn } from "./search/web-search.js";
+import type { SearchProviderCredentials, SettingsContext } from "./settings-context.js";
+import type { ResearchSnapshot } from "./state-machine.js";
+import { ResearchStateMachine } from "./state-machine.js";
 
 export interface StatePersistence {
   saveState(snapshot: ResearchSnapshot, extra: Record<string, unknown>): void;
@@ -32,13 +32,34 @@ export interface OrchestratorDeps {
 export interface OrchestratorParams {
   planArtifactPath?: string;
   /** Session entries for state lookup (mockable). */
-  entries: Array<{ customType?: string; data?: Record<string, unknown>; message?: { role?: string; content?: unknown } }>;
+  entries: Array<{
+    customType?: string;
+    data?: Record<string, unknown>;
+    message?: { role?: string; content?: unknown };
+  }>;
 }
 
 export type OrchestratorResult =
   | { kind: "error"; error: string; details?: Record<string, unknown> }
-  | { kind: "in_progress"; snapshot: ResearchSnapshot; inject?: string; plan: ResearchPlan; planArtifactPath: string; deepResearchBase: string }
-  | { kind: "done"; snapshot: ResearchSnapshot; plan: ResearchPlan; planArtifactPath: string; deepResearchBase: string; logsDir: string; reportPath?: string; pdfResult?: any; mindMapPrompt?: string };
+  | {
+      kind: "in_progress";
+      snapshot: ResearchSnapshot;
+      inject?: string;
+      plan: ResearchPlan;
+      planArtifactPath: string;
+      deepResearchBase: string;
+    }
+  | {
+      kind: "done";
+      snapshot: ResearchSnapshot;
+      plan: ResearchPlan;
+      planArtifactPath: string;
+      deepResearchBase: string;
+      logsDir: string;
+      reportPath?: string;
+      pdfResult?: any;
+      mindMapPrompt?: string;
+    };
 
 const STATE_KEY = "deep-research:state";
 
@@ -72,6 +93,7 @@ export class ResearchRunOrchestrator {
       artifactsDir,
       searchCred: this.searchCred,
       logger,
+      defaultReportStyle: this.settings?.reportStyle,
     });
   }
 
@@ -82,7 +104,10 @@ export class ResearchRunOrchestrator {
     return this.handleSubsequentCall(params.entries);
   }
 
-  private async handleFirstCall(planArtifactPath: string, entries: OrchestratorParams["entries"]): Promise<OrchestratorResult> {
+  private async handleFirstCall(
+    planArtifactPath: string,
+    entries: OrchestratorParams["entries"],
+  ): Promise<OrchestratorResult> {
     if (!existsSync(planArtifactPath)) {
       return { kind: "error", error: "artifact_not_found", details: {} };
     }
@@ -131,9 +156,7 @@ export class ResearchRunOrchestrator {
   }
 
   private async handleSubsequentCall(entries: OrchestratorParams["entries"]): Promise<OrchestratorResult> {
-    const lastAssistant = [...entries].reverse().find(
-      (e) => e.message?.role === "assistant"
-    );
+    const lastAssistant = [...entries].reverse().find((e) => e.message?.role === "assistant");
     const rawResponse = lastAssistant?.message?.content as string | undefined;
     // Parse once — used for both draft recovery and state machine phases
     const parsedResponse = extractTextContent(rawResponse) || undefined;
@@ -150,9 +173,7 @@ export class ResearchRunOrchestrator {
 
     // Restore draft from encoded blob — works for any phase
     const draftEncoded = stateData.draftEncoded as string | undefined;
-    snapshot.draft = draftEncoded
-      ? ResearchDraft.decode(draftEncoded)
-      : new ResearchDraft();
+    snapshot.draft = draftEncoded ? ResearchDraft.decode(draftEncoded) : new ResearchDraft();
 
     let deepResearchBase = (stateData.deepResearchBase as string) || join(dirname(planArtifactPath), "..");
     if (!deepResearchBase.startsWith("/")) deepResearchBase = join(process.cwd(), deepResearchBase);
@@ -204,8 +225,8 @@ export class ResearchRunOrchestrator {
     }
 
     const reportsDir = this.settings.reportsDir;
-    const profileName = typeof plan.profile === "object" && "name" in plan.profile
-      ? (plan.profile as any).name : undefined;
+    const profileName =
+      typeof plan.profile === "object" && "name" in plan.profile ? (plan.profile as any).name : undefined;
 
     const reportPath = assembleReport({
       snapshot,
@@ -243,7 +264,6 @@ export class ResearchRunOrchestrator {
       mindMapPrompt,
     };
   }
-
 }
 
 /** Extract plain text from agent response (handles string and content blocks array).

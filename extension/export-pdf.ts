@@ -1,6 +1,6 @@
+import { execFileSync, execSync } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
-import { dirname, basename } from "node:path";
-import { execSync, execFileSync } from "node:child_process";
+import { basename, dirname } from "node:path";
 
 export interface ConvertToPdfParams {
   reportPath: string;
@@ -46,10 +46,13 @@ export async function convertToPdf(params: ConvertToPdfParams): Promise<ConvertT
 
       const args = [
         reportPath,
-        "-o", outputPath,
+        "-o",
+        outputPath,
         "--pdf-engine=weasyprint",
-        "-f", "markdown",
-        "--metadata", `title=Research: ${topic}`,
+        "-f",
+        "markdown",
+        "--metadata",
+        `title=Research: ${topic}`,
       ];
       if (mermaidOk) args.push("--filter", "mermaid-filter");
 
@@ -70,12 +73,7 @@ export async function convertToPdf(params: ConvertToPdfParams): Promise<ConvertT
   }
 
   // Fallback: agent-based conversion
-  const missing = [
-    !pandocOk && "pandoc",
-    !weasyOk && "weasyprint",
-  ]
-    .filter(Boolean)
-    .join(", ");
+  const missing = [!pandocOk && "pandoc", !weasyOk && "weasyprint"].filter(Boolean).join(", ");
 
   return {
     kind: "fallback",
@@ -88,10 +86,7 @@ export async function convertToPdf(params: ConvertToPdfParams): Promise<ConvertT
 /** Check if a command is available. Cross-platform (Unix `which` / Windows `where`). */
 function commandExists(cmd: string): boolean {
   try {
-    execSync(
-      process.platform === "win32" ? `where ${cmd}` : `which ${cmd}`,
-      { stdio: "ignore" },
-    );
+    execSync(process.platform === "win32" ? `where ${cmd}` : `which ${cmd}`, { stdio: "ignore" });
     return true;
   } catch {
     return false;

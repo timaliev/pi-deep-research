@@ -1,8 +1,8 @@
-import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, rmSync, writeFileSync, existsSync, readFileSync as readFs } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync as readFs, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, it } from "node:test";
 
 // ─── Settings: pdfExport ─────────────────────────────────────
 describe("pdfExport setting", () => {
@@ -46,10 +46,7 @@ describe("pdfExport setting", () => {
       join(tmpHome, ".pi", "agent", "settings.json"),
       JSON.stringify({ deepResearch: { pdfExport: true } }),
     );
-    writeFileSync(
-      join(tmpCwd, ".pi", "settings.json"),
-      JSON.stringify({ deepResearch: { pdfExport: false } }),
-    );
+    writeFileSync(join(tmpCwd, ".pi", "settings.json"), JSON.stringify({ deepResearch: { pdfExport: false } }));
     const { SettingsContext } = await import("../extension/settings-context.js");
     const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
     assert.equal(ctx.pdfExport, false);
@@ -57,10 +54,7 @@ describe("pdfExport setting", () => {
 
   it("env DEEP_RESEARCH_PDF_EXPORT overrides all", async () => {
     process.env.DEEP_RESEARCH_PDF_EXPORT = "true";
-    writeFileSync(
-      join(tmpCwd, ".pi", "settings.json"),
-      JSON.stringify({ deepResearch: { pdfExport: false } }),
-    );
+    writeFileSync(join(tmpCwd, ".pi", "settings.json"), JSON.stringify({ deepResearch: { pdfExport: false } }));
     const { SettingsContext } = await import("../extension/settings-context.js");
     const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
     assert.equal(ctx.pdfExport, true);
@@ -129,7 +123,7 @@ describe("convertToPdf", () => {
     mkdirSync(binDir, { recursive: true });
 
     // Fake pandoc: creates output file (arg order: reportPath, -o, outputPath, ...)
-    writeFileSync(join(binDir, "pandoc"), "#!/bin/bash\ntouch \"$3\"\n", { mode: 0o755 });
+    writeFileSync(join(binDir, "pandoc"), '#!/bin/bash\ntouch "$3"\n', { mode: 0o755 });
     writeFileSync(join(binDir, "weasyprint"), "#!/bin/bash\nexit 0\n", { mode: 0o755 });
 
     const reportPath = join(tmpDir, "research.md");
@@ -168,10 +162,7 @@ describe("export_pdf tool", () => {
 
   it("tool imports convertToPdf from export-pdf module", async () => {
     const src = readIndexTs();
-    assert.ok(
-      src.includes("export-pdf") || src.includes("convertToPdf"),
-      "must import from export-pdf module",
-    );
+    assert.ok(src.includes("export-pdf") || src.includes("convertToPdf"), "must import from export-pdf module");
   });
 
   it("tool calls convertToPdf in execute handler", async () => {
@@ -209,26 +200,17 @@ describe("export_pdf tool", () => {
 
 /** Read index.ts source for static analysis. */
 function readIndexTs(): string {
-  return readFs(
-    join(import.meta.dirname ?? ".", "..", "extension", "tools", "export-pdf.ts"),
-    "utf-8",
-  );
+  return readFs(join(import.meta.dirname ?? ".", "..", "extension", "tools", "export-pdf.ts"), "utf-8");
 }
 
 /** Read run-research.ts source for static analysis. */
 function readRunResearchTs(): string {
-  return readFs(
-    join(import.meta.dirname ?? ".", "..", "extension", "tools", "run-research.ts"),
-    "utf-8",
-  );
+  return readFs(join(import.meta.dirname ?? ".", "..", "extension", "tools", "run-research.ts"), "utf-8");
 }
 
 /** Read orchestrator source for static analysis. */
 function readOrchestratorTs(): string {
-  return readFs(
-    join(import.meta.dirname ?? ".", "..", "extension", "research-run-orchestrator.ts"),
-    "utf-8",
-  );
+  return readFs(join(import.meta.dirname ?? ".", "..", "extension", "research-run-orchestrator.ts"), "utf-8");
 }
 
 // ─── Auto-export integration ─────────────────────────────────
@@ -236,35 +218,23 @@ describe("auto-export after run_research done", () => {
   it("orchestrator checks pdfExport when research completes", async () => {
     const src = readOrchestratorTs();
     // buildDoneResult must check pdfExport setting
-    assert.ok(
-      src.includes("pdfExport"),
-      "orchestrator must check pdfExport setting",
-    );
+    assert.ok(src.includes("pdfExport"), "orchestrator must check pdfExport setting");
   });
 
   it("orchestrator imports convertToPdf for auto-export", async () => {
     const src = readOrchestratorTs();
-    assert.ok(
-      src.includes("convertToPdf") || src.includes("export-pdf"),
-      "orchestrator must reference convertToPdf",
-    );
+    assert.ok(src.includes("convertToPdf") || src.includes("export-pdf"), "orchestrator must reference convertToPdf");
   });
 
   it("run-research tool has access to settings (for pdfExport)", async () => {
     const src = readRunResearchTs();
-    assert.ok(
-      src.includes("settings"),
-      "createRunResearchTool receives settings param",
-    );
+    assert.ok(src.includes("settings"), "createRunResearchTool receives settings param");
   });
 
   it("auto-export result appended to done response", async () => {
     const src = readRunResearchTs();
     // When pdfExport enabled and conversion succeeds, the done message includes PDF info
-    const hasPdfInDone =
-      src.includes("pdf") ||
-      src.includes("PDF") ||
-      src.includes("export_pdf");
+    const hasPdfInDone = src.includes("pdf") || src.includes("PDF") || src.includes("export_pdf");
     assert.ok(hasPdfInDone, "done handler must mention PDF output");
   });
 });

@@ -3,6 +3,7 @@
 
 # Dependencies
 extension/node_modules/
+node_modules/
 
 # Generated artifacts  
 /deep-research/

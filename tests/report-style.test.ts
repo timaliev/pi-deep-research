@@ -1,13 +1,13 @@
-import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { afterEach, beforeEach, describe, it } from "node:test";
+import type { ResearchPlan, ResearchPlanProfile } from "../extension/prefilter.js";
 import { PrefilterManager } from "../extension/prefilter.js";
 import { createReportStyle } from "../extension/report-styles.js";
-import type { ResearchPlan, ResearchPlanProfile } from "../extension/prefilter.js";
-import type { Finding } from "../extension/state-machine.js";
+import type { ScrapedPage, Scraper } from "../extension/scraper.js";
 import type { WebSearchResult } from "../extension/search/web-search.js";
-import type { Scraper, ScrapedPage } from "../extension/scraper.js";
+import type { Finding } from "../extension/state-machine.js";
 
 const TEST_ARTIFACTS = join(import.meta.dirname ?? ".", "..", "test-artifacts-style");
 
@@ -51,8 +51,12 @@ function validPlan(overrides?: Partial<ResearchPlan>): ResearchPlan {
 // ─── RED: reportStyle validation ──────────────────────────────────
 
 describe("reportStyle in ResearchPlan validation", () => {
-  beforeEach(() => { mkdirSync(TEST_ARTIFACTS, { recursive: true }); });
-  afterEach(() => { if (existsSync(TEST_ARTIFACTS)) rmSync(TEST_ARTIFACTS, { recursive: true, force: true }); });
+  beforeEach(() => {
+    mkdirSync(TEST_ARTIFACTS, { recursive: true });
+  });
+  afterEach(() => {
+    if (existsSync(TEST_ARTIFACTS)) rmSync(TEST_ARTIFACTS, { recursive: true, force: true });
+  });
 
   it("rejects invalid reportStyle value", async () => {
     const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
@@ -64,8 +68,7 @@ describe("reportStyle in ResearchPlan validation", () => {
 
     const result = await manager.finalize("test", planJson);
     assert.equal(result.phase, "error");
-    assert.ok(result.error!.includes("reportStyle"),
-      `error must mention reportStyle, got: ${result.error}`);
+    assert.ok(result.error!.includes("reportStyle"), `error must mention reportStyle, got: ${result.error}`);
   });
 
   it("accepts reportStyle: 'narrative'", async () => {
@@ -136,9 +139,13 @@ describe("buildDraftingPrompt with reportStyle", () => {
     const prompt = createReportStyle(plan.reportStyle ?? "narrative").buildDraftingPrompt(plan, MOCK_FINDINGS);
 
     assert.ok(
-      prompt.includes("thematic") || prompt.includes("subtopic") || prompt.includes("sections") ||
-      prompt.includes("themes") || prompt.includes("topics") || prompt.includes("discover"),
-      "subtopics prompt must instruct LLM to generate thematic sections"
+      prompt.includes("thematic") ||
+        prompt.includes("subtopic") ||
+        prompt.includes("sections") ||
+        prompt.includes("themes") ||
+        prompt.includes("topics") ||
+        prompt.includes("discover"),
+      "subtopics prompt must instruct LLM to generate thematic sections",
     );
   });
 
@@ -162,23 +169,52 @@ describe("buildDraftingPrompt with reportStyle", () => {
 // ─── RED: prefilter prompts mention reportStyle ───────────────────
 
 describe("prefilter prompts mention reportStyle", () => {
-  beforeEach(() => { mkdirSync(TEST_ARTIFACTS, { recursive: true }); });
-  afterEach(() => { if (existsSync(TEST_ARTIFACTS)) rmSync(TEST_ARTIFACTS, { recursive: true, force: true }); });
+  beforeEach(() => {
+    mkdirSync(TEST_ARTIFACTS, { recursive: true });
+  });
+  afterEach(() => {
+    if (existsSync(TEST_ARTIFACTS)) rmSync(TEST_ARTIFACTS, { recursive: true, force: true });
+  });
 
   it("buildParamsPrompt mentions reportStyle choice", async () => {
     const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
     const result = await manager.start("test");
 
-    assert.ok(result.inject!.includes("reportStyle") || result.inject!.includes("report style") ||
-      result.inject!.includes("report format") || result.inject!.includes("report_format"),
-      "params prompt must mention reportStyle choice");
+    assert.ok(
+      result.inject!.includes("reportStyle") ||
+        result.inject!.includes("report style") ||
+        result.inject!.includes("report format") ||
+        result.inject!.includes("report_format"),
+      "params prompt must mention reportStyle choice",
+    );
   });
 
   it("buildPlanPrompt includes reportStyle in JSON template", async () => {
     const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
     const result = await manager.withParams("test", ["duckduckgo"], { name: "fast" });
 
-    assert.ok(result.inject!.includes("reportStyle") || result.inject!.includes("report_style"),
-      "plan prompt JSON template must include reportStyle field");
+    assert.ok(
+      result.inject!.includes("reportStyle") || result.inject!.includes("report_style"),
+      "plan prompt JSON template must include reportStyle field",
+    );
+  });
+
+  it("buildParamsPrompt shows (default) next to configured report style", async () => {
+    const resolver = new (await import("../extension/profile-resolver.js")).ProfileResolver({});
+    const manager = new PrefilterManager(
+      mockSearchFn(MOCK_RESULTS),
+      mockScraper(mockScrapedPages()),
+      TEST_ARTIFACTS,
+      undefined,
+      resolver,
+    );
+    const result = await manager.start("test");
+
+    // Prompt must have "narrative (default)" to mark the default report style
+    // Not just "narrative" which always appears in the styles list
+    assert.ok(
+      result.inject!.includes("narrative (default)"),
+      "params prompt must mark default report style with '(default)'",
+    );
   });
 });

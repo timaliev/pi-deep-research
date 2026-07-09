@@ -1,5 +1,5 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 
 describe("Report saving", () => {
   it("finds assistant message via entry.message.role, not entry.type or entry.role", () => {
@@ -25,9 +25,7 @@ describe("Report saving", () => {
     ];
 
     // Find last assistant — check message.role, not entry.type
-    const lastAssistant = [...mockEntries].reverse().find(
-      (e: any) => e.message?.role === "assistant"
-    );
+    const lastAssistant = [...mockEntries].reverse().find((e: any) => e.message?.role === "assistant");
     assert.ok(lastAssistant, "must find assistant entry");
     assert.equal(lastAssistant?.message?.content, "The report content");
   });
@@ -43,9 +41,7 @@ describe("Report saving", () => {
       },
     ];
 
-    const found = [...mockEntries].reverse().find(
-      (e: any) => e.type === "assistant" || e.role === "assistant"
-    );
+    const found = [...mockEntries].reverse().find((e: any) => e.type === "assistant" || e.role === "assistant");
     assert.equal(found, undefined, "old filter must not match SessionMessageEntry");
   });
 });

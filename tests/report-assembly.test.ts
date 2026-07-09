@@ -1,10 +1,10 @@
-import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, rmSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import type { ResearchSnapshot } from "../extension/state-machine.js";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, it } from "node:test";
 import { ResearchDraft } from "../extension/research-draft.js";
+import type { ResearchSnapshot } from "../extension/state-machine.js";
 
 // Dynamic import to verify module compiles
 describe("ReportAssembly module", () => {

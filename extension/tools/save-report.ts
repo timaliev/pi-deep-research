@@ -1,5 +1,5 @@
-import { Type } from "typebox";
 import { mkdirSync } from "node:fs";
+import { Type } from "typebox";
 import { resolveReportPath, writeReportFile } from "../report-assembly.js";
 import type { SettingsContext } from "../settings-context.js";
 

@@ -1,13 +1,16 @@
-import { ProfileResolver } from "../extension/profile-resolver.js";
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { ResearchStateMachine } from "../extension/state-machine.js";
-import { buildTelemetrySection } from "../extension/report-assembly.js";
+import { describe, it } from "node:test";
 import type { ResearchPlan } from "../extension/prefilter.js";
+import { ProfileResolver } from "../extension/profile-resolver.js";
+import { buildTelemetrySection } from "../extension/report-assembly.js";
+import { ResearchStateMachine } from "../extension/state-machine.js";
 
 const MOCK_PLAN: ResearchPlan = {
-  topic: "Test", goal: "Test", researchQuestions: ["Q1"],
-  engines: ["duckduckgo"], profile: { name: "default" },
+  topic: "Test",
+  goal: "Test",
+  researchQuestions: ["Q1"],
+  engines: ["duckduckgo"],
+  profile: { name: "default" },
   scope: { include: "", exclude: "" },
   estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" },
 };
@@ -15,12 +18,17 @@ const MOCK_PLAN: ResearchPlan = {
 describe("Telemetry", () => {
   it("buildTelemetrySection includes all key metrics", () => {
     const snapshot = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
-    snapshot.searchCalls = 8; snapshot.scrapeCalls = 6;
-    snapshot.allVisitedUrls = ["a", "b", "c"]; snapshot.currentDepth = 2; snapshot.softLimitTriggered = false;
+    snapshot.searchCalls = 8;
+    snapshot.scrapeCalls = 6;
+    snapshot.allVisitedUrls = ["a", "b", "c"];
+    snapshot.currentDepth = 2;
+    snapshot.softLimitTriggered = false;
     const section = buildTelemetrySection(snapshot);
     assert.ok(section.includes("Research Telemetry"));
-    assert.ok(section.includes("8")); assert.ok(section.includes("6"));
-    assert.ok(section.includes("3")); assert.ok(section.includes("2/2"));
+    assert.ok(section.includes("8"));
+    assert.ok(section.includes("6"));
+    assert.ok(section.includes("3"));
+    assert.ok(section.includes("2/2"));
     assert.ok(section.includes("no"));
   });
 

@@ -1,7 +1,7 @@
-import { describe, it, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { afterEach, describe, it } from "node:test";
 import { JsonlLogger } from "../extension/logger.js";
 
 const TEST_DIR = join(import.meta.dirname ?? ".", "../test-logs");

@@ -1,14 +1,18 @@
-import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { afterEach, beforeEach, describe, it } from "node:test";
 import { SearchProviderCredentials } from "../extension/settings-context.js";
 
 const TEST_DIR = join(import.meta.dirname ?? ".", "..", "test-search-providers");
 
 describe("SearchProviderCredentials", () => {
-  beforeEach(() => { mkdirSync(TEST_DIR, { recursive: true }); });
-  afterEach(() => { if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true }); });
+  beforeEach(() => {
+    mkdirSync(TEST_DIR, { recursive: true });
+  });
+  afterEach(() => {
+    if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true });
+  });
 
   it("get returns setting value when no env var", () => {
     const prev = process.env.BRAVE_API_KEY;
@@ -33,7 +37,8 @@ describe("SearchProviderCredentials", () => {
     const val = cred.get("brave", "apiKey");
     assert.equal(val, "env-key", "env var must override settings.json");
 
-    if (prev) process.env.BRAVE_API_KEY = prev; else delete process.env.BRAVE_API_KEY;
+    if (prev) process.env.BRAVE_API_KEY = prev;
+    else delete process.env.BRAVE_API_KEY;
   });
 
   it("get returns undefined when no source has it", () => {

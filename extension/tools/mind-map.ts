@@ -10,9 +10,7 @@ export function createMindMapTool(sendUserMessage: (msg: string, opts: any) => v
     parameters: Type.Object({
       topic: Type.String({ description: "Topic for the mind map" }),
       content: Type.String({ description: "Content to base the mind map on (findings, notes, report text)" }),
-      save_path: Type.Optional(
-        Type.String({ description: "Optional file path to save the mind map diagram" }),
-      ),
+      save_path: Type.Optional(Type.String({ description: "Optional file path to save the mind map diagram" })),
     }),
     async execute(_toolCallId: string, params: any) {
       const prompt = buildMindMapPrompt(
@@ -27,7 +25,8 @@ export function createMindMapTool(sendUserMessage: (msg: string, opts: any) => v
         content: [
           {
             type: "text",
-            text: `Mind map prompt sent. Respond with a Mermaid \`graph TD\` block for topic: ${params.topic}.` +
+            text:
+              `Mind map prompt sent. Respond with a Mermaid \`graph TD\` block for topic: ${params.topic}.` +
               (params.save_path ? ` Save to: ${params.save_path}` : ""),
           },
         ],

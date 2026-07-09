@@ -1,15 +1,18 @@
-import { ProfileResolver } from "../extension/profile-resolver.js";
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { ResearchStateMachine } from "../extension/state-machine.js";
+import { describe, it } from "node:test";
 import type { ResearchPlan } from "../extension/prefilter.js";
+import { ProfileResolver } from "../extension/profile-resolver.js";
+import type { ScrapedPage, Scraper } from "../extension/scraper.js";
 import type { WebSearchResult } from "../extension/search/web-search.js";
-import type { Scraper, ScrapedPage } from "../extension/scraper.js";
 import { SearchProviderCredentials } from "../extension/settings-context.js";
+import { ResearchStateMachine } from "../extension/state-machine.js";
 
 const MOCK_PLAN: ResearchPlan = {
-  topic: "test", goal: "test", researchQuestions: ["q1"],
-  engines: ["brave"], profile: { name: "default" },
+  topic: "test",
+  goal: "test",
+  researchQuestions: ["q1"],
+  engines: ["brave"],
+  profile: { name: "default" },
   scope: { include: "", exclude: "" },
   estimatedCost: { searchCalls: 1, scrapeCalls: 1, description: "" },
 };
@@ -27,7 +30,9 @@ describe("credentials passed to searchWeb from state machine", () => {
       };
 
       const mockScraper: Scraper = {
-        async scrape() { throw new Error("no mock"); },
+        async scrape() {
+          throw new Error("no mock");
+        },
       };
 
       const cred = new SearchProviderCredentials({
@@ -55,7 +60,9 @@ describe("credentials passed to searchWeb from state machine", () => {
     };
 
     const mockScraper: Scraper = {
-      async scrape() { throw new Error("no mock"); },
+      async scrape() {
+        throw new Error("no mock");
+      },
     };
 
     const machine = new ResearchStateMachine({ searchFn: mockSearch, scraper: mockScraper });
@@ -63,7 +70,6 @@ describe("credentials passed to searchWeb from state machine", () => {
 
     await machine.next(snapshot, MOCK_PLAN);
 
-    assert.equal(capturedCredentials, undefined,
-      "credentials must be undefined when no searchCred in constructor");
+    assert.equal(capturedCredentials, undefined, "credentials must be undefined when no searchCred in constructor");
   });
 });

@@ -394,7 +394,7 @@ Built-in `searchWeb()` function (multi-engine, retry with exponential backoff):
 | `tavily` | required | Best | AI-optimized, extracts clean content |
 | `yandex` | required | Good | Russian/global coverage |
 
-All search calls — user-facing `web_search` tool and pipeline — use the same function with rate-limit backoff and result deduplication.
+All search calls — user-facing `deep_web_search` tool and pipeline — use the same function with rate-limit backoff and result deduplication.
 
 See [Environment Variables](#environment-variables) for API key configuration.
 

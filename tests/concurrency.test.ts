@@ -1,14 +1,17 @@
-import { ProfileResolver } from "../extension/profile-resolver.js";
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { ResearchStateMachine } from "../extension/state-machine.js";
+import { describe, it } from "node:test";
 import type { ResearchPlan } from "../extension/prefilter.js";
+import { ProfileResolver } from "../extension/profile-resolver.js";
+import type { ScrapedPage, Scraper } from "../extension/scraper.js";
 import type { WebSearchResult } from "../extension/search/web-search.js";
-import type { Scraper, ScrapedPage } from "../extension/scraper.js";
+import { ResearchStateMachine } from "../extension/state-machine.js";
 
 const MOCK_PLAN: ResearchPlan = {
-  topic: "Test", goal: "Test", researchQuestions: ["Q1", "Q2", "Q3", "Q4"],
-  engines: ["duckduckgo"], profile: { name: "default" },
+  topic: "Test",
+  goal: "Test",
+  researchQuestions: ["Q1", "Q2", "Q3", "Q4"],
+  engines: ["duckduckgo"],
+  profile: { name: "default" },
   scope: { include: "", exclude: "" },
   estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" },
 };
@@ -19,11 +22,19 @@ const RESULTS: WebSearchResult[] = [
 ];
 
 function slowSearchFn(delayMs: number) {
-  return async () => { await new Promise(r => setTimeout(r, delayMs)); return RESULTS; };
+  return async () => {
+    await new Promise((r) => setTimeout(r, delayMs));
+    return RESULTS;
+  };
 }
 
 function slowScraper(delayMs: number): Scraper {
-  return { async scrape(url: string) { await new Promise(r => setTimeout(r, delayMs)); return { url, title: url, content: "mock" }; } };
+  return {
+    async scrape(url: string) {
+      await new Promise((r) => setTimeout(r, delayMs));
+      return { url, title: url, content: "mock" };
+    },
+  };
 }
 
 describe("ResearchStateMachine concurrency", () => {
@@ -41,9 +52,19 @@ describe("ResearchStateMachine concurrency", () => {
     const plan: ResearchPlan = { ...MOCK_PLAN, profile: { name: "custom", breadth: 3, depth: 1, concurrency: 3 } };
     const machine = new ResearchStateMachine({ searchFn: slowSearchFn(10), scraper: slowScraper(5) });
     let s = ResearchStateMachine.init(plan, new ProfileResolver({}, "default"));
-    s = (await machine.next(s, plan)).snapshot; assert.equal(s.phase, "extracting");
-    s = (await machine.next(s, plan)).snapshot; assert.equal(s.phase, "drafting");
-    s = (await machine.next(s, plan, "# Research Report\n\nThis is a comprehensive research report with detailed analysis and findings from multiple sources.")).snapshot; assert.equal(s.phase, "saving");
-    s = (await machine.next(s, plan)).snapshot; assert.equal(s.phase, "done");
+    s = (await machine.next(s, plan)).snapshot;
+    assert.equal(s.phase, "extracting");
+    s = (await machine.next(s, plan)).snapshot;
+    assert.equal(s.phase, "drafting");
+    s = (
+      await machine.next(
+        s,
+        plan,
+        "# Research Report\n\nThis is a comprehensive research report with detailed analysis and findings from multiple sources.",
+      )
+    ).snapshot;
+    assert.equal(s.phase, "saving");
+    s = (await machine.next(s, plan)).snapshot;
+    assert.equal(s.phase, "done");
   });
 });

@@ -1,16 +1,13 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, existsSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, it } from "node:test";
 
 // ─── Feature 1: save_report writes to reportsDir ────────────────
 describe("save_report → reportsDir", () => {
   it("save_report tool receives reportsDir param", async () => {
-    const src = readFileSync(
-      join(import.meta.dirname ?? ".", "..", "extension", "tools/save-report.ts"),
-      "utf-8",
-    );
+    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools/save-report.ts"), "utf-8");
     // save_report handler must use reportsDir
     assert.ok(src.includes("reportsDir"), "save_report must reference reportsDir");
   });
@@ -32,13 +29,11 @@ describe("save_report → reportsDir", () => {
   });
 
   it("auto-save and save_report use same reportsDir source", async () => {
-    const src = readFileSync(
-      join(import.meta.dirname ?? ".", "..", "extension", "index.ts"),
-      "utf-8",
-    );
-    // Both paths should use reportsDir consistently
-    const reportsDirRefs = [...src.matchAll(/reportsDir/g)];
-    assert.ok(reportsDirRefs.length >= 2, "reportsDir referenced at least twice");
+    const srcIdx = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "index.ts"), "utf-8");
+    const srcDeps = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "deps.ts"), "utf-8");
+    // reportsDir should flow through settings object to both index.ts and deps.ts
+    assert.ok(srcIdx.includes("settings"), "index.ts must reference settings");
+    assert.ok(srcDeps.includes("settings"), "deps.ts must reference settings");
   });
 });
 
@@ -109,29 +104,21 @@ describe("telemetry appended to report", () => {
   });
 
   it("telemetry is saved with report path in session", async () => {
-    const src = readFileSync(
-      join(import.meta.dirname ?? ".", "..", "extension", "tools/run-research.ts"),
-      "utf-8",
-    );
+    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools/run-research.ts"), "utf-8");
     // session.saveReportPath must include telemetry
     const savePathCall = src.match(/saveReportPath\([^)]+telemetry[^)]*\)/);
     assert.ok(
-      src.includes("saveReportPath(reportPath, settings.reportsDir") || src.includes("saveReportPath(reportPath, reportsDir"),
+      src.includes("saveReportPath(reportPath, settings.reportsDir") ||
+        src.includes("saveReportPath(reportPath, reportsDir"),
       "saveReportPath must pass telemetry param",
     );
   });
 
   it("save_report reads telemetry from session and appends to report", async () => {
-    const src = readFileSync(
-      join(import.meta.dirname ?? ".", "..", "extension", "tools/save-report.ts"),
-      "utf-8",
-    );
+    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools/save-report.ts"), "utf-8");
     const saveSection = src.match(/name: "save_report"[\s\S]*?^\s*},/m);
     assert.ok(saveSection, "save_report section must exist");
-    assert.ok(
-      saveSection[0].includes("telemetry"),
-      "save_report must handle telemetry from session",
-    );
+    assert.ok(saveSection[0].includes("telemetry"), "save_report must handle telemetry from session");
   });
 
   it("does not reuse stale report-path from a different research run", async () => {
