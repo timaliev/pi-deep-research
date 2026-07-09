@@ -46,7 +46,7 @@ export function createPlanResearchTool(
       );
 
       // Step 1: topic only → negotiate params
-      if (!params.params_json && !params.plan_json) {
+      if (!params.params_json && !params.plan_json && params.topic) {
         if (!params.topic) {
           return {
             content: [{ type: "text", text: "Error: topic is required for the first call." }],
@@ -101,6 +101,19 @@ export function createPlanResearchTool(
               text: `## Research Planning — Phase: ${result.phase}\n\nPreliminary search complete. ${result.searchResults?.length ?? 0} results. I've sent a prompt to create the plan.`,
             },
           ],
+          details: { phase: result.phase, run_id: result.runId },
+        };
+      }
+
+      // Step 2b: zero params → continue (state-driven routing)
+      if (!params.params_json && !params.plan_json && !params.topic) {
+        const result = await manager.continue();
+        if (result.inject) pi.sendUserMessage(result.inject, { deliverAs: "steer" });
+        if (result.phase === "error") {
+          return { content: [{ type: "text", text: `Error: ${result.error}` }], details: { error: result.error } };
+        }
+        return {
+          content: [{ type: "text", text: `## Research Planning — Phase: ${result.phase}\n\nContinuing prefilter flow.` }],
           details: { phase: result.phase, run_id: result.runId },
         };
       }

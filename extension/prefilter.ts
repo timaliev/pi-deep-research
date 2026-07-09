@@ -113,6 +113,30 @@ export class PrefilterManager {
     return this.sharedRunId ?? generateRunId();
   }
 
+  // Cache for withParams reuse in continue()
+  private cachedTopic?: string;
+  private cachedEngines?: SearchEngine[];
+  private cachedProfile?: ResearchPlanProfile;
+
+  /**
+   * Handle a zero-params call — internally routes to the appropriate step.
+   * Called by the plan_research tool when no params_json or plan_json are provided.
+   */
+  async continue(topic?: string): Promise<PrefilterResult> {
+    // Fresh state with topic → behave like start()
+    if (topic && this.lastSearchResultCount === 0 && this.lastScrapedUrls.length === 0) {
+      return this.start(topic);
+    }
+
+    // Cached params from a prior withParams() → route to next step
+    if (this.cachedTopic && this.cachedEngines && this.cachedProfile) {
+      return { phase: "error", runId: this.runId(), error: "continue() after withParams — search+merge not yet implemented (ADR-0017)" };
+    }
+
+    // No topic, no cached state → error
+    return { phase: "error", runId: this.runId(), error: "No topic provided and no cached prefilter state." };
+  }
+
   /** Step 1: Ask agent to propose engines + profile. */
   async start(topic: string): Promise<PrefilterResult> {
     const runId = this.runId();
@@ -131,6 +155,11 @@ export class PrefilterManager {
   async withParams(topic: string, engines: SearchEngine[], profile: ResearchPlanProfile): Promise<PrefilterResult> {
     const runId = this.runId();
     this.logger?.event("prefilter_params_set", { engines, profile });
+
+    // Cache for continue() to route to search+merge later
+    this.cachedTopic = topic;
+    this.cachedEngines = engines;
+    this.cachedProfile = profile;
 
     const missingKeys = this.checkApiKeys(engines);
     if (missingKeys.length > 0) {
