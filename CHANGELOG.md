@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **(ci)** add package-lock.json for npm ci in GitHub Actions - ([9f97cbe](https://github.com/timaliev/pi-deep-research/commit/9f97cbe108c9786cee30ffb9401820c655685498)) - Tim Aliev
 - **(engines)** remove utils.ts pass-through module - ([e42abd1](https://github.com/timaliev/pi-deep-research/commit/e42abd16cd7b15430a5b4433b007455e2810ba41)) - Tim Aliev
+- apply biome formatting to 3 files failing CI - ([b4e6f61](https://github.com/timaliev/pi-deep-research/commit/b4e6f61291a3a4aef59c848d9cfa21843e4c6d42)) - Tim Aliev
 
 ### Refactoring
 
