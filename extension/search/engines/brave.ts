@@ -5,7 +5,7 @@
 
 import type { WebSearchOptions, WebSearchResult } from "../web-search.js";
 import type { SearchProviderCredentials } from "../../settings-context.js";
-import { DDG_USER_AGENT, fetchUrl, waitIfNeeded } from "../web-search.js";
+import { DDG_USER_AGENT, fetchUrl, rateLimiter } from "../web-search.js";
 
 // ─── Credential resolution ────────────────────────────────────
 
@@ -89,6 +89,8 @@ export async function search(
   opts: WebSearchOptions,
   cred?: SearchProviderCredentials,
 ): Promise<WebSearchResult[]> {
-  await waitIfNeeded("brave");
-  return searchBrave(query, opts.maxResults ?? 5, cred);
+  await rateLimiter.waitIfNeeded("brave");
+  const results = await searchBrave(query, opts.maxResults ?? 5, cred);
+  rateLimiter.recordCall("brave");
+  return results;
 }

@@ -6,7 +6,7 @@
 import { request as httpsRequest } from "node:https";
 import type { WebSearchOptions, WebSearchResult } from "../web-search.js";
 import type { SearchProviderCredentials } from "../../settings-context.js";
-import { sleep, decodeHtmlEntities, waitIfNeeded } from "../web-search.js";
+import { sleep, decodeHtmlEntities, rateLimiter } from "../web-search.js";
 
 const YANDEX_SEARCH_URL = "https://searchapi.api.cloud.yandex.net/v2/web/searchAsync";
 const YANDEX_OPERATION_URL = "https://operation.api.cloud.yandex.net/operations/";
@@ -195,6 +195,8 @@ export async function search(
   opts: WebSearchOptions,
   _cred?: SearchProviderCredentials,
 ): Promise<WebSearchResult[]> {
-  await waitIfNeeded("yandex");
-  return searchYandex(query, opts.maxResults ?? 5);
+  await rateLimiter.waitIfNeeded("yandex");
+  const results = await searchYandex(query, opts.maxResults ?? 5);
+  rateLimiter.recordCall("yandex");
+  return results;
 }

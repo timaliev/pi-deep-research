@@ -6,7 +6,7 @@
 import { request as httpsRequest } from "node:https";
 import type { WebSearchOptions, WebSearchResult } from "../web-search.js";
 import type { SearchProviderCredentials } from "../../settings-context.js";
-import { DDG_USER_AGENT, waitIfNeeded } from "../web-search.js";
+import { DDG_USER_AGENT, rateLimiter } from "../web-search.js";
 
 const TAVILY_API_URL = "https://api.tavily.com/search";
 
@@ -79,6 +79,8 @@ export async function search(
   opts: WebSearchOptions,
   _cred?: SearchProviderCredentials,
 ): Promise<WebSearchResult[]> {
-  await waitIfNeeded("tavily");
-  return searchTavily(query, opts.maxResults ?? 5);
+  await rateLimiter.waitIfNeeded("tavily");
+  const results = await searchTavily(query, opts.maxResults ?? 5);
+  rateLimiter.recordCall("tavily");
+  return results;
 }

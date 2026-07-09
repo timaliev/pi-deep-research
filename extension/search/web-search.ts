@@ -12,6 +12,8 @@ import { request as httpRequest } from "node:http";
 import type { Logger } from "./logger.js";
 import type { SearchProviderCredentials } from "../settings-context.js";
 
+export { rateLimiter } from "./rate-limiter.js";
+
 export const DDG_USER_AGENT = "Mozilla/5.0 (compatible; web-search/1.0)";
 
 // --- Search result type ---
@@ -120,7 +122,6 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// --- Brave Search API (optional - needs BRAVE_API_KEY env var or settings) ---
 /** Decode HTML entities (shared by engine parsers) */
 export function decodeHtmlEntities(text: string): string {
   return text
@@ -149,26 +150,6 @@ function deduplicateByUrl(results: WebSearchResult[]): WebSearchResult[] {
     }
   }
   return out;
-}
-
-// --- Per-engine rate limiter ---
-export const engineLastCall: Record<string, number> = {};
-const ENGINE_MIN_DELAY: Record<string, number> = {
-  duckduckgo: 2500,
-  searxng: 2000,
-  brave: 500,
-  tavily: 200,
-  yandex: 500,
-};
-
-export async function waitIfNeeded(engine: string): Promise<void> {
-  const last = engineLastCall[engine] ?? 0;
-  const minDelay = ENGINE_MIN_DELAY[engine] ?? 1000;
-  const elapsed = Date.now() - last;
-  if (elapsed < minDelay) {
-    const waitTime = minDelay - elapsed + Math.random() * 500;
-    await sleep(waitTime);
-  }
 }
 
 // --- Public API ---
@@ -279,7 +260,6 @@ async function searchAllEngines(
 
       const results = await fn(query, searchOpts, credentials);
       const elapsedMs = Date.now() - startMs;
-      engineLastCall[engine] = Date.now();
       perEngine[engine] = results;
       allResults.push(...results);
 
