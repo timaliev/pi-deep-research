@@ -6,8 +6,7 @@
 import { request as httpsRequest } from "node:https";
 import type { WebSearchOptions, WebSearchResult } from "../web-search.js";
 import type { SearchProviderCredentials } from "../../settings-context.js";
-import { DDG_USER_AGENT } from "../web-search.js";
-import { waitIfNeeded } from "./utils.js";
+import { DDG_USER_AGENT, waitIfNeeded } from "../web-search.js";
 
 const TAVILY_API_URL = "https://api.tavily.com/search";
 

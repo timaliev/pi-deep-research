@@ -6,8 +6,7 @@
 import { request as httpsRequest } from "node:https";
 import type { WebSearchOptions, WebSearchResult } from "../web-search.js";
 import type { SearchProviderCredentials } from "../../settings-context.js";
-import { sleep, decodeHtmlEntities } from "../web-search.js";
-import { waitIfNeeded } from "./utils.js";
+import { sleep, decodeHtmlEntities, waitIfNeeded } from "../web-search.js";
 
 const YANDEX_SEARCH_URL = "https://searchapi.api.cloud.yandex.net/v2/web/searchAsync";
 const YANDEX_OPERATION_URL = "https://operation.api.cloud.yandex.net/operations/";

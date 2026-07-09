@@ -11,8 +11,8 @@ import {
   sleep,
   decodeHtmlEntities,
   engineLastCall,
+  waitIfNeeded,
 } from "../web-search.js";
-import { waitIfNeeded } from "./utils.js";
 
 // ─── DDG-specific constants ────────────────────────────────────
 const DDG_BASE_URL = "https://html.duckduckgo.com/html";
