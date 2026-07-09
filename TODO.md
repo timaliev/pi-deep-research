@@ -73,3 +73,9 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 - DONE: update `prefilter.ts` prompt — show configured default marked with `(default)`, instruct LLM to advise narrative vs subtopics based on topic complexity.
 - DONE: add `"reportStyle"` to `buildParamsPrompt` expected JSON template.
 - DONE: add tests for settings cascade, env override, state machine fallback, prefilter prompt advisory.
+
+### Architecture review 4 (2026-07-09)
+
+- TODO: post-processing pipeline — `PostProcessor` interface with `process(ctx)`, adapters for assemble/PdfExport/mindMap, orchestrator builds pipeline list at construction.
+- TODO: plan_research dispatch — extract `execute()` branches into `handleStart()`, `handleParams()`, `handleFinalize()`, `handleContinue()`. One method per branch, ~20 lines each.
+- TODO: orchestrator run-and-persist — extract `runAndPersist(machine, snapshot, plan, response?, saveState?, extra?)` from `handleFirstCall`/`handleSubsequentCall`.
