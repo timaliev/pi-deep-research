@@ -1,7 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { ResearchPlanProfile } from "./prefilter.js";
 import { DEFAULT_PRESETS, mergeProfiles } from "./profile-resolver.js";
 import type { ResearchProfile } from "./state-machine.js";
 
@@ -33,6 +32,9 @@ const ENV = {
   mindMap: "DEEP_RESEARCH_MIND_MAP",
   reportStyle: "DEEP_RESEARCH_REPORT_STYLE",
   enabledEngines: "DEEP_RESEARCH_ENABLED_ENGINES",
+  settingsOnSessionStart: "DEEP_RESEARCH_SETTINGS_ON_SESSION_START",
+  settingsOnRunStart: "DEEP_RESEARCH_SETTINGS_ON_RUN_START",
+  settingsInReport: "DEEP_RESEARCH_SETTINGS_IN_REPORT",
 } as const;
 
 // ─── Built-in defaults ─────────────────────────────────────────
@@ -41,7 +43,40 @@ const BUILTIN = {
   profiles: DEFAULT_PRESETS,
   reportStyle: "narrative" as "narrative" | "subtopics",
   enabledEngines: ["duckduckgo", "searxng"],
+  settingsReport: { onSessionStart: false, onRunStart: false, inReport: false },
 };
+
+// ─── Provenance helpers ────────────────────────────────────────
+type SourceTag = string; // "default" | "env:VAR" | "file:path"
+
+function sourceDefault(): SourceTag {
+  return "default";
+}
+
+function sourceEnv(key: string): SourceTag {
+  return `env:${key}`;
+}
+
+function sourceFile(absPath: string, homeDir: string): SourceTag {
+  if (absPath.startsWith(homeDir)) {
+    return `file:~${absPath.slice(homeDir.length)}`;
+  }
+  return `file:${absPath}`;
+}
+
+// ─── SettingsReport config ─────────────────────────────────────
+export interface SettingsReportConfig {
+  onSessionStart: boolean;
+  onRunStart: boolean;
+  inReport: boolean;
+}
+
+// ─── Setting entry for getAllWithSources() ─────────────────────
+export interface SettingEntry {
+  key: string;
+  value: string | boolean;
+  source: SourceTag;
+}
 
 // ─── Interface ─────────────────────────────────────────────────
 export interface SettingsContextData {
@@ -54,6 +89,7 @@ export interface SettingsContextData {
   mindMap: boolean;
   reportStyle: "narrative" | "subtopics";
   enabledEngines: string[];
+  settingsReport: SettingsReportConfig;
 }
 
 export interface InitParams {
@@ -65,15 +101,29 @@ export interface InitParams {
 let instance: SettingsContext | null = null;
 
 export class SettingsContext implements SettingsContextData {
-  reportsDir: string;
-  artifactsDir: string;
-  defaultProfile: string;
-  profiles: Record<string, ResearchProfile>;
-  credentials: SearchProviderCredentials;
-  pdfExport: boolean;
-  mindMap: boolean;
-  reportStyle: "narrative" | "subtopics";
-  enabledEngines: string[];
+  reportsDir!: string;
+  artifactsDir!: string;
+  defaultProfile!: string;
+  profiles!: Record<string, ResearchProfile>;
+  credentials!: SearchProviderCredentials;
+  pdfExport!: boolean;
+  mindMap!: boolean;
+  reportStyle!: "narrative" | "subtopics";
+  enabledEngines!: string[];
+  settingsReport!: SettingsReportConfig;
+
+  // ─── Provenance fields (parallel to value fields) ─────────
+  reportsDirSource!: SourceTag;
+  artifactsDirSource!: SourceTag;
+  defaultProfileSource!: SourceTag;
+  pdfExportSource!: SourceTag;
+  mindMapSource!: SourceTag;
+  reportStyleSource!: SourceTag;
+  enabledEnginesSource!: SourceTag;
+  settingsReportOnSessionStartSource!: SourceTag;
+  settingsReportOnRunStartSource!: SourceTag;
+  settingsReportInReportSource!: SourceTag;
+  credentialSources!: Record<string, Record<string, SourceTag>>;
 
   private homeAgentDir: string;
 
@@ -89,76 +139,134 @@ export class SettingsContext implements SettingsContextData {
 
   private compute(cwd: string): void {
     const homeAgentDir = this.homeAgentDir;
+    const globalPath = join(homeAgentDir, "settings.json");
+    const localPath = join(cwd, ".pi", "settings.json");
+    const homeDir = homedir();
 
     // Read files
-    const global = readJsonFile(join(homeAgentDir, "settings.json"));
-    const local = readJsonFile(join(cwd, ".pi", "settings.json"));
+    const global = readJsonFile(globalPath);
+    const local = readJsonFile(localPath);
 
     const globalDr = (global?.deepResearch ?? {}) as Record<string, unknown>;
     const localDr = (local?.deepResearch ?? {}) as Record<string, unknown>;
 
-    // ─── String settings: env → local → global → built-in ────
-    this.reportsDir =
-      envString(ENV.reportsDir) ??
-      (localDr.reportsDir as string | undefined) ??
-      (globalDr.reportsDir as string | undefined) ??
-      join(cwd, "deep-research", "reports");
-
-    this.artifactsDir =
-      envString(ENV.artifactsDir) ??
-      (localDr.artifactsDir as string | undefined) ??
-      (globalDr.artifactsDir as string | undefined) ??
-      join(cwd, "deep-research", "artifacts");
-
-    this.defaultProfile =
-      envString(ENV.defaultProfile) ??
-      (localDr.defaultProfile as string | undefined) ??
-      (globalDr.defaultProfile as string | undefined) ??
-      BUILTIN.defaultProfile;
-
-    // ─── pdfExport: env → local → global → built-in false ──
-    this.pdfExport =
-      envBool(ENV.pdfExport) ??
-      (localDr.pdfExport as boolean | undefined) ??
-      (globalDr.pdfExport as boolean | undefined) ??
-      false;
-
-    // ─── mindMap: env → local → global → built-in false ─────
-    this.mindMap =
-      envBool(ENV.mindMap) ??
-      (localDr.mindMap as boolean | undefined) ??
-      (globalDr.mindMap as boolean | undefined) ??
-      false;
-
-    // ─── reportStyle: env → local → global → built-in narrative ──
-    this.reportStyle = resolveReportStyle(
-      envString(ENV.reportStyle),
-      localDr.defaultReportStyle as string | undefined,
-      globalDr.defaultReportStyle as string | undefined,
+    // ─── String settings: env → local → global → built-in ──
+    [this.reportsDir, this.reportsDirSource] = resolveString(
+      ENV.reportsDir, localDr.reportsDir, globalDr.reportsDir,
+      join(cwd, "deep-research", "reports"), localPath, globalPath, homeDir,
     );
 
-    // ─── enabledEngines: env → local → global → built-in ────
-    this.enabledEngines = resolveEnabledEngines(
+    [this.artifactsDir, this.artifactsDirSource] = resolveString(
+      ENV.artifactsDir, localDr.artifactsDir, globalDr.artifactsDir,
+      join(cwd, "deep-research", "artifacts"), localPath, globalPath, homeDir,
+    );
+
+    [this.defaultProfile, this.defaultProfileSource] = resolveString(
+      ENV.defaultProfile, localDr.defaultProfile, globalDr.defaultProfile,
+      BUILTIN.defaultProfile, localPath, globalPath, homeDir,
+    );
+
+    // ─── Boolean settings: env → local → global → built-in ─
+    [this.pdfExport, this.pdfExportSource] = resolveBool(
+      ENV.pdfExport, localDr.pdfExport, globalDr.pdfExport,
+      false, localPath, globalPath, homeDir,
+    );
+
+    [this.mindMap, this.mindMapSource] = resolveBool(
+      ENV.mindMap, localDr.mindMap, globalDr.mindMap,
+      false, localPath, globalPath, homeDir,
+    );
+
+    // ─── reportStyle ───────────────────────────────────────
+    [this.reportStyle, this.reportStyleSource] = resolveReportStyleWithSource(
+      envString(ENV.reportStyle),
+      localDr.defaultReportStyle,
+      globalDr.defaultReportStyle,
+      localPath, globalPath, homeDir,
+    );
+
+    // ─── enabledEngines ────────────────────────────────────
+    [this.enabledEngines, this.enabledEnginesSource] = resolveEnabledEnginesWithSource(
       envString(ENV.enabledEngines),
       localDr.enabledEngines as string[] | undefined,
       globalDr.enabledEngines as string[] | undefined,
+      localPath, globalPath, homeDir,
     );
 
-    // ─── Profiles: local → global → built-in (no env) ────────
+    // ─── settingsReport group ──────────────────────────────
+    const localSr = localDr.settingsReport as Record<string, unknown> | undefined;
+    const globalSr = globalDr.settingsReport as Record<string, unknown> | undefined;
+    const srBuiltin = BUILTIN.settingsReport;
+
+    let srOnSession: boolean; let srOnSessionSrc: SourceTag;
+    [srOnSession, srOnSessionSrc] = resolveBool(
+      ENV.settingsOnSessionStart, localSr?.onSessionStart, globalSr?.onSessionStart,
+      srBuiltin.onSessionStart, localPath, globalPath, homeDir,
+    );
+
+    let srOnRun: boolean; let srOnRunSrc: SourceTag;
+    [srOnRun, srOnRunSrc] = resolveBool(
+      ENV.settingsOnRunStart, localSr?.onRunStart, globalSr?.onRunStart,
+      srBuiltin.onRunStart, localPath, globalPath, homeDir,
+    );
+
+    let srInReport: boolean; let srInReportSrc: SourceTag;
+    [srInReport, srInReportSrc] = resolveBool(
+      ENV.settingsInReport, localSr?.inReport, globalSr?.inReport,
+      srBuiltin.inReport, localPath, globalPath, homeDir,
+    );
+
+    this.settingsReport = { onSessionStart: srOnSession, onRunStart: srOnRun, inReport: srInReport };
+    this.settingsReportOnSessionStartSource = srOnSessionSrc;
+    this.settingsReportOnRunStartSource = srOnRunSrc;
+    this.settingsReportInReportSource = srInReportSrc;
+
+    // ─── Profiles: local → global → built-in (no env) ──────
     const globalProfiles = (globalDr.profiles ?? {}) as Record<string, Partial<ResearchProfile>>;
     const localProfiles = (localDr.profiles ?? {}) as Record<string, Partial<ResearchProfile>>;
     this.profiles = mergeProfiles(mergeProfiles(BUILTIN.profiles, globalProfiles), localProfiles);
 
-    // ─── Search providers: local → global (env handled inside cred) ──
-    const globalProvidersRaw = globalDr.searchProviders;
-    const localProvidersRaw = localDr.searchProviders;
-    // Merge raw, then normalize — handles array format and field casing
+    // ─── Search providers: local → global (env handled inside cred) ─
+    const globalProvidersRaw = globalDr.searchProviders as Record<string, unknown> | undefined;
+    const localProvidersRaw = localDr.searchProviders as Record<string, unknown> | undefined;
     const mergedProvidersRaw = {
-      ...((globalProvidersRaw as Record<string, unknown>) ?? {}),
-      ...((localProvidersRaw as Record<string, unknown>) ?? {}),
+      ...(globalProvidersRaw ?? {}),
+      ...(localProvidersRaw ?? {}),
     };
     const mergedProviders = normalizeSearchProviders(mergedProvidersRaw);
     this.credentials = new SearchProviderCredentials(mergedProviders);
+
+    // ─── Credential sources ────────────────────────────────
+    this.credentialSources = {};
+    const credEnvMap = SearchProviderCredentials["ENV_MAP"] as Record<string, Record<string, string>>;
+    for (const engine of Object.keys(credEnvMap)) {
+      const engineCreds: Record<string, SourceTag> = {};
+      for (const key of Object.keys(credEnvMap[engine])) {
+        const envVar = credEnvMap[engine][key];
+        if (envVar && process.env[envVar]) {
+          engineCreds[key] = sourceEnv(envVar);
+        } else if (typeof localProvidersRaw?.[engine] === "object" && localProvidersRaw[engine] !== null) {
+          const le = localProvidersRaw[engine] as Record<string, unknown>;
+          if (le[key] !== undefined) {
+            engineCreds[key] = sourceFile(localPath, homeDir);
+            continue;
+          }
+        }
+        if (!engineCreds[key]) {
+          if (typeof globalProvidersRaw?.[engine] === "object" && globalProvidersRaw[engine] !== null) {
+            const ge = globalProvidersRaw[engine] as Record<string, unknown>;
+            if (ge[key] !== undefined) {
+              engineCreds[key] = sourceFile(globalPath, homeDir);
+              continue;
+            }
+          }
+        }
+        if (!engineCreds[key]) {
+          engineCreds[key] = sourceDefault();
+        }
+      }
+      this.credentialSources[engine] = engineCreds;
+    }
   }
 
   /** Initialize the singleton. Subsequent calls return the same instance. */
@@ -177,42 +285,100 @@ export class SettingsContext implements SettingsContextData {
     if (!instance) throw new Error("SettingsContext not initialized. Call SettingsContext.init() first.");
     return instance;
   }
+
+  /** Return all settings as a flat list of { key, value, source } entries.
+   *  Excludes profiles (handled separately). Credential values are masked as "****". */
+  getAllWithSources(): SettingEntry[] {
+    const entries: SettingEntry[] = [
+      { key: "reportsDir", value: this.reportsDir, source: this.reportsDirSource },
+      { key: "artifactsDir", value: this.artifactsDir, source: this.artifactsDirSource },
+      { key: "defaultProfile", value: this.defaultProfile, source: this.defaultProfileSource },
+      { key: "pdfExport", value: this.pdfExport, source: this.pdfExportSource },
+      { key: "mindMap", value: this.mindMap, source: this.mindMapSource },
+      { key: "reportStyle", value: this.reportStyle, source: this.reportStyleSource },
+      { key: "enabledEngines", value: this.enabledEngines.join(", "), source: this.enabledEnginesSource },
+      { key: "settingsReport.onSessionStart", value: this.settingsReport.onSessionStart, source: this.settingsReportOnSessionStartSource },
+      { key: "settingsReport.onRunStart", value: this.settingsReport.onRunStart, source: this.settingsReportOnRunStartSource },
+      { key: "settingsReport.inReport", value: this.settingsReport.inReport, source: this.settingsReportInReportSource },
+    ];
+
+    // Credentials with masked values
+    const credEnvMap = SearchProviderCredentials["ENV_MAP"] as Record<string, Record<string, string>>;
+    for (const engine of Object.keys(credEnvMap)) {
+      for (const key of Object.keys(credEnvMap[engine])) {
+        const src = this.credentialSources[engine]?.[key] ?? sourceDefault();
+        entries.push({
+          key: `${engine}.${key}`,
+          value: "****",
+          source: src,
+        });
+      }
+    }
+
+    return entries;
+  }
 }
 
 // ─── Helpers ────────────────────────────────────────────────────
 
-/** Resolve report style: env → local → global → "narrative". Invalid values fall back to "narrative". */
-function resolveReportStyle(env?: string, local?: string, global?: string): "narrative" | "subtopics" {
+/** Resolve string with provenance. */
+function resolveString(
+  envKey: string, localVal: unknown, globalVal: unknown,
+  defaultVal: string, localPath: string, globalPath: string, homeDir: string,
+): [string, SourceTag] {
+  const env = envString(envKey);
+  if (env !== undefined) return [env, sourceEnv(envKey)];
+  if (typeof localVal === "string" && localVal.length > 0) return [localVal, sourceFile(localPath, homeDir)];
+  if (typeof globalVal === "string" && globalVal.length > 0) return [globalVal, sourceFile(globalPath, homeDir)];
+  return [defaultVal, sourceDefault()];
+}
+
+/** Resolve boolean with provenance. */
+function resolveBool(
+  envKey: string, localVal: unknown, globalVal: unknown,
+  defaultVal: boolean, localPath: string, globalPath: string, homeDir: string,
+): [boolean, SourceTag] {
+  const env = envBool(envKey);
+  if (env !== undefined) return [env, sourceEnv(envKey)];
+  if (typeof localVal === "boolean") return [localVal, sourceFile(localPath, homeDir)];
+  if (typeof globalVal === "boolean") return [globalVal, sourceFile(globalPath, homeDir)];
+  return [defaultVal, sourceDefault()];
+}
+
+/** Resolve report style with provenance. */
+function resolveReportStyleWithSource(
+  env: string | undefined,
+  local: unknown,
+  global: unknown,
+  localPath: string,
+  globalPath: string,
+  homeDir: string,
+): ["narrative" | "subtopics", SourceTag] {
   const valid = ["narrative", "subtopics"];
-  const value = env ?? local ?? global;
-  if (value && valid.includes(value)) return value as "narrative" | "subtopics";
-  return "narrative";
+  if (env && valid.includes(env)) return [env as "narrative" | "subtopics", sourceEnv(ENV.reportStyle)];
+  if (typeof local === "string" && valid.includes(local)) return [local as "narrative" | "subtopics", sourceFile(localPath, homeDir)];
+  if (typeof global === "string" && valid.includes(global)) return [global as "narrative" | "subtopics", sourceFile(globalPath, homeDir)];
+  return [BUILTIN.reportStyle, sourceDefault()];
 }
 
-/** Resolve enabled engines: env (comma-separated) → local → global → built-in default. */
-function resolveEnabledEngines(
-  env?: string,
-  local?: string[],
-  global?: string[],
-): string[] {
-  if (env && env.length > 0) return env.split(",").map((s) => s.trim()).filter(Boolean);
-  if (local && local.length > 0) return local;
-  if (global && global.length > 0) return global;
-  return BUILTIN.enabledEngines;
+/** Resolve enabled engines with provenance. */
+function resolveEnabledEnginesWithSource(
+  env: string | undefined,
+  local: string[] | undefined,
+  global: string[] | undefined,
+  localPath: string,
+  globalPath: string,
+  homeDir: string,
+): [string[], SourceTag] {
+  if (env && env.length > 0) return [env.split(",").map((s) => s.trim()).filter(Boolean), sourceEnv(ENV.enabledEngines)];
+  if (local && local.length > 0) return [local, sourceFile(localPath, homeDir)];
+  if (global && global.length > 0) return [global, sourceFile(globalPath, homeDir)];
+  return [BUILTIN.enabledEngines, sourceDefault()];
 }
 
-/** Normalize searchProviders from settings.json into the canonical
- *  Record&lt;engine, Record&lt;key, value&gt;&gt; shape expected by SearchProviderCredentials.
- *
- *  Handles two common format mismatches silently:
- *  1. Array format  [{name: "brave", apikey: "..."}]  →  {brave: {apiKey: "..."}}
- *  2. Case mismatch  apikey → apiKey, oauth_token → oauthToken
- *
- *  Already-correct input passes through unchanged. */
 function normalizeSearchProviders(raw: unknown): Record<string, Record<string, string>> {
   if (!raw || typeof raw !== "object") return {};
 
-  // Field name normalisation map (lowercase → canonical camelCase)
   const KEY_MAP: Record<string, string> = {
     apikey: "apiKey",
     oauth_token: "oauthToken",
@@ -231,7 +397,6 @@ function normalizeSearchProviders(raw: unknown): Record<string, Record<string, s
     return out;
   };
 
-  // Array format: [{name: "brave", apikey: "..."}, ...]
   if (Array.isArray(raw)) {
     const result: Record<string, Record<string, string>> = {};
     for (const item of raw as Array<Record<string, unknown>>) {
@@ -243,7 +408,6 @@ function normalizeSearchProviders(raw: unknown): Record<string, Record<string, s
     return result;
   }
 
-  // Object format: {brave: {apiKey: "..."}, tavily: {apiKey: "..."}}
   const result: Record<string, Record<string, string>> = {};
   for (const [engine, fields] of Object.entries(raw as Record<string, unknown>)) {
     if (!fields || typeof fields !== "object") continue;
