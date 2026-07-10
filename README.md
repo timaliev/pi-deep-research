@@ -439,7 +439,7 @@ See [Environment Variables](#environment-variables) for API key configuration.
 # Run tests
 cd extension && node --import tsx --test ../tests/*.test.ts
 
-# 363 tests across 53 files covering:
+# 422 tests across 57 files covering:
 # - PrefilterManager (three-step, validation, API key checks, engine status)
 # - ResearchStateMachine (full cycle, concurrency, soft limits, deepening)
 # - Engine adapters (DDG, Brave, SearXNG, Tavily, Yandex — per-engine tests)
@@ -484,6 +484,6 @@ cd extension && node --import tsx --test ../tests/*.test.ts
 | [0017](docs/adr/0017-llm-introspection-source-tagged-questions.md) | proposed | LLM introspection + source-tagged questions |
 | [0018](docs/adr/0018-release-monitor.md) | accepted | Release monitor on session start |
 | [0019](docs/adr/0019-tui-confirmation-gate.md) | accepted | TUI confirmation gate for research plans |
-| [0020](docs/adr/0020-settings-reinit-session-start.md) | proposed | SettingsContext re-init on session_start |
+| [0020](docs/adr/0020-settings-reinit-session-start.md) | accepted | SettingsContext re-init on session_start |
 | [0021](docs/adr/0021-save-report-report-path.md) | accepted | save_report report_path for large reports |
 | [0022](docs/adr/0022-done-phase-steer-messages.md) | accepted | Remove redundant steer from done phase |

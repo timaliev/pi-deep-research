@@ -86,17 +86,16 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 - DONE: Extract prompt builders from prefilter.ts.
 - DONE: Fix brave engine waitIfNeeded error.
 
-### SearXNG custom instance
+### SearXNG custom URL (implemented 2026-07-10)
 
-- TODO: add `searxng: { url: "SEARXNG_URL" }` to settings + env cascade.
-- TODO: read URL in searxng adapter to prepend custom instance before public fallbacks.
-- TODO: custom instance has no fallback to public instances (privacy).
+- DONE: add `searxng: { url: "SEARXNG_URL" }` to `SearchProviderCredentials.ENV_MAP`.
+- DONE: read `cred?.get("searxng", "url")` in searxng adapter to prepend custom URL before public fallbacks.
+- DONE: custom instance has no fallback to public instances (privacy).
 
 ### Engine allowlist (implemented 2026-07-10)
 
-- DONE: add `enabledEngines` field to `SettingsContext` — env `DEEP_RESEARCH_ENABLED_ENGINES` or `deepResearch.enabledEngines` in settings.json. Default: ["duckduckgo", "searxng"].
-- DONE: update `buildEngineStatus()` to filter by allowlist.
-- TODO: has key but not in allowlist → ❌ "not enabled" (new distinct label).
+- DONE: add `enabledEngines` field to `SettingsContext` — env + settings.json cascade. Default: ["duckduckgo", "searxng"].
+- DONE: update `buildEngineStatus()` to filter by allowlist + show "not enabled" label.
 
 ### ADR-0017: LLM introspection (implemented 2026-07-10)
 
