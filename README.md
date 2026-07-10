@@ -153,7 +153,7 @@ Keys per engine:
 
 #### `enabledEngines`
 
-Whitelist which search engines are available. Comma-separated string in env var, array in settings.json. Defaults to `["duckduckgo", "searxng"]` (free, no API keys). Absent/empty = all configured engines enabled (backward compatible with projects that don't set this).
+Whitelist which search engines are available. Comma-separated string in env var, array in settings.json. If not set (or empty), built-in defaults (`["duckduckgo", "searxng"]`) are used &mdash; free engines only, no API keys needed. Engines not in the list are excluded from prefilter engine suggestions, even if their API key is configured.
 
 ```json
 "enabledEngines": ["duckduckgo", "brave", "tavily"]

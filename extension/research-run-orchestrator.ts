@@ -70,6 +70,8 @@ export interface PostProcessContext {
   logsDir: string;
   profileName?: string;
   reportPath?: string;
+  /** Settings for processors that need configuration (PDF, mind-map, settings report). */
+  settings?: SettingsContext;
 }
 
 export type PostProcessResult = Partial<{
@@ -272,6 +274,7 @@ export class ResearchRunOrchestrator {
       planArtifactPath,
       logsDir,
       profileName: typeof plan.profile === "object" && "name" in plan.profile ? (plan.profile as any).name : undefined,
+      settings: this.settings,
     };
 
     const results: PostProcessResult[] = [];
@@ -306,6 +309,8 @@ class AssembleReportProcessor implements PostProcessor {
       planArtifactPath: ctx.planArtifactPath,
       logsDir: ctx.logsDir,
       profileName: ctx.profileName,
+      appendSettingsReport: ctx.settings?.settingsReport.inReport ?? false,
+      settings: ctx.settings,
     });
     ctx.reportPath = reportPath;
     return { reportPath };
