@@ -46,8 +46,11 @@ export default function (pi: ExtensionAPI) {
     searchFn: searchWeb,
   });
 
-  // Release monitor — check GitHub for new versions on session start (ADR-0018)
-  pi.on("session_start", () => checkForNewRelease(pi.sendUserMessage.bind(pi)));
+  // Release monitor + settings re-init on session start (ADR-0018, ADR-0020)
+  pi.on("session_start", (_event: any, ctx: any) => {
+    settings.reinit(ctx.cwd);
+    checkForNewRelease(pi.sendUserMessage.bind(pi));
+  });
 
   // TUI confirmation gate — enforce user approval before research runs (ADR-0019)
   pi.on("tool_call", async (event: any, ctx: any) => {

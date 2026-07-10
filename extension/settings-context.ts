@@ -62,21 +62,33 @@ export interface InitParams {
 let instance: SettingsContext | null = null;
 
 export class SettingsContext implements SettingsContextData {
-  readonly reportsDir: string;
-  readonly artifactsDir: string;
-  readonly defaultProfile: string;
-  readonly profiles: Record<string, ResearchProfile>;
-  readonly credentials: SearchProviderCredentials;
-  readonly pdfExport: boolean;
-  readonly mindMap: boolean;
-  readonly reportStyle: "narrative" | "subtopics";
+  reportsDir: string;
+  artifactsDir: string;
+  defaultProfile: string;
+  profiles: Record<string, ResearchProfile>;
+  credentials: SearchProviderCredentials;
+  pdfExport: boolean;
+  mindMap: boolean;
+  reportStyle: "narrative" | "subtopics";
+
+  private homeAgentDir: string;
 
   private constructor(params: InitParams) {
-    const homeAgentDir = params.homeAgentDir ?? join(homedir(), ".pi", "agent");
+    this.homeAgentDir = params.homeAgentDir ?? join(homedir(), ".pi", "agent");
+    this.compute(params.cwd);
+  }
+
+  /** Re-apply settings cascade with a new working directory (ADR-0020). */
+  reinit(cwd: string): void {
+    this.compute(cwd);
+  }
+
+  private compute(cwd: string): void {
+    const homeAgentDir = this.homeAgentDir;
 
     // Read files
     const global = readJsonFile(join(homeAgentDir, "settings.json"));
-    const local = readJsonFile(join(params.cwd, ".pi", "settings.json"));
+    const local = readJsonFile(join(cwd, ".pi", "settings.json"));
 
     const globalDr = (global?.deepResearch ?? {}) as Record<string, unknown>;
     const localDr = (local?.deepResearch ?? {}) as Record<string, unknown>;
@@ -86,13 +98,13 @@ export class SettingsContext implements SettingsContextData {
       envString(ENV.reportsDir) ??
       (localDr.reportsDir as string | undefined) ??
       (globalDr.reportsDir as string | undefined) ??
-      join(params.cwd, "deep-research", "reports");
+      join(cwd, "deep-research", "reports");
 
     this.artifactsDir =
       envString(ENV.artifactsDir) ??
       (localDr.artifactsDir as string | undefined) ??
       (globalDr.artifactsDir as string | undefined) ??
-      join(params.cwd, "deep-research", "artifacts");
+      join(cwd, "deep-research", "artifacts");
 
     this.defaultProfile =
       envString(ENV.defaultProfile) ??

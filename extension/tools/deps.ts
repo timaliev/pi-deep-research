@@ -33,8 +33,8 @@ export function registerAllTools(pi: ExtensionAPI, deps: ToolDeps): void {
   pi.registerTool(createWebSearchTool(deps.credentials));
   pi.registerTool(createScrapeUrlTool(deps.scraper));
   pi.registerTool(createSaveReportTool(deps.settings));
-  pi.registerTool(createExportPdfTool(sendUserMessage));
-  pi.registerTool(createMindMapTool(sendUserMessage));
+  pi.registerTool(createExportPdfTool(sendUserMessage, deps.settings));
+  pi.registerTool(createMindMapTool(sendUserMessage, deps.settings));
   pi.registerTool(
     createPlanResearchTool(pi, deps.settings, deps.profileResolver, deps.credentials, deps.scraper, deps.searchFn),
   );
