@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug Fixes
 
+- **(settings)** resolve biome lint errors — useLiteralKeys + useConst - ([5ab7e8c](https://github.com/timaliev/pi-deep-research/commit/5ab7e8c21e1be6dcf58c49094d1c9a79e9b5cbb8)) - Tim Aliev
 - apply biome formatting to 3 files failing CI - ([ab129f5](https://github.com/timaliev/pi-deep-research/commit/ab129f5a8000e4334678c82d24eb91e815dbc614)) - Tim Aliev
 
 ### Documentation
