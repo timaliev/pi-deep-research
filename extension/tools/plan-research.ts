@@ -1,7 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { Type } from "typebox";
 import type { ResearchPlanProfile } from "../prefilter.js";
-import { PrefilterManager, PrefilterSession } from "../prefilter.js";
+import { type PrefilterManager, PrefilterSession } from "../prefilter.js";
 import type { ProfileResolver } from "../profile-resolver.js";
 import type { Scraper } from "../scraper.js";
 import type { SearchEngine, searchWeb as SearchWebFn } from "../search/web-search.js";
@@ -32,7 +32,12 @@ export function createPlanResearchTool(
     const result = await manager.start(topic);
     if (result.inject) pi.sendUserMessage(result.inject, { deliverAs: "steer" });
     return {
-      content: [{ type: "text", text: `## Research Planning — Phase: ${result.phase}\n\nI've sent you a prompt to choose engines and profile. Respond with JSON, then call plan_research again with params_json.` }],
+      content: [
+        {
+          type: "text",
+          text: `## Research Planning — Phase: ${result.phase}\n\nI've sent you a prompt to choose engines and profile. Respond with JSON, then call plan_research again with params_json.`,
+        },
+      ],
       details: { phase: result.phase, run_id: result.runId },
     };
   }
@@ -45,15 +50,26 @@ export function createPlanResearchTool(
       engines = parsed.engines ?? ["duckduckgo"];
       profile = parsed.profile ?? { name: "default" };
     } catch {
-      return { content: [{ type: "text", text: "Error: params_json must be valid JSON." }], details: { error: "invalid_params_json" } };
+      return {
+        content: [{ type: "text", text: "Error: params_json must be valid JSON." }],
+        details: { error: "invalid_params_json" },
+      };
     }
     const result = await manager.withParams(topic, engines, profile);
     if (result.inject) pi.sendUserMessage(result.inject, { deliverAs: "steer" });
     if (result.phase === "awaiting_params") {
-      return { content: [{ type: "text", text: "## API Key Required\n\nSet missing env vars and retry." }], details: { phase: result.phase, run_id: result.runId } };
+      return {
+        content: [{ type: "text", text: "## API Key Required\n\nSet missing env vars and retry." }],
+        details: { phase: result.phase, run_id: result.runId },
+      };
     }
     return {
-      content: [{ type: "text", text: `## Research Planning — Phase: ${result.phase}\n\nPreliminary search complete. ${result.searchResults?.length ?? 0} results. I've sent a prompt to create the plan.` }],
+      content: [
+        {
+          type: "text",
+          text: `## Research Planning — Phase: ${result.phase}\n\nPreliminary search complete. ${result.searchResults?.length ?? 0} results. I've sent a prompt to create the plan.`,
+        },
+      ],
       details: { phase: result.phase, run_id: result.runId },
     };
   }
@@ -61,9 +77,10 @@ export function createPlanResearchTool(
   async function handleContinue(entries: any[], manager: PrefilterManager) {
     // ADR-0017: extract LLM response for introspection flow
     const lastAssistant = [...entries].reverse().find((e: any) => e.message?.role === "assistant");
-    const llmText = typeof lastAssistant?.message?.content === "string"
-      ? (lastAssistant.message.content as string).replace(/<tool_calls>[\s\S]*?<\/tool_calls>/g, "").trim()
-      : undefined;
+    const llmText =
+      typeof lastAssistant?.message?.content === "string"
+        ? (lastAssistant.message.content as string).replace(/<tool_calls>[\s\S]*?<\/tool_calls>/g, "").trim()
+        : undefined;
     const result = await manager.continue(undefined, llmText);
     if (result.inject) pi.sendUserMessage(result.inject, { deliverAs: "steer" });
     if (result.phase === "error") {
@@ -78,24 +95,42 @@ export function createPlanResearchTool(
   async function handleFinalize(topic: string | undefined, planJson: string, manager: PrefilterManager) {
     let resolvedTopic = topic as string;
     if (!resolvedTopic) {
-      try { resolvedTopic = JSON.parse(planJson).topic || "unknown"; } catch { resolvedTopic = "unknown"; }
+      try {
+        resolvedTopic = JSON.parse(planJson).topic || "unknown";
+      } catch {
+        resolvedTopic = "unknown";
+      }
     }
     const result = await manager.finalize(resolvedTopic, planJson);
     session.remove(result.runId);
     return {
-      content: [{ type: "text", text: result.phase === "plan_ready"
-        ? `## Research Plan Ready ✅\n\nPlan saved to: ${result.planArtifactPath}\n\n**Topic:** ${result.plan?.topic}\n**Engines:** ${result.plan?.engines.join(", ")}\n**Profile:** ${result.plan?.profile.name}\n**Questions:** ${result.plan?.researchQuestions.length}\n\nNext: show user and ask for confirmation before calling run_research.`
-        : `## Plan Error ❌\n\n${result.error}` }],
-      details: { phase: result.phase, plan_artifact_path: result.planArtifactPath, plan: result.plan, error: result.error },
+      content: [
+        {
+          type: "text",
+          text:
+            result.phase === "plan_ready"
+              ? `## Research Plan Ready ✅\n\nPlan saved to: ${result.planArtifactPath}\n\n**Topic:** ${result.plan?.topic}\n**Engines:** ${result.plan?.engines.join(", ")}\n**Profile:** ${result.plan?.profile.name}\n**Questions:** ${result.plan?.researchQuestions.length}\n\nNext: show user and ask for confirmation before calling run_research.`
+              : `## Plan Error ❌\n\n${result.error}`,
+        },
+      ],
+      details: {
+        phase: result.phase,
+        plan_artifact_path: result.planArtifactPath,
+        plan: result.plan,
+        error: result.error,
+      },
     };
   }
 
   return {
     name: "plan_research",
     label: "Plan Research",
-    description: "Three-step research planning. (1) Call with topic — agent proposes engines+profile. (2) Call with topic and params_json — preliminary search runs. (3) Call with topic and plan_json — save plan artifact.",
+    description:
+      "Three-step research planning. (1) Call with topic — agent proposes engines+profile. (2) Call with topic and params_json — preliminary search runs. (3) Call with topic and plan_json — save plan artifact.",
     parameters: Type.Object({
-      topic: Type.Optional(Type.String({ description: "Research topic (optional if plan_json provided, extracted from plan)" })),
+      topic: Type.Optional(
+        Type.String({ description: "Research topic (optional if plan_json provided, extracted from plan)" }),
+      ),
       params_json: Type.Optional(Type.String({ description: "JSON with engines and profile (second call)" })),
       plan_json: Type.Optional(Type.String({ description: "JSON research plan (third call)" })),
     }),

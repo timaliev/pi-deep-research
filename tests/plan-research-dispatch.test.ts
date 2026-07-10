@@ -8,10 +8,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 
-const src = readFileSync(
-  join(import.meta.dirname ?? ".", "..", "extension", "tools", "plan-research.ts"),
-  "utf-8",
-);
+const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "plan-research.ts"), "utf-8");
 
 describe("plan_research dispatch — handler methods", () => {
   it("has handleStart method", () => {
@@ -32,8 +29,10 @@ describe("plan_research dispatch — handler methods", () => {
 
   it("execute() dispatches to handlers", () => {
     assert.ok(
-      src.includes("handleStart(") && src.includes("handleWithParams(") &&
-      src.includes("handleContinue(") && src.includes("handleFinalize("),
+      src.includes("handleStart(") &&
+        src.includes("handleWithParams(") &&
+        src.includes("handleContinue(") &&
+        src.includes("handleFinalize("),
       "execute must call all 4 handlers",
     );
   });

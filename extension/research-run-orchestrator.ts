@@ -295,7 +295,9 @@ export class ResearchRunOrchestrator {
 
 class AssembleReportProcessor implements PostProcessor {
   name = "assemble-report";
-  enabled() { return true; }
+  enabled() {
+    return true;
+  }
   async process(ctx: PostProcessContext): Promise<PostProcessResult> {
     const reportPath = assembleReport({
       snapshot: ctx.snapshot,
@@ -312,7 +314,9 @@ class AssembleReportProcessor implements PostProcessor {
 
 class PdfExportProcessor implements PostProcessor {
   name = "pdf-export";
-  enabled(s?: SettingsContext) { return s?.pdfExport ?? false; }
+  enabled(s?: SettingsContext) {
+    return s?.pdfExport ?? false;
+  }
   async process(ctx: PostProcessContext): Promise<PostProcessResult> {
     if (!ctx.reportPath) return {};
     const r = await convertToPdf({ reportPath: ctx.reportPath });
@@ -324,27 +328,37 @@ class PdfExportProcessor implements PostProcessor {
 
 class MindMapProcessor implements PostProcessor {
   name = "mind-map";
-  enabled(s?: SettingsContext) { return (s?.mindMap ?? false) && true; }
+  enabled(s?: SettingsContext) {
+    return (s?.mindMap ?? false) && true;
+  }
   async process(ctx: PostProcessContext): Promise<PostProcessResult> {
     if (ctx.snapshot.allFindings.length === 0) return {};
-    const summary = ctx.snapshot.allFindings.slice(0, 30)
-      .map((f, i) => `${i + 1}. ${f.text.substring(0, 200)}`).join("\n");
+    const summary = ctx.snapshot.allFindings
+      .slice(0, 30)
+      .map((f, i) => `${i + 1}. ${f.text.substring(0, 200)}`)
+      .join("\n");
     return { mindMapPrompt: buildMindMapPrompt(ctx.plan.topic, summary) };
   }
 }
 
 class ContradictionProcessor implements PostProcessor {
   name = "contradiction";
-  enabled() { return true; }
+  enabled() {
+    return true;
+  }
   async process(ctx: PostProcessContext): Promise<PostProcessResult> {
     const contradictions = ctx.snapshot.allFindings.filter(
       (f) => f.text.includes("CONTRADICTION") || f.text.includes("contradiction") || f.text.includes("debatable"),
     );
     if (contradictions.length === 0) return {};
-    return { contradictionAnalysis: [
-      `## Contradictions & Debatable Facts`, ``,
-      ...contradictions.map((f) => `- ${f.text.substring(0, 300)} [Source: ${f.sourceUrl}]`), ``,
-    ].join("\n") };
+    return {
+      contradictionAnalysis: [
+        `## Contradictions & Debatable Facts`,
+        ``,
+        ...contradictions.map((f) => `- ${f.text.substring(0, 300)} [Source: ${f.sourceUrl}]`),
+        ``,
+      ].join("\n"),
+    };
   }
 }
 
