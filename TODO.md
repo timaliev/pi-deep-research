@@ -124,7 +124,7 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 - DONE: PDF: repository URL truncated in pandoc. Fix: use markdown link format `[url](url)` instead of bare URL in telemetry.
 - DONE: Too many session-settings logs — one per `session_start` event. Fix: write only first time per process, or once per timestamp-minute.
 - DONE: `onSessionStart` settings injection triggers deep research skill activation. Fix: prefix with "ℹ️ Informational:".
-- TODO: LLM introspection not triggered — agent never calls zero-param plan_research continue path. Fix: SKILL.md protocol should explicitly describe the introspection turn.
+- DONE: LLM introspection not triggered — agent never calls zero-param plan_research continue path. Fix: add explicit introspection turn to SKILL.md Phase 2.
 - DONE: Extended settings (Node.js version, platform, cwd) missing from settings report. Fix: add system info section to `buildSettingsTable`.
 - DONE: SKILL.md hardcodes profile defaults (4/2/4 etc.) but settings.json can override. Fix: remove hardcoded numbers, reference resolved profiles.
 - DONE: TUI double confirmation: SKILL.md Phase 3 says "ask user" AND "call confirm_research (TUI dialog)". Fix: remove verbal confirmation, go directly to TUI.
