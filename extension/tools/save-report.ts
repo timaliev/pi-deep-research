@@ -11,7 +11,12 @@ export function createSaveReportTool(settings: SettingsContext) {
     parameters: Type.Object({
       topic: Type.String({ description: "Research topic (used in filename)" }),
       markdown: Type.Optional(Type.String({ description: "Report content in markdown" })),
-      report_path: Type.Optional(Type.String({ description: "Path to an existing report file to re-save (for large reports that can't be passed as markdown)" })),
+      report_path: Type.Optional(
+        Type.String({
+          description:
+            "Path to an existing report file to re-save (for large reports that can't be passed as markdown)",
+        }),
+      ),
     }),
     async execute(_toolCallId: string, params: any, _signal: any, _onUpdate: any, ctx: any) {
       mkdirSync(settings.reportsDir, { recursive: true });

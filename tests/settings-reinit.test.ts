@@ -7,15 +7,9 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 
-const indexSrc = readFileSync(
-  join(import.meta.dirname ?? ".", "..", "extension", "index.ts"),
-  "utf-8",
-);
+const indexSrc = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "index.ts"), "utf-8");
 
-const settingsSrc = readFileSync(
-  join(import.meta.dirname ?? ".", "..", "extension", "settings-context.ts"),
-  "utf-8",
-);
+const settingsSrc = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "settings-context.ts"), "utf-8");
 
 describe("ADR-0020 — SettingsContext re-init", () => {
   it("SettingsContext has reinit method", () => {
@@ -30,10 +24,7 @@ describe("ADR-0020 — SettingsContext re-init", () => {
   });
 
   it("export_pdf tool accepts settings for default output path", () => {
-    const pdfSrc = readFileSync(
-      join(import.meta.dirname ?? ".", "..", "extension", "tools", "export-pdf.ts"),
-      "utf-8",
-    );
+    const pdfSrc = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "export-pdf.ts"), "utf-8");
     assert.ok(
       pdfSrc.includes("settings") || pdfSrc.includes("reportsDir"),
       "export_pdf must use settings for default output path",
@@ -41,10 +32,7 @@ describe("ADR-0020 — SettingsContext re-init", () => {
   });
 
   it("mind_map tool accepts settings for default save path", () => {
-    const mmSrc = readFileSync(
-      join(import.meta.dirname ?? ".", "..", "extension", "tools", "mind-map.ts"),
-      "utf-8",
-    );
+    const mmSrc = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "mind-map.ts"), "utf-8");
     assert.ok(
       mmSrc.includes("settings") || mmSrc.includes("reportsDir"),
       "mind_map must use settings for default save path",

@@ -3,10 +3,7 @@ import { Type } from "typebox";
 import { buildMindMapPrompt } from "../mind-map-injector.js";
 import type { SettingsContext } from "../settings-context.js";
 
-export function createMindMapTool(
-  sendUserMessage: (msg: string, opts: any) => void,
-  settings: SettingsContext,
-) {
+export function createMindMapTool(sendUserMessage: (msg: string, opts: any) => void, settings: SettingsContext) {
   return {
     name: "mind_map",
     label: "Generate Mind Map",

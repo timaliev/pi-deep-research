@@ -9,19 +9,13 @@ import { describe, it } from "node:test";
 
 const releaseMonitorSrc = () => {
   try {
-    return readFileSync(
-      join(import.meta.dirname ?? ".", "..", "extension", "release-monitor.ts"),
-      "utf-8",
-    );
+    return readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "release-monitor.ts"), "utf-8");
   } catch {
     return "";
   }
 };
 
-const indexSrc = readFileSync(
-  join(import.meta.dirname ?? ".", "..", "extension", "index.ts"),
-  "utf-8",
-);
+const indexSrc = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "index.ts"), "utf-8");
 
 describe("ADR-0018 — Release monitor", () => {
   it("release-monitor.ts module exists", () => {
@@ -44,7 +38,11 @@ describe("ADR-0018 — Release monitor", () => {
   it("has 6-hour cooldown mechanism", () => {
     const src = releaseMonitorSrc();
     assert.ok(
-      src.includes("lastCheck") || src.includes("cooldown") || src.includes("6") || src.includes("3600000") || src.includes("Date.now"),
+      src.includes("lastCheck") ||
+        src.includes("cooldown") ||
+        src.includes("6") ||
+        src.includes("3600000") ||
+        src.includes("Date.now"),
       "must have cooldown logic",
     );
   });

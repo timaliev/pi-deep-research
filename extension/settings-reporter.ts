@@ -70,10 +70,15 @@ export function writeSettingsLog(
 ): void {
   const json = buildSettingsJson(ctx);
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const prefix = opts.trigger === "run_start" && opts.runId
-    ? `${opts.runId}-settings`
-    : `session-settings`;
+  const prefix = opts.trigger === "run_start" && opts.runId ? `${opts.runId}-settings` : `session-settings`;
   const filename = `${prefix}-${timestamp}.json`;
   const path = join(logDir, filename);
-  writeFileSync(path, JSON.stringify({ ...json, timestamp: new Date().toISOString(), trigger: opts.trigger, runId: opts.runId ?? null }, null, 2));
+  writeFileSync(
+    path,
+    JSON.stringify(
+      { ...json, timestamp: new Date().toISOString(), trigger: opts.trigger, runId: opts.runId ?? null },
+      null,
+      2,
+    ),
+  );
 }
