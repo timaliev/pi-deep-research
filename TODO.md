@@ -86,17 +86,16 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 - DONE: Extract prompt builders from prefilter.ts.
 - DONE: Fix brave engine waitIfNeeded error.
 
-### SearXNG custom instance
+### SearXNG custom URL (implemented 2026-07-10)
 
-- TODO: add `searxng: { url: "SEARXNG_URL" }` to settings + env cascade.
-- TODO: read URL in searxng adapter to prepend custom instance before public fallbacks.
-- TODO: custom instance has no fallback to public instances (privacy).
+- DONE: add `searxng: { url: "SEARXNG_URL" }` to `SearchProviderCredentials.ENV_MAP`.
+- DONE: read `cred?.get("searxng", "url")` in searxng adapter to prepend custom URL before public fallbacks.
+- DONE: custom instance has no fallback to public instances (privacy).
 
 ### Engine allowlist (implemented 2026-07-10)
 
-- DONE: add `enabledEngines` field to `SettingsContext` — env `DEEP_RESEARCH_ENABLED_ENGINES` or `deepResearch.enabledEngines` in settings.json. Default: ["duckduckgo", "searxng"].
-- DONE: update `buildEngineStatus()` to filter by allowlist.
-- TODO: has key but not in allowlist → ❌ "not enabled" (new distinct label).
+- DONE: add `enabledEngines` field to `SettingsContext` — env + settings.json cascade. Default: ["duckduckgo", "searxng"].
+- DONE: update `buildEngineStatus()` to filter by allowlist + show "not enabled" label.
 
 ### ADR-0017: LLM introspection (implemented 2026-07-10)
 
@@ -111,10 +110,24 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 
 ### Architecture review 4 (2026-07-09)
 
-- TODO: post-processing pipeline — `PostProcessor` interface, adapters for assemble/PdfExport/mindMap.
-- TODO: plan_research dispatch — extract `execute()` into 4 handler methods.
-- TODO: orchestrator run-and-persist — deduplicate `handleFirstCall`/`handleSubsequentCall`.
+- DONE: post-processing pipeline — `PostProcessor` interface, adapters for assemble/PdfExport/mindMap (2026-07-10).
+- DONE: plan_research dispatch — extract `execute()` into 4 handler methods (2026-07-10).
+- DONE: orchestrator run-and-persist — deduplicate `handleFirstCall`/`handleSubsequentCall` (2026-07-10).
 
 ### Dead code / stubs
 
 - DONE: `saveReportPath` dead telemetry param removed (2026-07-10).
+
+### Diagnosis 2026-07-11 — session 019f4dfe issues
+
+- DONE: PDF: settings section missing because `appendFileSync` runs after `convertToPdf`. Fix: pass `appendSettingsReport` to `assembleReport` so it's in .md before PDF conversion.
+- DONE: PDF: repository URL truncated in pandoc. Fix: use markdown link format `[url](url)` instead of bare URL in telemetry.
+- DONE: Too many session-settings logs — one per `session_start` event. Fix: write only first time per process, or once per timestamp-minute.
+- DONE: `onSessionStart` settings injection triggers deep research skill activation. Fix: prefix with "ℹ️ Informational:".
+- DONE: LLM introspection not triggered — agent never calls zero-param plan_research continue path. Fix: add explicit introspection turn to SKILL.md Phase 2.
+- DONE: Extended settings (Node.js version, platform, cwd) missing from settings report. Fix: add system info section to `buildSettingsTable`.
+- DONE: SKILL.md hardcodes profile defaults (4/2/4 etc.) but settings.json can override. Fix: remove hardcoded numbers, reference resolved profiles.
+- DONE: TUI double confirmation: SKILL.md Phase 3 says "ask user" AND "call confirm_research (TUI dialog)". Fix: remove verbal confirmation, go directly to TUI.
+- DONE: README `enabledEngines` docs: empty array → falls through to defaults, not "all enabled".
+- DONE: Telemetry: repo URL should be markdown link `[url](url)`, not bare URL.
+- DONE: `assembleReport` should accept `appendSettingsReport` + `settings` params instead of side-effect `appendFileSync` in orchestrator.

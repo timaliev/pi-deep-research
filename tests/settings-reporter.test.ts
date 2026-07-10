@@ -130,6 +130,20 @@ describe("SettingsReporter — buildSettingsTable", () => {
     assert.ok(table.includes("| custom | 10 |"));
     assert.ok(table.includes("| 100 |")); // maxSearchCalls
   });
+
+  it("includes System section with Node.js, platform, cwd", async () => {
+    const { SettingsContext } = await import("../extension/settings-context.js");
+    const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
+    const { buildSettingsTable } = await import("../extension/settings-reporter.js");
+
+    const table = buildSettingsTable(ctx);
+    assert.ok(table.includes("### System"));
+    assert.ok(table.includes("Node.js"));
+    assert.ok(table.includes("Platform"));
+    assert.ok(table.includes("CWD"));
+    assert.ok(table.includes(process.version), "must include Node.js version");
+    assert.ok(table.includes(process.platform), "must include platform");
+  });
 });
 
 describe("SettingsReporter — buildSettingsJson", () => {
@@ -229,5 +243,21 @@ describe("SettingsReporter — writeSettingsLog", () => {
     writeSettingsLog(ctx, tmpLogDir, { trigger: "run_start", runId: "20260710-test" });
     const files = readdirSync(tmpLogDir);
     assert.ok(files.some((f) => f.startsWith("20260710-test-settings-") && f.endsWith(".json")));
+  });
+
+  it("deduplicates session_start logs within same minute", async () => {
+    const { SettingsContext } = await import("../extension/settings-context.js");
+    const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
+    const { writeSettingsLog } = await import("../extension/settings-reporter.js");
+
+    // Module-level lastLogMinute may already be set from previous tests.
+    // All three calls should return early if same minute — verify no leaks.
+    const before = readdirSync(tmpLogDir).filter((f) => f.startsWith("session-settings-")).length;
+    writeSettingsLog(ctx, tmpLogDir, { trigger: "session_start" });
+    writeSettingsLog(ctx, tmpLogDir, { trigger: "session_start" });
+    writeSettingsLog(ctx, tmpLogDir, { trigger: "session_start" });
+    const after = readdirSync(tmpLogDir).filter((f) => f.startsWith("session-settings-")).length;
+    // At most 1 new file (if minute rolled over), otherwise 0 (deduped)
+    assert.ok(after - before <= 1, `at most 1 new file, got ${after - before}`);
   });
 });

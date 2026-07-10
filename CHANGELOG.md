@@ -13,6 +13,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.25.0](https://github.com/timaliev/pi-deep-research/compare/v0.24.0..v0.25.0) - 2026-07-10
+
+### Features
+
+- **(settings)** add system info (Node.js, platform, cwd) to settings table, deduplicate session logs - ([1c4f400](https://github.com/timaliev/pi-deep-research/commit/1c4f4008a617f96b3283e8d1df93847a584216eb)) - Tim Aliev
+- add SearXNG custom URL via env var + credentials - ([1418cb9](https://github.com/timaliev/pi-deep-research/commit/1418cb97f4a6f7b8992b12c2ad6caa0419c8eafb)) - Tim Aliev
+- show 'not enabled' label for disallowed engines - ([65cdbb7](https://github.com/timaliev/pi-deep-research/commit/65cdbb714222328b97358597b42a2a701fb48000)) - Tim Aliev
+
+### Bug Fixes
+
+- **(settings)** resolve biome lint errors — useLiteralKeys + useConst - ([e0dc8fa](https://github.com/timaliev/pi-deep-research/commit/e0dc8fa76b22a837108e05ccab74670a44c00eb2)) - Tim Aliev
+- **(skill)** remove hardcoded profile numbers, fix double confirmation, add informational prefix to settings injection - ([0f8f1e3](https://github.com/timaliev/pi-deep-research/commit/0f8f1e3e8d5886342631eab20a3aaee269b90dbd)) - Tim Aliev
+- remove dangling searxngUrl fields — credentials path is correct - ([12e243e](https://github.com/timaliev/pi-deep-research/commit/12e243e28049a08341aa629315a4892ad23e65ea)) - Tim Aliev
+- move settings into assembleReport pipeline, use markdown link for repo URL, fix README contradiction - ([e5749b8](https://github.com/timaliev/pi-deep-research/commit/e5749b83ae8cfee840ba8ac832ea332697558375)) - Tim Aliev
+
+### Refactoring
+
+- extract plan_research execute into 4 handler methods - ([752305a](https://github.com/timaliev/pi-deep-research/commit/752305a50108d6f02dc1a43e3376202102d9938e)) - Tim Aliev
+- extract runAndPersist from handleFirstCall/handleSubsequentCall - ([941eaef](https://github.com/timaliev/pi-deep-research/commit/941eaef38ecb5933fd0b70039c21e814b917cf91)) - Tim Aliev
+- extract PostProcessor pipeline from buildDoneResult - ([0c55e8f](https://github.com/timaliev/pi-deep-research/commit/0c55e8fce4bbac53e52bf995a5149fbeab11244a)) - Tim Aliev
+
+### Documentation
+
+- **(readme)** add enabledEngines config and env var - ([5069b12](https://github.com/timaliev/pi-deep-research/commit/5069b12e1a7b948e83f4c4c76a140ec5668ffeb3)) - Tim Aliev
+- **(skill)** add LLM introspection turn to Phase 2 protocol - ([1d13294](https://github.com/timaliev/pi-deep-research/commit/1d132940534a9cd718882941b5ce380f488078b2)) - Tim Aliev
+- **(todo)** mark completed diagnosis items - ([b7cb89f](https://github.com/timaliev/pi-deep-research/commit/b7cb89f5b3ffad427b4d5fa091a9646cd52d4a8c)) - Tim Aliev
+- **(todo)** mark dedup and extended settings as done - ([5cfea17](https://github.com/timaliev/pi-deep-research/commit/5cfea178d0cd7d6357fc3d5f185085e914bf3cfd)) - Tim Aliev
+- **(todo)** convert diagnosis items to DONE/TODO format - ([60ac7c3](https://github.com/timaliev/pi-deep-research/commit/60ac7c397e645bc722246458be2eac57dfb4dc41)) - Tim Aliev
+- add dev notes with test and lint commands - ([de4c9f6](https://github.com/timaliev/pi-deep-research/commit/de4c9f6f7205a98fbd77771fd2e64c431d71f352)) - Tim Aliev
+- mark architecture review 4 items as DONE - ([e02a053](https://github.com/timaliev/pi-deep-research/commit/e02a053ca32f2d5e8874d37e4235d4052f56bd48)) - Tim Aliev
+- final update — TODO, README test count, ADR table - ([5c96be9](https://github.com/timaliev/pi-deep-research/commit/5c96be94d0856c79eca063b0a0e50a1365e6fd68)) - Tim Aliev
+
+### Tests
+
+- add regression tests for system info, repo URL link, and log dedup - ([d0c4958](https://github.com/timaliev/pi-deep-research/commit/d0c49581310208ce23a6dad07fd1cd689f5dd4d0)) - Tim Aliev
+
+### Miscellaneous Chores
+
+- add format check to npm pretest - ([ba04cc9](https://github.com/timaliev/pi-deep-research/commit/ba04cc9a1bda36e8e930d6e7a860c24ffd62c6fa)) - Tim Aliev
+- fix npm test path, add pre-commit hook with lint+format check - ([df00dac](https://github.com/timaliev/pi-deep-research/commit/df00dac7db16b48079717f564ad58f36433f4a43)) - Tim Aliev
+- fix npm test path, add pre-commit hook with lint+format check - ([a86f53e](https://github.com/timaliev/pi-deep-research/commit/a86f53ede98933f3ecdf52b63e584734226bb0cb)) - Tim Aliev
+- add format check to npm pretest - ([0615f9d](https://github.com/timaliev/pi-deep-research/commit/0615f9da4cc4a61bd940e537106c7cf09d99f349)) - Tim Aliev
+
+### Other
+
+- skip release-prep if PR with release label already exists - ([f52d5ec](https://github.com/timaliev/pi-deep-research/commit/f52d5ecddb3c0278d980d7e7bc7d5572af522be6)) - Tim Aliev
+- skip release-prep if release already exists, add lint to tests - ([c230fa4](https://github.com/timaliev/pi-deep-research/commit/c230fa4a3f4b58434a7cc784f9039bfd87160513)) - Tim Aliev
+- skip release-prep if PR with release label already exists - ([115a7c2](https://github.com/timaliev/pi-deep-research/commit/115a7c2eb2ebfdd7899113195cfef52bafd3b3a4)) - Tim Aliev
+
+### Style
+
+- apply biome formatting to all files - ([ff0cfa9](https://github.com/timaliev/pi-deep-research/commit/ff0cfa9d7e27db96b21b14fd32901ba4e168aa70)) - Tim Aliev
+- apply biome auto-fixes across all files - ([3119f2d](https://github.com/timaliev/pi-deep-research/commit/3119f2d7c99f24c57ce01962ce7a1b624545b412)) - Tim Aliev
+- break long line in settings injection message - ([048eac6](https://github.com/timaliev/pi-deep-research/commit/048eac6b6b2816d407c46abefdf6dc6f38fa96f3)) - Tim Aliev
+
 ## [0.24.0](https://github.com/timaliev/pi-deep-research/compare/v0.23.0..v0.24.0) - 2026-07-10
 
 ### Features

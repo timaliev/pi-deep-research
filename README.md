@@ -151,6 +151,16 @@ Keys per engine:
 - `tavily`: `apiKey`
 - `yandex`: `oauthToken`, `folderId`
 
+#### `enabledEngines`
+
+Whitelist which search engines are available. Comma-separated string in env var, array in settings.json. If not set (or empty), built-in defaults (`["duckduckgo", "searxng"]`) are used &mdash; free engines only, no API keys needed. Engines not in the list are excluded from prefilter engine suggestions, even if their API key is configured.
+
+```json
+"enabledEngines": ["duckduckgo", "brave", "tavily"]
+```
+
+Engines not in the list are excluded from prefilter engine suggestions, even if their API key is configured.
+
 #### `artifactsDir` / `reportsDir`
 
 Override default output paths. Defaults resolve to `<cwd>/deep-research/artifacts` and `<cwd>/deep-research/reports`. Use relative paths (resolved against `cwd`) or absolute paths.
@@ -223,6 +233,7 @@ All settings can be configured via environment variables. Env vars take priority
 | `DEEP_RESEARCH_SETTINGS_ON_SESSION_START` | `false` | Show settings table on session start (`true`) |
 | `DEEP_RESEARCH_SETTINGS_ON_RUN_START` | `false` | Show settings table at plan_research step 1 (`true`) |
 | `DEEP_RESEARCH_SETTINGS_IN_REPORT` | `false` | Append settings section to report (`true`) |
+| `DEEP_RESEARCH_ENABLED_ENGINES` | `duckduckgo,searxng` | Comma-separated list of allowed search engines |
 
 #### Search Engine API Keys
 
