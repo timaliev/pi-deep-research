@@ -107,7 +107,12 @@ export function createPlanResearchTool(
 
       // Step 2b: zero params → continue (state-driven routing)
       if (!params.params_json && !params.plan_json && !params.topic) {
-        const result = await manager.continue();
+        // Extract last assistant response for introspection (ADR-0017)
+        const lastAssistant = [...entries].reverse().find((e: any) => e.message?.role === "assistant");
+        const llmText = typeof lastAssistant?.message?.content === "string"
+          ? (lastAssistant.message.content as string).replace(/<tool_calls>[\s\S]*?<\/tool_calls>/g, "").trim()
+          : undefined;
+        const result = await manager.continue(undefined, llmText);
         if (result.inject) pi.sendUserMessage(result.inject, { deliverAs: "steer" });
         if (result.phase === "error") {
           return { content: [{ type: "text", text: `Error: ${result.error}` }], details: { error: result.error } };
