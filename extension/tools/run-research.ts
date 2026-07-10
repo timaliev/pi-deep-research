@@ -67,26 +67,19 @@ export function createRunResearchTool(
       if (result.kind === "done") {
         const reportPath = result.reportPath;
         if (reportPath) {
-          session.saveReportPath(reportPath, settings.reportsDir, "", result.snapshot.runId);
+          session.saveReportPath(reportPath, settings.reportsDir, result.snapshot.runId);
         }
 
         let pdfInfo = "";
         if (result.pdfResult?.kind === "fallback") {
-          pdfInfo = `\nPDF export: ${result.pdfResult.error} Prompt sent for agent-based conversion. Output: ${result.pdfResult.outputPath}`;
-          pi.sendUserMessage(
-            `## PDF Export — Agent Fallback\n\n${result.pdfResult.error}\n\nConvert the report to PDF using available tools:\n` +
-              `- Report: ${reportPath}\n- Output: ${result.pdfResult.outputPath}\n\n` +
-              `Use print-to-PDF in browser, or any other available PDF tool.`,
-            { deliverAs: "steer" },
-          );
+          pdfInfo = `\n💡 PDF export failed (${result.pdfResult.error}). Call export_pdf to retry on demand.`;
         } else if (result.pdfResult?.kind === "success") {
           pdfInfo = `\nPDF exported: ${result.pdfResult.outputPath}`;
         }
 
         let mindMapInfo = "";
         if (result.mindMapPrompt) {
-          mindMapInfo = `\nMind map: prompt sent. Respond with a Mermaid \`graph TD\` block.`;
-          pi.sendUserMessage(result.mindMapPrompt, { deliverAs: "steer" });
+          mindMapInfo = `\n💡 Mind map available. Call mind_map to generate.`;
         }
 
         return {

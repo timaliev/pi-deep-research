@@ -79,3 +79,7 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 - TODO: post-processing pipeline — `PostProcessor` interface with `process(ctx)`, adapters for assemble/PdfExport/mindMap, orchestrator builds pipeline list at construction.
 - TODO: plan_research dispatch — extract `execute()` branches into `handleStart()`, `handleParams()`, `handleFinalize()`, `handleContinue()`. One method per branch, ~20 lines each.
 - TODO: orchestrator run-and-persist — extract `runAndPersist(machine, snapshot, plan, response?, saveState?, extra?)` from `handleFirstCall`/`handleSubsequentCall`.
+
+### Dead code / stubs
+
+- TODO: `saveReportPath(path, dir, "", runId)` in `run-research.ts` — telemetry param is empty string, never populated. Store actual telemetry string from `assembleReport()` or remove param from `saveReportPath()` and `save_report` tool handler (the `storedTelemetry && ...` logic is a no-op for all deep-research flows).

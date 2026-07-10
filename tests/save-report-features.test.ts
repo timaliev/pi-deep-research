@@ -103,22 +103,17 @@ describe("telemetry appended to report", () => {
     assert.ok(result.includes("Scrape calls"), "must include scrape count");
   });
 
-  it("telemetry is saved with report path in session", async () => {
+  it("telemetry is NOT passed through saveReportPath (removed dead code)", async () => {
     const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools/run-research.ts"), "utf-8");
-    // session.saveReportPath must include telemetry
-    const savePathCall = src.match(/saveReportPath\([^)]+telemetry[^)]*\)/);
-    assert.ok(
-      src.includes("saveReportPath(reportPath, settings.reportsDir") ||
-        src.includes("saveReportPath(reportPath, reportsDir"),
-      "saveReportPath must pass telemetry param",
-    );
+    // saveReportPath must NOT pass an empty telemetry argument
+    const savePathCall = src.match(/saveReportPath\([^)]+\)/);
+    assert.ok(savePathCall, "saveReportPath call must exist");
+    assert.ok(!savePathCall[0].includes('""'), "saveReportPath must not pass empty string telemetry");
   });
 
-  it("save_report reads telemetry from session and appends to report", async () => {
+  it("save_report does NOT reference storedTelemetry (removed dead code)", async () => {
     const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools/save-report.ts"), "utf-8");
-    const saveSection = src.match(/name: "save_report"[\s\S]*?^\s*},/m);
-    assert.ok(saveSection, "save_report section must exist");
-    assert.ok(saveSection[0].includes("telemetry"), "save_report must handle telemetry from session");
+    assert.ok(!src.includes("storedTelemetry"), "save_report must not reference storedTelemetry");
   });
 
   it("does not reuse stale report-path from a different research run", async () => {

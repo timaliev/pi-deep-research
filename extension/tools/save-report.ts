@@ -35,7 +35,6 @@ export function createSaveReportTool(settings: SettingsContext) {
       // Prefer path pre-computed by run_research auto-save
       const storedRunId = (reportPathEntry?.data as any)?.runId as string | undefined;
       const storedPath = reportPathEntry?.data?.path as string | undefined;
-      const storedTelemetry = (reportPathEntry?.data as any)?.telemetry as string | undefined;
 
       let path: string;
       if (storedPath && typeof storedPath === "string" && storedRunId) {
@@ -55,11 +54,10 @@ export function createSaveReportTool(settings: SettingsContext) {
         mkdirSync(settings.reportsDir, { recursive: true });
       }
 
-      writeReportFile(path, markdown, storedTelemetry);
+      writeReportFile(path, markdown);
 
-      const hasTelemetry = storedTelemetry && !markdown.includes("## Research Telemetry");
       return {
-        content: [{ type: "text", text: `Report saved${hasTelemetry ? " (with telemetry)" : ""}: ${path}` }],
+        content: [{ type: "text", text: `Report saved: ${path}` }],
         details: { report_path: path },
       };
     },

@@ -28,8 +28,8 @@ export class SessionState {
     return entry?.data as Record<string, unknown> | undefined;
   }
 
-  saveReportPath(path: string, reportsDir: string, telemetry: string, runId?: string): void {
-    this.writer.appendEntry(REPORT_PATH_KEY, { path, reportsDir, telemetry, runId });
+  saveReportPath(path: string, reportsDir: string, runId?: string): void {
+    this.writer.appendEntry(REPORT_PATH_KEY, { path, reportsDir, runId });
   }
 
   saveConfirmation(planArtifactPath: string): void {
