@@ -307,7 +307,7 @@ describe("SettingsContext — getAllWithSources convenience method", () => {
     const entries = ctx.getAllWithSources();
     assert.ok(Array.isArray(entries));
     assert.ok(entries.length > 5);
-    const reportsEntry = entries.find(e => e.key === "reportsDir");
+    const reportsEntry = entries.find((e) => e.key === "reportsDir");
     assert.ok(reportsEntry);
     assert.ok("value" in reportsEntry);
     assert.ok("source" in reportsEntry);
@@ -321,7 +321,7 @@ describe("SettingsContext — getAllWithSources convenience method", () => {
 
     const entries = ctx.getAllWithSources();
     // Profiles are not in the flat list — no entry keyed as a profile name
-    const profileKeys = new Set(entries.map(e => e.key));
+    const profileKeys = new Set(entries.map((e) => e.key));
     assert.ok(!profileKeys.has("default"));
     assert.ok(!profileKeys.has("fast"));
     assert.ok(!profileKeys.has("deep"));
@@ -333,7 +333,7 @@ describe("SettingsContext — getAllWithSources convenience method", () => {
     const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
 
     const entries = ctx.getAllWithSources();
-    const brave = entries.find(e => e.key === "brave.apiKey");
+    const brave = entries.find((e) => e.key === "brave.apiKey");
     assert.ok(brave);
     assert.equal(brave!.value, "****");
     assert.equal(brave!.source, "env:BRAVE_API_KEY");

@@ -75,10 +75,7 @@ describe("SettingsReporter — buildSettingsTable", () => {
     const homeDir = homedir();
     const realAgentDir = join(homeDir, ".pi-test-sr", "agent");
     mkdirSync(realAgentDir, { recursive: true });
-    writeFileSync(
-      join(realAgentDir, "settings.json"),
-      JSON.stringify({ deepResearch: { pdfExport: true } }),
-    );
+    writeFileSync(join(realAgentDir, "settings.json"), JSON.stringify({ deepResearch: { pdfExport: true } }));
     const { SettingsContext } = await import("../extension/settings-context.js");
     const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: realAgentDir });
     const { buildSettingsTable } = await import("../extension/settings-reporter.js");
@@ -221,7 +218,7 @@ describe("SettingsReporter — writeSettingsLog", () => {
 
     writeSettingsLog(ctx, tmpLogDir, { trigger: "session_start" });
     const files = readdirSync(tmpLogDir);
-    assert.ok(files.some(f => f.startsWith("session-settings-") && f.endsWith(".json")));
+    assert.ok(files.some((f) => f.startsWith("session-settings-") && f.endsWith(".json")));
   });
 
   it("writes JSON file with runId for run_start trigger", async () => {
@@ -231,6 +228,6 @@ describe("SettingsReporter — writeSettingsLog", () => {
 
     writeSettingsLog(ctx, tmpLogDir, { trigger: "run_start", runId: "20260710-test" });
     const files = readdirSync(tmpLogDir);
-    assert.ok(files.some(f => f.startsWith("20260710-test-settings-") && f.endsWith(".json")));
+    assert.ok(files.some((f) => f.startsWith("20260710-test-settings-") && f.endsWith(".json")));
   });
 });

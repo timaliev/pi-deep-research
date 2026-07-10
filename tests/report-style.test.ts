@@ -269,10 +269,7 @@ describe("prefilter prompts mention reportStyle", () => {
 // ─── ADR-0022: Done phase must NOT inject steer messages ─────
 describe("run_research done phase — no steer messages", () => {
   it("done phase does NOT call sendUserMessage for PDF fallback", async () => {
-    const src = readFileSync(
-      join(import.meta.dirname ?? ".", "..", "extension", "tools", "run-research.ts"),
-      "utf-8",
-    );
+    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "run-research.ts"), "utf-8");
     // Find the done-phase handler block
     const doneBlock = src.match(/if \(result\.kind === "done"\)[\s\S]*?^\s+return \{/m);
     assert.ok(doneBlock, "done phase block must exist");
@@ -281,10 +278,7 @@ describe("run_research done phase — no steer messages", () => {
   });
 
   it("done phase shows inline hints instead of steer messages", async () => {
-    const src = readFileSync(
-      join(import.meta.dirname ?? ".", "..", "extension", "tools", "run-research.ts"),
-      "utf-8",
-    );
+    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "run-research.ts"), "utf-8");
     // Inline hints must use 💡 emoji or action callouts
     assert.ok(src.includes("💡"), "must use inline hint emoji");
     assert.ok(src.includes("export_pdf"), "must mention export_pdf tool");
@@ -295,10 +289,7 @@ describe("run_research done phase — no steer messages", () => {
 // ─── Dead telemetry: saveReportPath no longer takes telemetry ──
 describe("saveReportPath — no dead telemetry param", () => {
   it("session-state.ts saveReportPath has no telemetry param", async () => {
-    const src = readFileSync(
-      join(import.meta.dirname ?? ".", "..", "extension", "session-state.ts"),
-      "utf-8",
-    );
+    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "session-state.ts"), "utf-8");
     // saveReportPath must NOT have a telemetry parameter
     const sig = src.match(/saveReportPath\([^)]+\)/);
     assert.ok(sig, "saveReportPath signature must exist");
@@ -306,10 +297,7 @@ describe("saveReportPath — no dead telemetry param", () => {
   });
 
   it("run-research.ts does not pass empty string to saveReportPath", async () => {
-    const src = readFileSync(
-      join(import.meta.dirname ?? ".", "..", "extension", "tools", "run-research.ts"),
-      "utf-8",
-    );
+    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "run-research.ts"), "utf-8");
     // saveReportPath call must not have "" as a telemetry argument
     const call = src.match(/saveReportPath\([^)]+\)/);
     assert.ok(call, "saveReportPath call must exist");
@@ -317,10 +305,7 @@ describe("saveReportPath — no dead telemetry param", () => {
   });
 
   it("save-report.ts does not reference storedTelemetry", async () => {
-    const src = readFileSync(
-      join(import.meta.dirname ?? ".", "..", "extension", "tools", "save-report.ts"),
-      "utf-8",
-    );
+    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "save-report.ts"), "utf-8");
     assert.ok(!src.includes("storedTelemetry"), "save_report must not reference storedTelemetry");
   });
 });

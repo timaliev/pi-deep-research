@@ -3,10 +3,7 @@ import { Type } from "typebox";
 import { convertToPdf } from "../export-pdf.js";
 import type { SettingsContext } from "../settings-context.js";
 
-export function createExportPdfTool(
-  sendUserMessage: (msg: string, opts: any) => void,
-  settings: SettingsContext,
-) {
+export function createExportPdfTool(sendUserMessage: (msg: string, opts: any) => void, settings: SettingsContext) {
   return {
     name: "export_pdf",
     label: "Export PDF",

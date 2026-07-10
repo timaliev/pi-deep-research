@@ -9,20 +9,14 @@ import { describe, it } from "node:test";
 
 describe("ADR-0017 — questionMetadata", () => {
   it("ResearchPlan has optional questionMetadata field", () => {
-    const src = readFileSync(
-      join(import.meta.dirname ?? ".", "..", "extension", "prefilter.ts"),
-      "utf-8",
-    );
+    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "prefilter.ts"), "utf-8");
     assert.ok(src.includes("questionMetadata"), "ResearchPlan must have questionMetadata");
   });
 });
 
 describe("ADR-0017 — subtopics tiers", () => {
   it("subtopics drafting prompt has tiered topic counts", () => {
-    const src = readFileSync(
-      join(import.meta.dirname ?? ".", "..", "extension", "report-styles.ts"),
-      "utf-8",
-    );
+    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "report-styles.ts"), "utf-8");
     assert.ok(
       src.includes("12") && src.includes("20") && src.includes("8") && src.includes("12"),
       "subtopics prompt must have tiered topic counts beyond 5-10",

@@ -23,9 +23,8 @@ export function buildEngineStatus(cred?: SearchProviderCredentials, enabledEngin
     { name: "yandex", key: "YANDEX_OAUTH_TOKEN", available: cred?.get("yandex", "oauthToken") != null },
     { name: "searxng", key: "none", available: true },
   ];
-  const filtered = enabledEngines && enabledEngines.length > 0
-    ? engines.filter((e) => enabledEngines.includes(e.name))
-    : engines;
+  const filtered =
+    enabledEngines && enabledEngines.length > 0 ? engines.filter((e) => enabledEngines.includes(e.name)) : engines;
   return filtered
     .map((e) => `  ${e.available ? "✅" : "❌"} ${e.name}${e.key !== "none" ? ` (needs ${e.key})` : ""}`)
     .join("\n");

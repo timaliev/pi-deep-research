@@ -152,29 +152,54 @@ export class SettingsContext implements SettingsContextData {
 
     // ─── String settings: env → local → global → built-in ──
     [this.reportsDir, this.reportsDirSource] = resolveString(
-      ENV.reportsDir, localDr.reportsDir, globalDr.reportsDir,
-      join(cwd, "deep-research", "reports"), localPath, globalPath, homeDir,
+      ENV.reportsDir,
+      localDr.reportsDir,
+      globalDr.reportsDir,
+      join(cwd, "deep-research", "reports"),
+      localPath,
+      globalPath,
+      homeDir,
     );
 
     [this.artifactsDir, this.artifactsDirSource] = resolveString(
-      ENV.artifactsDir, localDr.artifactsDir, globalDr.artifactsDir,
-      join(cwd, "deep-research", "artifacts"), localPath, globalPath, homeDir,
+      ENV.artifactsDir,
+      localDr.artifactsDir,
+      globalDr.artifactsDir,
+      join(cwd, "deep-research", "artifacts"),
+      localPath,
+      globalPath,
+      homeDir,
     );
 
     [this.defaultProfile, this.defaultProfileSource] = resolveString(
-      ENV.defaultProfile, localDr.defaultProfile, globalDr.defaultProfile,
-      BUILTIN.defaultProfile, localPath, globalPath, homeDir,
+      ENV.defaultProfile,
+      localDr.defaultProfile,
+      globalDr.defaultProfile,
+      BUILTIN.defaultProfile,
+      localPath,
+      globalPath,
+      homeDir,
     );
 
     // ─── Boolean settings: env → local → global → built-in ─
     [this.pdfExport, this.pdfExportSource] = resolveBool(
-      ENV.pdfExport, localDr.pdfExport, globalDr.pdfExport,
-      false, localPath, globalPath, homeDir,
+      ENV.pdfExport,
+      localDr.pdfExport,
+      globalDr.pdfExport,
+      false,
+      localPath,
+      globalPath,
+      homeDir,
     );
 
     [this.mindMap, this.mindMapSource] = resolveBool(
-      ENV.mindMap, localDr.mindMap, globalDr.mindMap,
-      false, localPath, globalPath, homeDir,
+      ENV.mindMap,
+      localDr.mindMap,
+      globalDr.mindMap,
+      false,
+      localPath,
+      globalPath,
+      homeDir,
     );
 
     // ─── reportStyle ───────────────────────────────────────
@@ -182,7 +207,9 @@ export class SettingsContext implements SettingsContextData {
       envString(ENV.reportStyle),
       localDr.defaultReportStyle,
       globalDr.defaultReportStyle,
-      localPath, globalPath, homeDir,
+      localPath,
+      globalPath,
+      homeDir,
     );
 
     // ─── enabledEngines ────────────────────────────────────
@@ -190,7 +217,9 @@ export class SettingsContext implements SettingsContextData {
       envString(ENV.enabledEngines),
       localDr.enabledEngines as string[] | undefined,
       globalDr.enabledEngines as string[] | undefined,
-      localPath, globalPath, homeDir,
+      localPath,
+      globalPath,
+      homeDir,
     );
 
     // ─── settingsReport group ──────────────────────────────
@@ -199,18 +228,33 @@ export class SettingsContext implements SettingsContextData {
     const srBuiltin = BUILTIN.settingsReport;
 
     const [srOnSession, srOnSessionSrc] = resolveBool(
-      ENV.settingsOnSessionStart, localSr?.onSessionStart, globalSr?.onSessionStart,
-      srBuiltin.onSessionStart, localPath, globalPath, homeDir,
+      ENV.settingsOnSessionStart,
+      localSr?.onSessionStart,
+      globalSr?.onSessionStart,
+      srBuiltin.onSessionStart,
+      localPath,
+      globalPath,
+      homeDir,
     );
 
     const [srOnRun, srOnRunSrc] = resolveBool(
-      ENV.settingsOnRunStart, localSr?.onRunStart, globalSr?.onRunStart,
-      srBuiltin.onRunStart, localPath, globalPath, homeDir,
+      ENV.settingsOnRunStart,
+      localSr?.onRunStart,
+      globalSr?.onRunStart,
+      srBuiltin.onRunStart,
+      localPath,
+      globalPath,
+      homeDir,
     );
 
     const [srInReport, srInReportSrc] = resolveBool(
-      ENV.settingsInReport, localSr?.inReport, globalSr?.inReport,
-      srBuiltin.inReport, localPath, globalPath, homeDir,
+      ENV.settingsInReport,
+      localSr?.inReport,
+      globalSr?.inReport,
+      srBuiltin.inReport,
+      localPath,
+      globalPath,
+      homeDir,
     );
 
     this.settingsReport = { onSessionStart: srOnSession, onRunStart: srOnRun, inReport: srInReport };
@@ -294,9 +338,21 @@ export class SettingsContext implements SettingsContextData {
       { key: "mindMap", value: this.mindMap, source: this.mindMapSource },
       { key: "reportStyle", value: this.reportStyle, source: this.reportStyleSource },
       { key: "enabledEngines", value: this.enabledEngines.join(", "), source: this.enabledEnginesSource },
-      { key: "settingsReport.onSessionStart", value: this.settingsReport.onSessionStart, source: this.settingsReportOnSessionStartSource },
-      { key: "settingsReport.onRunStart", value: this.settingsReport.onRunStart, source: this.settingsReportOnRunStartSource },
-      { key: "settingsReport.inReport", value: this.settingsReport.inReport, source: this.settingsReportInReportSource },
+      {
+        key: "settingsReport.onSessionStart",
+        value: this.settingsReport.onSessionStart,
+        source: this.settingsReportOnSessionStartSource,
+      },
+      {
+        key: "settingsReport.onRunStart",
+        value: this.settingsReport.onRunStart,
+        source: this.settingsReportOnRunStartSource,
+      },
+      {
+        key: "settingsReport.inReport",
+        value: this.settingsReport.inReport,
+        source: this.settingsReportInReportSource,
+      },
     ];
 
     // Credentials with masked values
@@ -320,8 +376,13 @@ export class SettingsContext implements SettingsContextData {
 
 /** Resolve string with provenance. */
 function resolveString(
-  envKey: string, localVal: unknown, globalVal: unknown,
-  defaultVal: string, localPath: string, globalPath: string, homeDir: string,
+  envKey: string,
+  localVal: unknown,
+  globalVal: unknown,
+  defaultVal: string,
+  localPath: string,
+  globalPath: string,
+  homeDir: string,
 ): [string, SourceTag] {
   const env = envString(envKey);
   if (env !== undefined) return [env, sourceEnv(envKey)];
@@ -332,8 +393,13 @@ function resolveString(
 
 /** Resolve boolean with provenance. */
 function resolveBool(
-  envKey: string, localVal: unknown, globalVal: unknown,
-  defaultVal: boolean, localPath: string, globalPath: string, homeDir: string,
+  envKey: string,
+  localVal: unknown,
+  globalVal: unknown,
+  defaultVal: boolean,
+  localPath: string,
+  globalPath: string,
+  homeDir: string,
 ): [boolean, SourceTag] {
   const env = envBool(envKey);
   if (env !== undefined) return [env, sourceEnv(envKey)];
@@ -353,8 +419,10 @@ function resolveReportStyleWithSource(
 ): ["narrative" | "subtopics", SourceTag] {
   const valid = ["narrative", "subtopics"];
   if (env && valid.includes(env)) return [env as "narrative" | "subtopics", sourceEnv(ENV.reportStyle)];
-  if (typeof local === "string" && valid.includes(local)) return [local as "narrative" | "subtopics", sourceFile(localPath, homeDir)];
-  if (typeof global === "string" && valid.includes(global)) return [global as "narrative" | "subtopics", sourceFile(globalPath, homeDir)];
+  if (typeof local === "string" && valid.includes(local))
+    return [local as "narrative" | "subtopics", sourceFile(localPath, homeDir)];
+  if (typeof global === "string" && valid.includes(global))
+    return [global as "narrative" | "subtopics", sourceFile(globalPath, homeDir)];
   return [BUILTIN.reportStyle, sourceDefault()];
 }
 
@@ -367,7 +435,14 @@ function resolveEnabledEnginesWithSource(
   globalPath: string,
   homeDir: string,
 ): [string[], SourceTag] {
-  if (env && env.length > 0) return [env.split(",").map((s) => s.trim()).filter(Boolean), sourceEnv(ENV.enabledEngines)];
+  if (env && env.length > 0)
+    return [
+      env
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+      sourceEnv(ENV.enabledEngines),
+    ];
   if (local && local.length > 0) return [local, sourceFile(localPath, homeDir)];
   if (global && global.length > 0) return [global, sourceFile(globalPath, homeDir)];
   return [BUILTIN.enabledEngines, sourceDefault()];

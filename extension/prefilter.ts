@@ -36,13 +36,16 @@ export interface ResearchPlan {
   /** Report generation style: narrative (5-section) or subtopics (LLM discovers themes). */
   reportStyle?: "narrative" | "subtopics";
   /** ADR-0017: metadata about each research question (source, confidence, importance). */
-  questionMetadata?: Record<string, {
-    source: "web" | "internal" | "both";
-    confidence: "low" | "medium" | "high";
-    importance: "critical" | "important" | "supplementary";
-    contradictionOf?: string;
-    debatableFact?: string;
-  }>;
+  questionMetadata?: Record<
+    string,
+    {
+      source: "web" | "internal" | "both";
+      confidence: "low" | "medium" | "high";
+      importance: "critical" | "important" | "supplementary";
+      contradictionOf?: string;
+      debatableFact?: string;
+    }
+  >;
   scope: {
     include: string;
     exclude: string;
@@ -168,7 +171,11 @@ export class PrefilterManager {
       return { phase: "error", runId: this.runId(), error: "No cached params for merge step." };
     }
     const searchQuery = buildSearchQuery(this.cachedTopic);
-    const searchResults = await this.searchFn(searchQuery, 5, this.cachedEngines.length > 0 ? this.cachedEngines[0] : "duckduckgo");
+    const searchResults = await this.searchFn(
+      searchQuery,
+      5,
+      this.cachedEngines.length > 0 ? this.cachedEngines[0] : "duckduckgo",
+    );
     this.lastSearchResultCount = searchResults.length;
     const inject = buildMergePrompt(this.cachedTopic, this.llmTopics ?? "", searchResults);
     return { phase: "awaiting_plan", runId: this.runId(), inject, searchResults };

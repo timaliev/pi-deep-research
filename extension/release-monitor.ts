@@ -91,11 +91,7 @@ function fetchLatestRelease(): Promise<{ tag_name: string } | null> {
 }
 
 function compareVersions(a: string, b: string): number {
-  const clean = (v: string) =>
-    v
-      .replace(/^v/, "")
-      .split(".")
-      .map(Number);
+  const clean = (v: string) => v.replace(/^v/, "").split(".").map(Number);
   const [aMaj, aMin, aPat] = clean(a);
   const [bMaj, bMin, bPat] = clean(b);
   if (aMaj !== bMaj) return aMaj - bMaj;
