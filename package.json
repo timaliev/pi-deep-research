@@ -8,7 +8,7 @@
     "url": "https://github.com/timaliev/pi-deep-research"
   },
   "scripts": {
-    "pretest": "npx biome lint extension/ tests/",
+    "pretest": "npx biome lint extension/ tests/ && npx biome format extension/ tests/",
     "test": "cd extension && npx tsx --test ../tests/*.test.ts",
     "format": "npx biome format --write extension/ tests/",
     "format:check": "npx biome format extension/ tests/",
