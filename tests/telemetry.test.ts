@@ -113,4 +113,37 @@ describe("Telemetry", () => {
     );
     assert.ok(!section.match(/\| Pi Extension repository \| https?:\/\/[^ ]+ \|/), "must not use bare URL");
   });
+
+  it("artifact links are relative paths", () => {
+    const { join } = require("node:path");
+    const { mkdirSync, rmSync, readFileSync, writeFileSync } = require("node:fs");
+    const { tmpdir } = require("node:os");
+
+    const tmpDir = join(tmpdir(), `telemetry-test-${Date.now()}`);
+    const reportsDir = join(tmpDir, "reports");
+    mkdirSync(reportsDir, { recursive: true });
+
+    const { assembleReport } = require("../extension/report-assembly.js");
+    const snapshot = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
+    snapshot.runId = "test-run";
+    snapshot.draft = { get: () => "# Test\n\nContent." };
+
+    const result = assembleReport({
+      snapshot,
+      topic: "Test",
+      reportsDir,
+      planArtifactPath: "deep-research/artifacts/test.json",
+      logsDir: join(tmpDir, "logs"),
+    });
+
+    const content = readFileSync(result, "utf-8");
+    assert.ok(content.includes("## Artifacts"), "must have Artifacts section");
+    const links = [...content.matchAll(/- \[(.+?)\]\((.+?)\)/g)];
+    assert.ok(links.length >= 2, `expected at least 2 artifact links, got ${links.length}`);
+    for (const [, , url] of links) {
+      assert.ok(!url.startsWith("/"), `artifact link must be relative: ${url}`);
+    }
+
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
 });
