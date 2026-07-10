@@ -1,3 +1,4 @@
+import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -8,6 +9,7 @@ import { WebScraper } from "./scraper.js";
 import { searchWeb } from "./search/web-search.js";
 import { SessionState } from "./session-state.js";
 import { SettingsContext } from "./settings-context.js";
+import { buildSettingsTable, writeSettingsLog } from "./settings-reporter.js";
 import { registerAllTools } from "./tools/deps.js";
 import { readPlanArtifact } from "./tools/shared.js";
 
@@ -46,10 +48,21 @@ export default function (pi: ExtensionAPI) {
     searchFn: searchWeb,
   });
 
-  // Release monitor + settings re-init on session start (ADR-0018, ADR-0020)
+  // Release monitor + settings report + settings re-init on session start (ADR-0018, ADR-0020, ADR-0023)
   pi.on("session_start", (_event: any, ctx: any) => {
     settings.reinit(ctx.cwd);
     checkForNewRelease(pi.sendUserMessage.bind(pi));
+
+    // Always log settings on session start
+    const logsDir = join(settings.artifactsDir, "..", "logs");
+    mkdirSync(logsDir, { recursive: true });
+    writeSettingsLog(settings, logsDir, { trigger: "session_start" });
+
+    // Inject settings table if onSessionStart is enabled
+    if (settings.settingsReport.onSessionStart) {
+      const table = buildSettingsTable(settings);
+      pi.sendUserMessage(`## Deep Research Settings\n\n${table}`, { deliverAs: "steer" });
+    }
   });
 
   // TUI confirmation gate — enforce user approval before research runs (ADR-0019)

@@ -56,6 +56,12 @@ export function buildSettingsJson(ctx: SettingsContext): object {
   };
 }
 
+/** Append a ## Settings section to a report string. */
+export function appendSettingsSection(report: string, ctx: SettingsContext): string {
+  const table = buildSettingsTable(ctx);
+  return `${report}\n## Settings\n\n${table}\n`;
+}
+
 /** Write settings JSON log to disk. Always called regardless of toggles. */
 export function writeSettingsLog(
   ctx: SettingsContext,

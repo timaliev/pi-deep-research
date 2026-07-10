@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, appendFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { convertToPdf } from "./export-pdf.js";
 import { JsonlLogger } from "./logger.js";
@@ -10,6 +10,7 @@ import { ResearchDraft } from "./research-draft.js";
 import type { Scraper } from "./scraper.js";
 import type { searchWeb as SearchWebFn } from "./search/web-search.js";
 import type { SearchProviderCredentials, SettingsContext } from "./settings-context.js";
+import { appendSettingsSection } from "./settings-reporter.js";
 import type { ResearchSnapshot } from "./state-machine.js";
 import { ResearchStateMachine } from "./state-machine.js";
 
@@ -255,6 +256,11 @@ export class ResearchRunOrchestrator {
         .map((f, i) => `${i + 1}. ${f.text.substring(0, 200)}`)
         .join("\n");
       mindMapPrompt = buildMindMapPrompt(plan.topic, findingsSummary, undefined, undefined);
+    }
+
+    // ADR-0023: append settings section if enabled
+    if (this.settings.settingsReport.inReport) {
+      appendFileSync(reportPath, `\n${appendSettingsSection("", this.settings)}`);
     }
 
     // ADR-0017: contradiction analysis — append to report if contradictions found

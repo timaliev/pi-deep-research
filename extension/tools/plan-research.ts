@@ -1,4 +1,5 @@
 import { mkdirSync } from "node:fs";
+import { join } from "node:path";
 import { Type } from "typebox";
 import type { ResearchPlanProfile } from "../prefilter.js";
 import { PrefilterManager, PrefilterSession } from "../prefilter.js";
@@ -7,6 +8,7 @@ import type { Scraper } from "../scraper.js";
 import type { SearchEngine, searchWeb as SearchWebFn } from "../search/web-search.js";
 import { searchWeb } from "../search/web-search.js";
 import type { SearchProviderCredentials, SettingsContext } from "../settings-context.js";
+import { buildSettingsTable, writeSettingsLog } from "../settings-reporter.js";
 
 export function createPlanResearchTool(
   pi: any,
@@ -55,6 +57,17 @@ export function createPlanResearchTool(
           };
         }
         const result = await manager.start(params.topic);
+
+        // ADR-0023: inject settings table if onRunStart is enabled
+        if (settings.settingsReport.onRunStart) {
+          const table = buildSettingsTable(settings);
+          pi.sendUserMessage(`## Deep Research Settings\n\n${table}`, { deliverAs: "steer" });
+          // Always log settings to disk
+          const logsDir = join(settings.artifactsDir, "..", "logs");
+          mkdirSync(logsDir, { recursive: true });
+          writeSettingsLog(settings, logsDir, { trigger: "run_start", runId: result.runId });
+        }
+
         if (result.inject) pi.sendUserMessage(result.inject, { deliverAs: "steer" });
         return {
           content: [
