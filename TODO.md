@@ -111,9 +111,9 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 
 ### Architecture review 4 (2026-07-09)
 
-- TODO: post-processing pipeline — `PostProcessor` interface, adapters for assemble/PdfExport/mindMap.
-- TODO: plan_research dispatch — extract `execute()` into 4 handler methods.
-- TODO: orchestrator run-and-persist — deduplicate `handleFirstCall`/`handleSubsequentCall`.
+- DONE: post-processing pipeline — `PostProcessor` interface, adapters for assemble/PdfExport/mindMap (2026-07-10).
+- DONE: plan_research dispatch — extract `execute()` into 4 handler methods (2026-07-10).
+- DONE: orchestrator run-and-persist — deduplicate `handleFirstCall`/`handleSubsequentCall` (2026-07-10).
 
 ### Dead code / stubs
 
