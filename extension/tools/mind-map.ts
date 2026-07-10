@@ -1,7 +1,12 @@
+import { join } from "node:path";
 import { Type } from "typebox";
 import { buildMindMapPrompt } from "../mind-map-injector.js";
+import type { SettingsContext } from "../settings-context.js";
 
-export function createMindMapTool(sendUserMessage: (msg: string, opts: any) => void) {
+export function createMindMapTool(
+  sendUserMessage: (msg: string, opts: any) => void,
+  settings: SettingsContext,
+) {
   return {
     name: "mind_map",
     label: "Generate Mind Map",
@@ -13,11 +18,12 @@ export function createMindMapTool(sendUserMessage: (msg: string, opts: any) => v
       save_path: Type.Optional(Type.String({ description: "Optional file path to save the mind map diagram" })),
     }),
     async execute(_toolCallId: string, params: any) {
+      const savePath = (params.save_path as string | undefined) ?? undefined;
       const prompt = buildMindMapPrompt(
         params.topic as string,
         undefined,
         params.content as string,
-        (params.save_path as string | undefined) ?? undefined,
+        savePath ?? join(settings.reportsDir, `${(params.topic as string).replace(/\s+/g, "-").toLowerCase()}.mmd`),
       );
       sendUserMessage(prompt, { deliverAs: "steer" });
 

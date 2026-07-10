@@ -1,7 +1,12 @@
+import { join } from "node:path";
 import { Type } from "typebox";
 import { convertToPdf } from "../export-pdf.js";
+import type { SettingsContext } from "../settings-context.js";
 
-export function createExportPdfTool(sendUserMessage: (msg: string, opts: any) => void) {
+export function createExportPdfTool(
+  sendUserMessage: (msg: string, opts: any) => void,
+  settings: SettingsContext,
+) {
   return {
     name: "export_pdf",
     label: "Export PDF",
@@ -13,7 +18,9 @@ export function createExportPdfTool(sendUserMessage: (msg: string, opts: any) =>
     }),
     async execute(_toolCallId: string, params: any) {
       const reportPath = params.report_path as string;
-      const outputPath = (params.output_path as string | undefined) ?? undefined;
+      const outputPath =
+        (params.output_path as string | undefined) ??
+        join(settings.reportsDir, reportPath.replace(/\.md$/, "") + ".pdf");
 
       const result = await convertToPdf({ reportPath, outputPath });
 
