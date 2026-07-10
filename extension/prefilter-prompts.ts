@@ -81,3 +81,33 @@ export function buildPlanPrompt(
 \`\`\`json\n{"topic":"${topic}","goal":"...","researchQuestions":["Q1"],"engines":${JSON.stringify(engines)},"profile":{"name":"${profileName}"},"scope":{"include":"...","exclude":"..."},"estimatedCost":{"searchCalls":12,"scrapeCalls":8,"description":"~12 searches"}}\n\`\`\`\n\nSet reportStyle to "narrative" (fixed 5-section) or "subtopics" (LLM discovers thematic sections). Output ONLY JSON.`;
   return p;
 }
+
+/** Build introspection prompt: ask LLM to propose topics from internal knowledge (ADR-0017). */
+export function buildIntrospectionPrompt(topic: string): string {
+  return `## LLM Knowledge Topics
+
+Propose top-level topics for "${topic}" from your internal knowledge. For each topic, include:
+- **Topic name** (short, descriptive)
+- **Confidence** (low/medium/high)
+- **Importance** (critical/important/supplementary)
+- **Key claim** (1 sentence)
+- **Uncertainty** (what we don't know)
+
+Respond with structured markdown — one numbered topic per section. Do NOT search the web yet.`;
+}
+
+/** Build merge prompt: combine LLM topics with web search results (ADR-0017). */
+export function buildMergePrompt(
+  topic: string,
+  llmTopics: string,
+  searchResults: import("../search/web-search.js").WebSearchResult[],
+): string {
+  let prompt = `## Merge & Plan
+
+Topic: ${topic}\n\n### LLM Knowledge Topics\n${llmTopics}\n\n### Web Search Results\n`;
+  for (const r of searchResults) {
+    prompt += `- [${r.title}](${r.url}): ${r.snippet}\n`;
+  }
+  prompt += `\n### Instructions\n\n1. Merge topics from both sources\n2. Tag each topic with source: "web", "internal", or "both"\n3. Rate importance and question validity\n4. Flag contradictions between internal knowledge and web sources\n5. Flag debatable facts that need validation\n6. Produce final Research Plan JSON with questionMetadata`;
+  return prompt;
+}
