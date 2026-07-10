@@ -51,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Miscellaneous Chores
 
 - **(ci)** merge lint workflow into test workflow - ([649219e](https://github.com/timaliev/pi-deep-research/commit/649219e59df4c238e8d71c39e9d846082a9004a5)) - Tim Aliev
+- fix npm test path, add pre-commit hook with lint+format check - ([6ae9948](https://github.com/timaliev/pi-deep-research/commit/6ae99481b7de5078616cd08bebd93478683fb439)) - Tim Aliev
 
 ## [0.23.0](https://github.com/timaliev/pi-deep-research/compare/v0.22.0..v0.23.0) - 2026-07-09
 
