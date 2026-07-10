@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - add format check to npm pretest - ([ba04cc9](https://github.com/timaliev/pi-deep-research/commit/ba04cc9a1bda36e8e930d6e7a860c24ffd62c6fa)) - Tim Aliev
 
+### Other
+
+- skip release-prep if PR with release label already exists - ([f52d5ec](https://github.com/timaliev/pi-deep-research/commit/f52d5ecddb3c0278d980d7e7bc7d5572af522be6)) - Tim Aliev
+
 ## [0.24.0](https://github.com/timaliev/pi-deep-research/compare/v0.23.0..v0.24.0) - 2026-07-10
 
 ### Features
