@@ -187,6 +187,26 @@ Auto-generate a Mermaid mind map diagram after each research run. Defaults to `f
 
 No system dependencies required — the agent generates the diagram using its LLM capabilities.
 
+#### `settingsReport`
+
+Report active configuration with provenance at three points: session start, before each research run, and appended to the final report. All default to `false` (opt-in). Settings are **always logged** to disk regardless of toggles (for debugging).
+
+```json
+"settingsReport": {
+  "onSessionStart": true,
+  "onRunStart": false,
+  "inReport": true
+}
+```
+
+| Setting | Env var | Type | Default |
+|---|---|---|---|
+| `onSessionStart` | `DEEP_RESEARCH_SETTINGS_ON_SESSION_START` | `true` | `false` |
+| `onRunStart` | `DEEP_RESEARCH_SETTINGS_ON_RUN_START` | `true` | `false` |
+| `inReport` | `DEEP_RESEARCH_SETTINGS_IN_REPORT` | `true` | `false` |
+
+When active, the settings table shows each setting, its resolved value, and which source won (env var name, settings.json path, or "default"). Credential values are masked as `****`. Profiles are listed with parameters (no source column).
+
 ### Environment Variables
 
 All settings can be configured via environment variables. Env vars take priority over `settings.json` values.
@@ -200,6 +220,9 @@ All settings can be configured via environment variables. Env vars take priority
 | `DEEP_RESEARCH_DEFAULT_PROFILE` | `default` | Default research profile name |
 | `DEEP_RESEARCH_PDF_EXPORT` | `false` | Auto-export reports to PDF (`true`) |
 | `DEEP_RESEARCH_MIND_MAP` | `false` | Auto-generate mind map after research (`true`) |
+| `DEEP_RESEARCH_SETTINGS_ON_SESSION_START` | `false` | Show settings table on session start (`true`) |
+| `DEEP_RESEARCH_SETTINGS_ON_RUN_START` | `false` | Show settings table at plan_research step 1 (`true`) |
+| `DEEP_RESEARCH_SETTINGS_IN_REPORT` | `false` | Append settings section to report (`true`) |
 
 #### Search Engine API Keys
 
@@ -348,7 +371,8 @@ extension/
 ├── ids.ts                      Shared ID generation
 ├── slug.ts                     Topic → filename slug
 ├── profile-resolver.ts         Profile resolution with user override merging
-├── settings-context.ts         unified settings + SearchProviderCredentials
+├── settings-context.ts         Unified settings + SearchProviderCredentials + provenance
+├── settings-reporter.ts        Settings table/log builder + report section appender
 ├── session-state.ts            Unified persistence seam
 ├── settings-context.ts         Settings cascade (env → project → user → defaults)
 ├── report-assembly.ts          Final report assembly with telemetry

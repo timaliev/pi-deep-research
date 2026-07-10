@@ -1,7 +1,7 @@
 # ADR-0023: Settings report — provenance trace on session start, run start, and in report
 
 **Date:** 2026-07-10
-**Status:** proposed
+**Status:** accepted ✓ (implemented 2026-07-10)
 
 ## Context
 
@@ -127,9 +127,18 @@ When `inReport` is enabled, appended after Telemetry as `## Settings` with the s
 
 ## Consequences
 
-- **SettingsContext grows ~20 source fields** — one per existing field plus 3 `settingsReport` sub-fields. Tolerable — the constructor is the only place this complexity lives.
+- **SettingsContext grows ~20 source fields** — one per existing field plus 3 `settingsReport` sub-fields plus 3 credential engine entries. Tolerable — the constructor is the only place this complexity lives.
 - **Non-breaking for consumers** — all existing fields retain their raw-value type. Zero changes required in tool handlers, orchestrator, state machine.
 - **Opt-in** — all three toggles default to `false`. Zero user-visible change unless configured.
 - **Always-on logging** — settings JSON always written to disk regardless of toggles. Enables post-mortem debugging without upfront opt-in.
 - **Profiles omitted from source tracking** — per-field provenance inside merged profiles was deemed over-engineered.
 - **Credentials masked everywhere** — `****` in table, configurable in JSON log (same mask rule).
+
+## Implementation Notes
+
+- `SettingsContext` now has parallel `*Source` fields (option A from ADR) — consumers unchanged.
+- `extension/settings-reporter.ts` — `buildSettingsTable()`, `buildSettingsJson()`, `writeSettingsLog()`, `appendSettingsSection()`.
+- `index.ts` — session_start handler injects table if `onSessionStart`, always logs.
+- `tools/plan-research.ts` — step 1 injects table if `onRunStart`, always logs.
+- `extension/research-run-orchestrator.ts` — `buildDoneResult` appends `## Settings` if `inReport`.
+- `CONTEXT.md` — new terms: Settings Report, Setting Source.

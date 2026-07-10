@@ -66,6 +66,16 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 - DONE: replace `pi.sendUserMessage()` PDF fallback with inline `💡` hint.
 - DONE: replace `pi.sendUserMessage()` mind-map prompt with inline `💡` hint.
 
+### ADR-0023: Settings report — provenance tracking (implemented 2026-07-10)
+
+- DONE: add `*Source` provenance fields to SettingsContext + `settingsReport` group (onSessionStart, onRunStart, inReport).
+- DONE: add `getAllWithSources()` to SettingsContext.
+- DONE: create `extension/settings-reporter.ts` — buildSettingsTable, buildSettingsJson, writeSettingsLog, appendSettingsSection.
+- DONE: wire session_start — always log, inject table if onSessionStart.
+- DONE: wire plan_research step 1 — always log, inject table if onRunStart.
+- DONE: wire orchestrator buildDoneResult — append ## Settings if inReport.
+- DONE: add ADR, README settings docs, CONTEXT.md terms.
+
 ### Architecture improvements (from review 2026-07-09)
 
 - DONE: Delete utils.ts pass-through module.
