@@ -6,12 +6,8 @@
 npm test
 ```
 
-Runs full test suite via `cd extension && npx tsx --test ../tests/*.test.ts`.
+Runs full test suite via `npm test`.
 
-## Lint command
+No separate lint command
 
-```bash
-npx biome check extension/ tests/
-```
-
-Auto-fix: `npx biome check --write extension/ tests/`
+Auto-fix lint: `npx biome check --write extension/ tests/`

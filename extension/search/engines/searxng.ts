@@ -13,10 +13,12 @@ export async function searchSearXNG(
   query: string,
   maxResults: number,
   instanceIndex: number = 0,
+  customUrl?: string,
 ): Promise<WebSearchResult[]> {
-  if (instanceIndex >= SEARXNG_INSTANCES.length) return [];
+  const instances = customUrl ? [customUrl, ...SEARXNG_INSTANCES] : SEARXNG_INSTANCES;
+  if (instanceIndex >= instances.length) return [];
 
-  const base = SEARXNG_INSTANCES[instanceIndex];
+  const base = instances[instanceIndex];
   try {
     const url = `${base}/search?q=${encodeURIComponent(query)}&format=json&categories=general`;
     const { status, body } = await fetchUrl(url, {
@@ -28,7 +30,7 @@ export async function searchSearXNG(
     });
 
     if (status !== 200) {
-      return searchSearXNG(query, maxResults, instanceIndex + 1);
+      return searchSearXNG(query, maxResults, instanceIndex + 1, customUrl);
     }
 
     const data = JSON.parse(body);
@@ -46,10 +48,11 @@ export async function searchSearXNG(
 export async function search(
   query: string,
   opts: WebSearchOptions,
-  _cred?: SearchProviderCredentials,
+  cred?: SearchProviderCredentials,
 ): Promise<WebSearchResult[]> {
   await rateLimiter.waitIfNeeded("searxng");
-  const results = await searchSearXNG(query, opts.maxResults ?? 5);
+  const customUrl = cred?.get("searxng", "url");
+  const results = await searchSearXNG(query, opts.maxResults ?? 5, 0, customUrl);
   rateLimiter.recordCall("searxng");
   return results;
 }
