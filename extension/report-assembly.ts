@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { SettingsContext } from "./settings-context.js";
 import { appendSettingsSection } from "./settings-reporter.js";
@@ -52,14 +52,11 @@ export function assembleReport(params: ReportAssemblyParams): string {
   }
 
   const meta = extensionVersion ? { version: extensionVersion } : readExtensionMeta();
-  const telemetry = buildTelemetrySection(
-    snapshot,
-    meta.version,
-    [planArtifactPath, join(logsDir, `${snapshot.runId}.log`)],
-    profileName,
-    undefined,
-    meta.repoUrl,
-  );
+  const artifactLinks = [
+    relative(dirname(reportPath), planArtifactPath),
+    relative(dirname(reportPath), join(logsDir, `${snapshot.runId}.log`)),
+  ];
+  const telemetry = buildTelemetrySection(snapshot, meta.version, artifactLinks, profileName, undefined, meta.repoUrl);
 
   writeReportFile(reportPath, reportText, telemetry);
 
