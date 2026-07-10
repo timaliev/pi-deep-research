@@ -9,6 +9,7 @@ import { searchWeb } from "./search/web-search.js";
 import { SessionState } from "./session-state.js";
 import { SettingsContext } from "./settings-context.js";
 import { registerAllTools } from "./tools/deps.js";
+import { readPlanArtifact } from "./tools/shared.js";
 
 const baseDir = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(baseDir, "..");
@@ -47,4 +48,50 @@ export default function (pi: ExtensionAPI) {
 
   // Release monitor — check GitHub for new versions on session start (ADR-0018)
   pi.on("session_start", () => checkForNewRelease(pi.sendUserMessage.bind(pi)));
+
+  // TUI confirmation gate — enforce user approval before research runs (ADR-0019)
+  pi.on("tool_call", async (event: any, ctx: any) => {
+    if (event.toolName !== "confirm_research") return;
+
+    const planPath = event.input?.plan_artifact_path;
+    const artifact = readPlanArtifact(planPath);
+    if (!artifact.ok) {
+      return { block: true, reason: `Cannot read plan: ${artifact.error}` };
+    }
+
+    const plan = artifact.artifact.plan;
+    const style = plan.reportStyle ?? settings.reportStyle ?? "narrative";
+    const prof = plan.profile;
+    const profileDesc =
+      prof.name === "custom"
+        ? `custom (breadth=${prof.breadth}, depth=${prof.depth}, concurrency=${prof.concurrency})`
+        : `${prof.name} (breadth=${profileResolver.resolve(prof).breadth}, depth=${profileResolver.resolve(prof).depth}, concurrency=${profileResolver.resolve(prof).concurrency})`;
+
+    if (!ctx.hasUI) {
+      return { block: true, reason: "Confirmation requires interactive mode." };
+    }
+
+    const cost = plan.estimatedCost;
+    const costDesc = cost?.description ?? `${cost?.searchCalls ?? "?"} searches, ${cost?.scrapeCalls ?? "?"} scrapes`;
+
+    const choice = await ctx.ui.select(
+      [
+        `🔬 Research Plan Confirmation`,
+        ``,
+        `Topic:      ${plan.topic}`,
+        `Engines:    ${plan.engines.join(", ")}`,
+        `Profile:    ${profileDesc}`,
+        `Style:      ${style}`,
+        `Questions:  ${plan.researchQuestions.length}`,
+        `Cost:       ${costDesc}`,
+        ``,
+        `Start deep research?`,
+      ].join("\n"),
+      ["No — Review plan", "Yes — Start research"],
+    );
+
+    if (!choice || !choice.startsWith("Yes")) {
+      return { block: true, reason: "Confirmation declined by user" };
+    }
+  });
 }
