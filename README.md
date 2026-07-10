@@ -151,6 +151,16 @@ Keys per engine:
 - `tavily`: `apiKey`
 - `yandex`: `oauthToken`, `folderId`
 
+#### `enabledEngines`
+
+Whitelist which search engines are available. Comma-separated string in env var, array in settings.json. Defaults to `["duckduckgo", "searxng"]` (free, no API keys). Absent/empty = all configured engines enabled (backward compatible with projects that don't set this).
+
+```json
+"enabledEngines": ["duckduckgo", "brave", "tavily"]
+```
+
+Engines not in the list are excluded from prefilter engine suggestions, even if their API key is configured.
+
 #### `artifactsDir` / `reportsDir`
 
 Override default output paths. Defaults resolve to `<cwd>/deep-research/artifacts` and `<cwd>/deep-research/reports`. Use relative paths (resolved against `cwd`) or absolute paths.
@@ -223,6 +233,7 @@ All settings can be configured via environment variables. Env vars take priority
 | `DEEP_RESEARCH_SETTINGS_ON_SESSION_START` | `false` | Show settings table on session start (`true`) |
 | `DEEP_RESEARCH_SETTINGS_ON_RUN_START` | `false` | Show settings table at plan_research step 1 (`true`) |
 | `DEEP_RESEARCH_SETTINGS_IN_REPORT` | `false` | Append settings section to report (`true`) |
+| `DEEP_RESEARCH_ENABLED_ENGINES` | `duckduckgo,searxng` | Comma-separated list of allowed search engines |
 
 #### Search Engine API Keys
 
@@ -439,7 +450,7 @@ See [Environment Variables](#environment-variables) for API key configuration.
 # Run tests
 cd extension && node --import tsx --test ../tests/*.test.ts
 
-# 422 tests across 57 files covering:
+# 363 tests across 53 files covering:
 # - PrefilterManager (three-step, validation, API key checks, engine status)
 # - ResearchStateMachine (full cycle, concurrency, soft limits, deepening)
 # - Engine adapters (DDG, Brave, SearXNG, Tavily, Yandex — per-engine tests)
@@ -484,6 +495,6 @@ cd extension && node --import tsx --test ../tests/*.test.ts
 | [0017](docs/adr/0017-llm-introspection-source-tagged-questions.md) | proposed | LLM introspection + source-tagged questions |
 | [0018](docs/adr/0018-release-monitor.md) | accepted | Release monitor on session start |
 | [0019](docs/adr/0019-tui-confirmation-gate.md) | accepted | TUI confirmation gate for research plans |
-| [0020](docs/adr/0020-settings-reinit-session-start.md) | accepted | SettingsContext re-init on session_start |
+| [0020](docs/adr/0020-settings-reinit-session-start.md) | proposed | SettingsContext re-init on session_start |
 | [0021](docs/adr/0021-save-report-report-path.md) | accepted | save_report report_path for large reports |
 | [0022](docs/adr/0022-done-phase-steer-messages.md) | accepted | Remove redundant steer from done phase |
