@@ -61,7 +61,9 @@ export default function (pi: ExtensionAPI) {
     // Inject settings table if onSessionStart is enabled
     if (settings.settingsReport.onSessionStart) {
       const table = buildSettingsTable(settings);
-      pi.sendUserMessage(`## Deep Research Settings\n\n${table}`, { deliverAs: "steer" });
+      pi.sendUserMessage(`## ℹ️ Deep Research Settings (informational — not a research request)\n\n${table}`, {
+        deliverAs: "steer",
+      });
     }
   });
 

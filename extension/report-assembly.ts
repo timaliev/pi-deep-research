@@ -1,6 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import type { SettingsContext } from "./settings-context.js";
+import { appendSettingsSection } from "./settings-reporter.js";
 import { topicToSlug } from "./slug.js";
 import type { ResearchSnapshot } from "./state-machine.js";
 
@@ -27,10 +29,14 @@ export interface ReportAssemblyParams {
   logsDir: string;
   extensionVersion?: string;
   profileName?: string;
+  reportStyle?: string;
+  /** Append ## Settings section to report (ADR-0023). Requires settings for provenance. */
+  appendSettingsReport?: boolean;
+  settings?: SettingsContext;
 }
 
 /**
- * Assemble final report: markdown body + telemetry + artifact links, write to disk.
+ * Assemble final report: markdown body + telemetry + artifact links + optional settings, write to disk.
  * Returns the absolute report path.
  */
 export function assembleReport(params: ReportAssemblyParams): string {
@@ -38,7 +44,12 @@ export function assembleReport(params: ReportAssemblyParams): string {
 
   const reportPath = resolveReportPath(topic, reportsDir);
 
-  const reportText = snapshot.draft.get();
+  let reportText = snapshot.draft.get();
+
+  // ADR-0023: append settings section if requested (must happen before PDF export)
+  if (params.appendSettingsReport && params.settings) {
+    reportText = appendSettingsSection(reportText, params.settings);
+  }
 
   const meta = extensionVersion ? { version: extensionVersion } : readExtensionMeta();
   const telemetry = buildTelemetrySection(
@@ -73,7 +84,7 @@ export function buildTelemetrySection(
     rows.push(`| Pi Extension version | \`${extensionVersion}\` |`);
   }
   if (extensionRepoUrl) {
-    rows.push(`| Pi Extension repository | ${extensionRepoUrl} |`);
+    rows.push(`| Pi Extension repository | [${extensionRepoUrl}](${extensionRepoUrl}) |`);
   }
   if (profileName && prof) {
     rows.push(`| Profile | ${profileName} |`);

@@ -11,6 +11,7 @@ export class SearchProviderCredentials {
     brave: { apiKey: "BRAVE_API_KEY" },
     tavily: { apiKey: "TAVILY_API_KEY" },
     yandex: { oauthToken: "YANDEX_OAUTH_TOKEN", folderId: "YANDEX_FOLDER_ID" },
+    searxng: { url: "SEARXNG_URL" },
   };
 
   constructor(private readonly settings: Record<string, Record<string, string>>) {}

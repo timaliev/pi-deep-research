@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, appendFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { convertToPdf } from "./export-pdf.js";
 import { JsonlLogger } from "./logger.js";
@@ -10,7 +10,6 @@ import { ResearchDraft } from "./research-draft.js";
 import type { Scraper } from "./scraper.js";
 import type { searchWeb as SearchWebFn } from "./search/web-search.js";
 import type { SearchProviderCredentials, SettingsContext } from "./settings-context.js";
-import { appendSettingsSection } from "./settings-reporter.js";
 import type { ResearchSnapshot } from "./state-machine.js";
 import { ResearchStateMachine } from "./state-machine.js";
 
@@ -63,6 +62,31 @@ export type OrchestratorResult =
       contradictionAnalysis?: string;
     };
 
+export interface PostProcessContext {
+  snapshot: ResearchSnapshot;
+  plan: ResearchPlan;
+  reportsDir: string;
+  planArtifactPath: string;
+  logsDir: string;
+  profileName?: string;
+  reportPath?: string;
+  /** Settings for processors that need configuration (PDF, mind-map, settings report). */
+  settings?: SettingsContext;
+}
+
+export type PostProcessResult = Partial<{
+  reportPath: string;
+  pdfResult: any;
+  mindMapPrompt: string;
+  contradictionAnalysis: string;
+}>;
+
+export interface PostProcessor {
+  name: string;
+  enabled(settings?: SettingsContext): boolean;
+  process(ctx: PostProcessContext): Promise<PostProcessResult>;
+}
+
 const STATE_KEY = "deep-research:state";
 
 export class ResearchRunOrchestrator {
@@ -76,6 +100,9 @@ export class ResearchRunOrchestrator {
   /** Settings context for post-processing features (PDF, mind-map). Optional for test compatibility. */
   private readonly settings?: SettingsContext;
 
+  /** Post-processing pipeline — each adapter handles one done-phase task. */
+  private readonly postProcessors: PostProcessor[];
+
   constructor(deps: OrchestratorDeps) {
     this.searchFn = deps.searchFn;
     this.scraper = deps.scraper;
@@ -84,6 +111,12 @@ export class ResearchRunOrchestrator {
     this.saveState = deps.saveState;
     this.profileResolver = deps.profileResolver;
     this.settings = deps.settings;
+    this.postProcessors = [
+      new AssembleReportProcessor(),
+      new PdfExportProcessor(),
+      new MindMapProcessor(),
+      new ContradictionProcessor(),
+    ];
   }
 
   /** Single construction site for ResearchStateMachine. Optional logger covers the only variance between first and subsequent calls. */
@@ -97,6 +130,19 @@ export class ResearchRunOrchestrator {
       logger,
       defaultReportStyle: this.settings?.reportStyle,
     });
+  }
+
+  /** Run one machine step and persist state. Single seam for handleFirstCall + handleSubsequentCall. */
+  private async runAndPersist(
+    machine: ResearchStateMachine,
+    snapshot: ResearchSnapshot,
+    plan: ResearchPlan,
+    parsedResponse: string | undefined,
+    extra: Record<string, unknown>,
+  ) {
+    const result = await machine.next(snapshot, plan, parsedResponse);
+    this.saveState?.(result.snapshot, extra);
+    return result;
   }
 
   async handle(params: OrchestratorParams): Promise<OrchestratorResult> {
@@ -138,10 +184,7 @@ export class ResearchRunOrchestrator {
     const runLogger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
     const machine = this.createMachine(artifactsDir, runLogger);
 
-    const result = await machine.next(snapshot, artifact.plan);
-
-    // Persist state
-    this.saveState?.(result.snapshot, {
+    const result = await this.runAndPersist(machine, snapshot, artifact.plan, undefined, {
       plan: artifact.plan,
       planArtifactPath,
       deepResearchBase,
@@ -188,9 +231,7 @@ export class ResearchRunOrchestrator {
 
     const machine = this.createMachine(artifactsDir);
 
-    const result = await machine.next(snapshot, plan, parsedResponse);
-
-    this.saveState?.(result.snapshot, {
+    const result = await this.runAndPersist(machine, snapshot, plan, parsedResponse, {
       plan,
       planArtifactPath,
       deepResearchBase,
@@ -210,8 +251,8 @@ export class ResearchRunOrchestrator {
     };
   }
   /**
-   * Post-process a done phase: assemble report, export PDF, generate mind-map.
-   * All conditional on this.settings being present (absent in test mode).
+   * Post-process a done phase via a pipeline of PostProcessor adapters.
+   * Add steps by registering, not editing this method.
    */
   private async buildDoneResult(
     snapshot: ResearchSnapshot,
@@ -226,64 +267,102 @@ export class ResearchRunOrchestrator {
       return { kind: "done", ...base };
     }
 
-    const reportsDir = this.settings.reportsDir;
-    const profileName =
-      typeof plan.profile === "object" && "name" in plan.profile ? (plan.profile as any).name : undefined;
-
-    const reportPath = assembleReport({
+    const ctx: PostProcessContext = {
       snapshot,
-      topic: plan.topic,
-      reportsDir,
+      plan,
+      reportsDir: this.settings.reportsDir,
       planArtifactPath,
       logsDir,
-      profileName,
-    });
+      profileName: typeof plan.profile === "object" && "name" in plan.profile ? (plan.profile as any).name : undefined,
+      settings: this.settings,
+    };
 
-    let pdfResult: any;
-    if (this.settings.pdfExport) {
-      const pdfR = await convertToPdf({ reportPath });
-      if (pdfR.kind === "success") {
-        pdfResult = { kind: "success", outputPath: pdfR.outputPath, method: pdfR.method };
-      } else if (pdfR.kind === "fallback") {
-        pdfResult = { kind: "fallback", error: pdfR.error, outputPath: pdfR.outputPath };
+    const results: PostProcessResult[] = [];
+    for (const pp of this.postProcessors) {
+      if (pp.enabled(this.settings)) {
+        results.push(await pp.process(ctx));
       }
     }
 
-    let mindMapPrompt: string | undefined;
-    if (this.settings.mindMap && snapshot.allFindings.length > 0) {
-      const findingsSummary = snapshot.allFindings
-        .slice(0, 30)
-        .map((f, i) => `${i + 1}. ${f.text.substring(0, 200)}`)
-        .join("\n");
-      mindMapPrompt = buildMindMapPrompt(plan.topic, findingsSummary, undefined, undefined);
-    }
-
-    // ADR-0023: append settings section if enabled
-    if (this.settings.settingsReport.inReport) {
-      appendFileSync(reportPath, `\n${appendSettingsSection("", this.settings)}`);
-    }
-
-    // ADR-0017: contradiction analysis — append to report if contradictions found
-    const contradictions = snapshot.allFindings.filter(
-      (f) => f.text.includes("CONTRADICTION") || f.text.includes("contradiction") || f.text.includes("debatable"),
-    );
-    let contradictionAnalysis: string | undefined;
-    if (contradictions.length > 0) {
-      contradictionAnalysis = [
-        `## Contradictions & Debatable Facts`,
-        ``,
-        ...contradictions.map((f) => `- ${f.text.substring(0, 300)} [Source: ${f.sourceUrl}]`),
-        ``,
-      ].join("\n");
-    }
+    const merged: PostProcessResult = Object.assign({}, ...results);
 
     return {
       kind: "done",
       ...base,
-      reportPath,
-      pdfResult,
-      mindMapPrompt,
-      contradictionAnalysis,
+      ...merged,
+    };
+  }
+}
+
+// ─── PostProcessor adapters ──────────────────────────────────
+
+class AssembleReportProcessor implements PostProcessor {
+  name = "assemble-report";
+  enabled() {
+    return true;
+  }
+  async process(ctx: PostProcessContext): Promise<PostProcessResult> {
+    const reportPath = assembleReport({
+      snapshot: ctx.snapshot,
+      topic: ctx.plan.topic,
+      reportsDir: ctx.reportsDir,
+      planArtifactPath: ctx.planArtifactPath,
+      logsDir: ctx.logsDir,
+      profileName: ctx.profileName,
+      appendSettingsReport: ctx.settings?.settingsReport.inReport ?? false,
+      settings: ctx.settings,
+    });
+    ctx.reportPath = reportPath;
+    return { reportPath };
+  }
+}
+
+class PdfExportProcessor implements PostProcessor {
+  name = "pdf-export";
+  enabled(s?: SettingsContext) {
+    return s?.pdfExport ?? false;
+  }
+  async process(ctx: PostProcessContext): Promise<PostProcessResult> {
+    if (!ctx.reportPath) return {};
+    const r = await convertToPdf({ reportPath: ctx.reportPath });
+    if (r.kind === "success") return { pdfResult: { kind: "success", outputPath: r.outputPath, method: r.method } };
+    if (r.kind === "fallback") return { pdfResult: { kind: "fallback", error: r.error, outputPath: r.outputPath } };
+    return {};
+  }
+}
+
+class MindMapProcessor implements PostProcessor {
+  name = "mind-map";
+  enabled(s?: SettingsContext) {
+    return (s?.mindMap ?? false) && true;
+  }
+  async process(ctx: PostProcessContext): Promise<PostProcessResult> {
+    if (ctx.snapshot.allFindings.length === 0) return {};
+    const summary = ctx.snapshot.allFindings
+      .slice(0, 30)
+      .map((f, i) => `${i + 1}. ${f.text.substring(0, 200)}`)
+      .join("\n");
+    return { mindMapPrompt: buildMindMapPrompt(ctx.plan.topic, summary) };
+  }
+}
+
+class ContradictionProcessor implements PostProcessor {
+  name = "contradiction";
+  enabled() {
+    return true;
+  }
+  async process(ctx: PostProcessContext): Promise<PostProcessResult> {
+    const contradictions = ctx.snapshot.allFindings.filter(
+      (f) => f.text.includes("CONTRADICTION") || f.text.includes("contradiction") || f.text.includes("debatable"),
+    );
+    if (contradictions.length === 0) return {};
+    return {
+      contradictionAnalysis: [
+        `## Contradictions & Debatable Facts`,
+        ``,
+        ...contradictions.map((f) => `- ${f.text.substring(0, 300)} [Source: ${f.sourceUrl}]`),
+        ``,
+      ].join("\n"),
     };
   }
 }

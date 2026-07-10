@@ -96,4 +96,21 @@ describe("Telemetry", () => {
     const section = buildTelemetrySection(snapshot);
     assert.ok(!section.includes("Report style"), "must not show Report style when undefined");
   });
+
+  it("formats repository URL as markdown link", () => {
+    const snapshot = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
+    const section = buildTelemetrySection(
+      snapshot,
+      "0.24.0",
+      undefined,
+      undefined,
+      undefined,
+      "https://github.com/timaliev/pi-deep-research",
+    );
+    assert.ok(
+      section.includes("[https://github.com/timaliev/pi-deep-research](https://github.com/timaliev/pi-deep-research)"),
+      "repo URL must be markdown link [url](url)",
+    );
+    assert.ok(!section.match(/\| Pi Extension repository \| https?:\/\/[^ ]+ \|/), "must not use bare URL");
+  });
 });

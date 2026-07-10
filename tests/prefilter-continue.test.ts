@@ -1,12 +1,11 @@
-import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { afterEach, beforeEach, describe, it } from "node:test";
 import { PrefilterManager } from "../extension/prefilter.js";
 import { ProfileResolver } from "../extension/profile-resolver.js";
+import type { ScrapedPage, Scraper } from "../extension/scraper.js";
 import type { WebSearchResult } from "../extension/search/web-search.js";
-import type { ScrapedPage } from "../extension/scraper.js";
-import type { Scraper } from "../extension/scraper.js";
 
 const TEST_DIR = join(import.meta.dirname ?? ".", "..", "test-prefilter-continue");
 
