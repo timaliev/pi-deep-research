@@ -33,7 +33,7 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 - TODO: add source-type breakdown rows (Web/Local/MCP counts) to `buildTelemetrySection()`.
 - TODO: update `buildParamsPrompt` and `buildPlanPrompt` to mention MCP/local sources in prefilter flow.
 
-### ADR-0018: Release monitor on session start (designed 2026-07-09)
+### ADR-0018: Release monitor on session start (implemented 2026-07-10)
 
 - DONE: create `extension/release-monitor.ts` — checkForNewRelease(sendUserMessage) with 6-hour cooldown.
 - DONE: wire `pi.on("session_start", ...)` in `extension/index.ts`.
@@ -48,45 +48,63 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 - DONE: block in non-interactive mode (ctx.hasUI check).
 - DONE: return `{ block: true }` when user declines.
 
-### SearxNG custom instance
+### ADR-0020: SettingsContext re-init on session_start (implemented 2026-07-10)
 
-- TODO: add `searxng: { url: "SEARXNG_URL" }` to `SearchProviderCredentials.ENV_MAP`.
-- TODO: read `cred?.get("searxng", "url")` in searxng adapter to prepend custom URL to instance list.
+- DONE: add `reinit(cwd)` method — re-applies cascade with new working directory.
+- DONE: make fields mutable, extract `compute(cwd)` helper.
+- DONE: wire `pi.on("session_start", ...)` in `extension/index.ts`.
+- DONE: wire SettingsContext into `export_pdf` and `mind_map` tools for default output paths.
+
+### ADR-0021: save_report with report_path (implemented 2026-07-09)
+
+- DONE: add optional `report_path` parameter to `save_report` tool.
+- DONE: read content from disk when `report_path` provided.
+- DONE: markdown made optional (backward-compatible).
+
+### ADR-0022: Remove done-phase steer messages (implemented 2026-07-10)
+
+- DONE: replace `pi.sendUserMessage()` PDF fallback with inline `💡` hint.
+- DONE: replace `pi.sendUserMessage()` mind-map prompt with inline `💡` hint.
+
+### Architecture improvements (from review 2026-07-09)
+
+- DONE: Delete utils.ts pass-through module.
+- DONE: Remove redundant dual waitIfNeeded calls.
+- DONE: Extract RateLimiter module.
+- DONE: De-duplicate artifact-not-found guard.
+- DONE: Consolidate tool factory dependency injection.
+- DONE: Extract prompt builders from prefilter.ts.
+- DONE: Fix brave engine waitIfNeeded error.
+
+### SearXNG custom instance
+
+- TODO: add `searxng: { url: "SEARXNG_URL" }` to settings + env cascade.
+- TODO: read URL in searxng adapter to prepend custom instance before public fallbacks.
 - TODO: custom instance has no fallback to public instances (privacy).
 
-### Search engine allowlist
+### Engine allowlist (implemented 2026-07-10)
 
-- TODO: add `enabledEngines` field to `SettingsContext` — env `DEEP_RESEARCH_ENABLED_ENGINES` (comma-separated) or `deepResearch.enabledEngines` in settings.json. Absent/empty = all configured engines enabled (backward compat).
-- TODO: update `buildEngineStatus()` to AND the enabled list into availability: `(hasKey \|\| isFree) && (inList \|\| listNotSet)`.
-- TODO: listed engine without key → ❌ "needs key" (existing). Has key but not in list → ❌ "not enabled" (new).
+- DONE: add `enabledEngines` field to `SettingsContext` — env `DEEP_RESEARCH_ENABLED_ENGINES` or `deepResearch.enabledEngines` in settings.json. Default: ["duckduckgo", "searxng"].
+- DONE: update `buildEngineStatus()` to filter by allowlist.
+- TODO: has key but not in allowlist → ❌ "not enabled" (new distinct label).
 
-### ADR-0017: LLM introspection + source-tagged questions (designed 2026-07-09)
+### ADR-0017: LLM introspection (implemented 2026-07-10)
 
-- TODO: add `introspectionDone` flag and LLM introspection substate to `PrefilterManager` / `PrefilterSession`.
-- TODO: add LLM introspection injection prompt to `prefilter-prompts.ts` — agent proposes topics from internal knowledge with confidence/importance.
-- TODO: add merge injection prompt to `prefilter-prompts.ts` — merge LLM topics with web search results, tag sources, flag contradictions.
-- TODO: extend `plan_research` tool to dispatch introspection turn (Turn 1: with params_json → inject introspection; Turn 2: no params → run search + inject merge).
-- TODO: add `questionMetadata?: Record<string, {source, confidence, importance, contradictionOf?, debatableFact?}>` to ResearchPlan.
-- TODO: extend subtopics drafting prompt topic tiers: 0-4q → 5-7, 5-7q → 8-12, 8+q → 12-20.
-- TODO: add post-report contradiction analysis in `ResearchRunOrchestrator` — gated by presence of contradiction flags, inject analysis prompt, append `## Contradictions & Debatable Facts` to report.
-- FUTURE: Question 8 — runtime consumption of questionMetadata (priority ordering, prompt enrichment based on confidence).
-
-### Default report style (implemented 2026-07-09)
-
-- DONE: add `reportStyle` field to `SettingsContext` — cascade: env `DEEP_RESEARCH_REPORT_STYLE` → local settings.json `deepResearch.defaultReportStyle` → global settings.json → `"narrative"`.
-- DONE: add `defaultReportStyle` field to `ResearchContext` interface and `ResearchStateMachine` constructor.
-- DONE: update `state-machine.ts` fallback: `plan.reportStyle ?? this.defaultReportStyle ?? "narrative"` (4 call sites).
-- DONE: wire `settings.reportStyle` through `index.ts` → `ResearchRunOrchestrator` → `ResearchStateMachine`.
-- DONE: update `prefilter.ts` prompt — show configured default marked with `(default)`, instruct LLM to advise narrative vs subtopics based on topic complexity.
-- DONE: add `"reportStyle"` to `buildParamsPrompt` expected JSON template.
-- DONE: add tests for settings cascade, env override, state machine fallback, prefilter prompt advisory.
+- DONE: add `introspectionDone` flag to `PrefilterManager`.
+- DONE: add `buildIntrospectionPrompt` to `prefilter-prompts.ts`.
+- DONE: add `buildMergePrompt` to `prefilter-prompts.ts`.
+- DONE: extend `plan_research` to dispatch introspection turn.
+- DONE: add `questionMetadata` to `ResearchPlan`.
+- DONE: extend subtopics drafting prompt tiers: 0-4 → 5-7, 5-7 → 8-12, 8+ → 12-20.
+- DONE: add contradiction analysis to `ResearchRunOrchestrator`.
+- FUTURE: Question 8 — runtime consumption of questionMetadata.
 
 ### Architecture review 4 (2026-07-09)
 
-- TODO: post-processing pipeline — `PostProcessor` interface with `process(ctx)`, adapters for assemble/PdfExport/mindMap, orchestrator builds pipeline list at construction.
-- TODO: plan_research dispatch — extract `execute()` branches into `handleStart()`, `handleParams()`, `handleFinalize()`, `handleContinue()`. One method per branch, ~20 lines each.
-- TODO: orchestrator run-and-persist — extract `runAndPersist(machine, snapshot, plan, response?, saveState?, extra?)` from `handleFirstCall`/`handleSubsequentCall`.
+- TODO: post-processing pipeline — `PostProcessor` interface, adapters for assemble/PdfExport/mindMap.
+- TODO: plan_research dispatch — extract `execute()` into 4 handler methods.
+- TODO: orchestrator run-and-persist — deduplicate `handleFirstCall`/`handleSubsequentCall`.
 
 ### Dead code / stubs
 
-- TODO: `saveReportPath(path, dir, "", runId)` in `run-research.ts` — telemetry param is empty string, never populated. Store actual telemetry string from `assembleReport()` or remove param from `saveReportPath()` and `save_report` tool handler (the `storedTelemetry && ...` logic is a no-op for all deep-research flows).
+- DONE: `saveReportPath` dead telemetry param removed (2026-07-10).
