@@ -353,17 +353,19 @@ extension/
 ├── settings-context.ts         Settings cascade (env → project → user → defaults)
 ├── report-assembly.ts          Final report assembly with telemetry
 ├── report-styles.ts            Report style templates (narrative, subtopics)
+├── release-monitor.ts         GitHub release check (ADR-0018)
 ├── research-run-orchestrator.ts Pre/post-run hooks (plan confirmation, mind map, PDF)
 ├── search-queue.ts             Controlled concurrency queue
 └── search/
     ├── web-search.ts           Multi-engine search (dispatch + retry/backoff)
+    ├── rate-limiter.ts         Rate-limiting with exponential backoff
     └── engines/
         ├── duckduckgo.ts       DuckDuckGo (free, zero-config)
         ├── brave.ts            Brave Search API adapter
         ├── searxng.ts          SearXNG public instances
         ├── tavily.ts           Tavily Search API
-        ├── yandex.ts           Yandex Search API
-        └── utils.ts            Rate-limit wait helper
+        ├── yandex.ts          Yandex Search API
+        └── duckduckgo.ts      DuckDuckGo (free, zero-config)
 
 tools/
 ├── save-report.ts             Save report tool (path resolution, telemetry)
@@ -413,7 +415,7 @@ See [Environment Variables](#environment-variables) for API key configuration.
 # Run tests
 cd extension && node --import tsx --test ../tests/*.test.ts
 
-# 275 tests across 45 files covering:
+# 363 tests across 53 files covering:
 # - PrefilterManager (three-step, validation, API key checks, engine status)
 # - ResearchStateMachine (full cycle, concurrency, soft limits, deepening)
 # - Engine adapters (DDG, Brave, SearXNG, Tavily, Yandex — per-engine tests)
@@ -453,3 +455,11 @@ cd extension && node --import tsx --test ../tests/*.test.ts
 | [0012](docs/adr/0012-settings-context-cascade.md) | accepted | SettingsContext unified settings cascade |
 | [0013](docs/adr/0013-mind-map-and-mcp-sources.md) | partially accepted | Mind map, MCP/local sources, repo link |
 | [0014](docs/adr/0014-pdf-export.md) | accepted | PDF export of research reports |
+| [0015](docs/adr/0015-research-draft-module.md) | accepted | ResearchDraft module — collapse triple-path draft |
+| [0016](docs/adr/0016-orchestrator-post-processing.md) | accepted | Move post-processing to orchestrator |
+| [0017](docs/adr/0017-llm-introspection-source-tagged-questions.md) | proposed | LLM introspection + source-tagged questions |
+| [0018](docs/adr/0018-release-monitor.md) | accepted | Release monitor on session start |
+| [0019](docs/adr/0019-tui-confirmation-gate.md) | accepted | TUI confirmation gate for research plans |
+| [0020](docs/adr/0020-settings-reinit-session-start.md) | proposed | SettingsContext re-init on session_start |
+| [0021](docs/adr/0021-save-report-report-path.md) | accepted | save_report report_path for large reports |
+| [0022](docs/adr/0022-done-phase-steer-messages.md) | accepted | Remove redundant steer from done phase |

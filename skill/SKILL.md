@@ -91,11 +91,11 @@ Environment variables take precedence over settings.json. Example settings.json:
    - Estimated search/scrape counts
    - Ask: "Start deep research?"
 3. **Guardrail:** Do NOT call `run_research` until the user explicitly confirms.
-4. After user confirms, call `confirm_research`:
+4. After user confirms, call `confirm_research`. The TUI will show a confirmation dialog with plan details — the user must pick "Yes — Start research" in the terminal before the tool executes.
    ```
    confirm_research({ plan_artifact_path: "<path from plan_research result>" })
    ```
-   `run_research` enforces this gate — it will reject unconfirmed plans.
+   `run_research` enforces this gate — it will reject unconfirmed plans. In non-interactive mode (print/CI), confirmation is blocked.
 
 ### Phase 4: Research Loop
 
@@ -117,8 +117,12 @@ Environment variables take precedence over settings.json. Example settings.json:
 
 ### Phase 5: Deliver
 
-1. The report is auto-saved by `run_research`. The path is printed in the completion message.
-2. Offer to show the report content.
+1. The report is auto-saved by `run_research` and the path is printed in the completion message.
+2. To re-save or deliver the report, call `save_report` with the report path (not the full content — use `report_path` for large reports):
+   ```
+   save_report({ topic: "Research Topic", report_path: "<path from run_research>" })
+   ```
+3. Offer to export PDF or generate a mind map on demand.
 
 ## Output
 
@@ -145,7 +149,7 @@ PDF saved to same directory as the report with `.pdf` extension. Override with `
 export_pdf({ report_path: "deep-research/reports/my-report.md", output_path: "exports/report.pdf" })
 ```
 
-**Auto-export:** Enable `deepResearch.pdfExport: true` in settings.json (or `DEEP_RESEARCH_PDF_EXPORT=true` env var). The report is automatically converted to PDF after each run.
+**Auto-export:** Enable `deepResearch.pdfExport: true` in settings.json (or `DEEP_RESEARCH_PDF_EXPORT=true` env var). The report is automatically converted to PDF after each run. On failure (missing pandoc), a hint is shown in the completion message — call `export_pdf` to retry.
 
 **System requirements for direct conversion:**
 - `pandoc` + `weasyprint` must be installed on the system

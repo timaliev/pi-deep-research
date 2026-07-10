@@ -35,11 +35,18 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 
 ### ADR-0018: Release monitor on session start (designed 2026-07-09)
 
-- TODO: create `extension/release-monitor.ts` — checkForNewRelease(sendUserMessage) with 6-hour cooldown.
-- TODO: wire `pi.on("session_start", ...)` in `extension/index.ts`.
-- TODO: GitHub API call `GET /repos/timaliev/pi-deep-research/releases/latest`, unauthenticated.
-- TODO: version comparison — GitHub `tag_name` vs local `package.json` `version`.
-- TODO: notify via `pi.sendUserMessage()` only if newer version exists.
+- DONE: create `extension/release-monitor.ts` — checkForNewRelease(sendUserMessage) with 6-hour cooldown.
+- DONE: wire `pi.on("session_start", ...)` in `extension/index.ts`.
+- DONE: GitHub API call `GET /repos/timaliev/pi-deep-research/releases/latest`, unauthenticated.
+- DONE: version comparison — GitHub `tag_name` vs local `package.json` `version`.
+- DONE: notify via `pi.sendUserMessage()` only if newer version exists.
+
+### ADR-0019: TUI confirmation gate (implemented 2026-07-10)
+
+- DONE: intercept `confirm_research` via `pi.on("tool_call", ...)` in `extension/index.ts`.
+- DONE: read plan artifact, show TUI binary choice with plan details.
+- DONE: block in non-interactive mode (ctx.hasUI check).
+- DONE: return `{ block: true }` when user declines.
 
 ### SearxNG custom instance
 
