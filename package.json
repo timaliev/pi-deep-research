@@ -8,14 +8,14 @@
     "url": "https://github.com/timaliev/pi-deep-research"
   },
   "scripts": {
-    "pretest": "biome lint extension/ tests/",
-    "test": "npx tsx --test tests/*.test.ts",
-    "format": "biome format --write extension/ tests/",
-    "format:check": "biome format extension/ tests/",
-    "lint": "biome lint extension/ tests/",
-    "lint:fix": "biome lint --write extension/ tests/",
-    "check": "biome check extension/ tests/",
-    "check:fix": "biome check --write extension/ tests/"
+    "pretest": "npx biome lint extension/ tests/",
+    "test": "cd extension && npx tsx --test ../tests/*.test.ts",
+    "format": "npx biome format --write extension/ tests/",
+    "format:check": "npx biome format extension/ tests/",
+    "lint": "npx biome lint extension/ tests/",
+    "lint:fix": "npx biome lint --write extension/ tests/",
+    "check": "npx biome check extension/ tests/",
+    "check:fix": "npx biome check --write extension/ tests/"
   },
   "pi": {
     "extensions": [
