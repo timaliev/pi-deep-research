@@ -13,6 +13,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.24.0](https://github.com/timaliev/pi-deep-research/compare/v0.23.0..v0.24.0) - 2026-07-10
+
+### Features
+
+- **(settings)** add provenance tracking, settingsReport config, and settings-reporter module - ([83601b1](https://github.com/timaliev/pi-deep-research/commit/83601b1016cf6b9c7d796632dbc0128f5b0a9b69)) - Tim Aliev
+- **(settings)** wire settings report to session_start, plan_research step 1, and report - ([af20d25](https://github.com/timaliev/pi-deep-research/commit/af20d25547612b26df440b2d5c79b4309bf27dba)) - Tim Aliev
+- add report_path param to save_report for large reports (ADR-0021) - ([c47bb6c](https://github.com/timaliev/pi-deep-research/commit/c47bb6c8cbabab361b3c834d3bb387b2eeb5039d)) - Tim Aliev
+- reduce token consumption — cap drafting findings, remove done steer, drop dead telemetry - ([4838464](https://github.com/timaliev/pi-deep-research/commit/4838464bb65753f1e27dc069b4a618c1a64b1067)) - Tim Aliev
+- trim deep_web_search description, mark ADR-0022 accepted - ([b311392](https://github.com/timaliev/pi-deep-research/commit/b3113928d4424105f685f3af092b2174b47d1bcc)) - Tim Aliev
+- add release monitor on session start (ADR-0018) - ([835a267](https://github.com/timaliev/pi-deep-research/commit/835a26784fda0be057fd47c2e50a03f216e0818c)) - Tim Aliev
+- add TUI confirmation gate for research plans (ADR-0019) - ([0727b28](https://github.com/timaliev/pi-deep-research/commit/0727b28fe79e46c87f8c868809551ec1d4ce1cdd)) - Tim Aliev
+- add engine allowlist — default duckduckgo + searxng - ([8d99a36](https://github.com/timaliev/pi-deep-research/commit/8d99a367db286dcd7e03e5ecd4200233abba116c)) - Tim Aliev
+- add SettingsContext.reinit on session_start (ADR-0020) - ([eaffd58](https://github.com/timaliev/pi-deep-research/commit/eaffd58c4920e8bd3a37af4bb700b07114f8dc66)) - Tim Aliev
+- add LLM introspection prompts + dispatch (ADR-0017 core) - ([a9967d6](https://github.com/timaliev/pi-deep-research/commit/a9967d6f114a3c3fe94540ab1fa51626553e7569)) - Tim Aliev
+- add questionMetadata, subtopics tiers, contradiction analysis (ADR-0017) - ([2b896be](https://github.com/timaliev/pi-deep-research/commit/2b896be773b5de8b69084a5cd2fa8a9db1f46a58)) - Tim Aliev
+
+### Bug Fixes
+
+- **(settings)** resolve biome lint errors — useLiteralKeys + useConst - ([5ab7e8c](https://github.com/timaliev/pi-deep-research/commit/5ab7e8c21e1be6dcf58c49094d1c9a79e9b5cbb8)) - Tim Aliev
+- apply biome formatting to 3 files failing CI - ([ab129f5](https://github.com/timaliev/pi-deep-research/commit/ab129f5a8000e4334678c82d24eb91e815dbc614)) - Tim Aliev
+
+### Documentation
+
+- **(context)** add Settings Report and Setting Source terms - ([81474f0](https://github.com/timaliev/pi-deep-research/commit/81474f0309f77b042851eb16151834f704d3b14d)) - Tim Aliev
+- add ADR-0018 release monitor design - ([55075d6](https://github.com/timaliev/pi-deep-research/commit/55075d64afa5afcfd4e49cfb2003e4ab137be2c4)) - Tim Aliev
+- add searxng custom instance to TODO.md - ([d5eafc5](https://github.com/timaliev/pi-deep-research/commit/d5eafc503678c6f8503fe2801441b6104d0fd473)) - Tim Aliev
+- add search engine allowlist to TODO.md - ([a633158](https://github.com/timaliev/pi-deep-research/commit/a633158d9d80a57eace6a5ab07df8d8d1d912a4c)) - Tim Aliev
+- add ADR-0019 TUI confirmation gate - ([2fa8456](https://github.com/timaliev/pi-deep-research/commit/2fa8456d015bf1c10718d79e3a59944292e88c94)) - Tim Aliev
+- add architecture review 4 candidates to TODO.md - ([fcdc923](https://github.com/timaliev/pi-deep-research/commit/fcdc9235c423e5aba9e133ea7cd4a02088388d55)) - Tim Aliev
+- add ADR-0020 settings reinit on session_start - ([e02ace4](https://github.com/timaliev/pi-deep-research/commit/e02ace454c82a11fdf302f3e1cb9fe88c11a17b8)) - Tim Aliev
+- adr-0020 — explicitly re-read process.env on reinit - ([771ef1c](https://github.com/timaliev/pi-deep-research/commit/771ef1ccaf143c8a14c5536829a19833cbd24a48)) - Tim Aliev
+- update README, SKILL.md, TODO for ADR-0018, ADR-0019, token reductions - ([f998e95](https://github.com/timaliev/pi-deep-research/commit/f998e951a016fd3cf47c1836f1a127ed552c6e52)) - Tim Aliev
+- update TODO — mark ADR-0017, engine allowlist, dead telemetry as DONE - ([1fbb767](https://github.com/timaliev/pi-deep-research/commit/1fbb7679f7d6a172092906fbfbc36f2d0fd4b24f)) - Tim Aliev
+- update ADR-0023 status, README settingsReport section, TODO completed items - ([e2cb6f4](https://github.com/timaliev/pi-deep-research/commit/e2cb6f451afffeb2eee7c0eedf100232838d6fb1)) - Tim Aliev
+
+### Miscellaneous Chores
+
+- **(ci)** merge lint workflow into test workflow - ([649219e](https://github.com/timaliev/pi-deep-research/commit/649219e59df4c238e8d71c39e9d846082a9004a5)) - Tim Aliev
+- fix npm test path, add pre-commit hook with lint+format check - ([6ae9948](https://github.com/timaliev/pi-deep-research/commit/6ae99481b7de5078616cd08bebd93478683fb439)) - Tim Aliev
+
+### Style
+
+- apply biome formatting to all files - ([98342a3](https://github.com/timaliev/pi-deep-research/commit/98342a30133c2528da7f462ef7550c14cea4a6cc)) - Tim Aliev
+
 ## [0.23.0](https://github.com/timaliev/pi-deep-research/compare/v0.22.0..v0.23.0) - 2026-07-09
 
 ### Features

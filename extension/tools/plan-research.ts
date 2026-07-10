@@ -1,4 +1,5 @@
 import { mkdirSync } from "node:fs";
+import { join } from "node:path";
 import { Type } from "typebox";
 import type { ResearchPlanProfile } from "../prefilter.js";
 import { PrefilterManager, PrefilterSession } from "../prefilter.js";
@@ -7,6 +8,7 @@ import type { Scraper } from "../scraper.js";
 import type { SearchEngine, searchWeb as SearchWebFn } from "../search/web-search.js";
 import { searchWeb } from "../search/web-search.js";
 import type { SearchProviderCredentials, SettingsContext } from "../settings-context.js";
+import { buildSettingsTable, writeSettingsLog } from "../settings-reporter.js";
 
 export function createPlanResearchTool(
   pi: any,
@@ -23,6 +25,7 @@ export function createPlanResearchTool(
     searchFn,
     scraper,
     settings.reportStyle,
+    settings.enabledEngines,
   );
 
   return {
@@ -54,6 +57,17 @@ export function createPlanResearchTool(
           };
         }
         const result = await manager.start(params.topic);
+
+        // ADR-0023: inject settings table if onRunStart is enabled
+        if (settings.settingsReport.onRunStart) {
+          const table = buildSettingsTable(settings);
+          pi.sendUserMessage(`## Deep Research Settings\n\n${table}`, { deliverAs: "steer" });
+          // Always log settings to disk
+          const logsDir = join(settings.artifactsDir, "..", "logs");
+          mkdirSync(logsDir, { recursive: true });
+          writeSettingsLog(settings, logsDir, { trigger: "run_start", runId: result.runId });
+        }
+
         if (result.inject) pi.sendUserMessage(result.inject, { deliverAs: "steer" });
         return {
           content: [
@@ -107,7 +121,13 @@ export function createPlanResearchTool(
 
       // Step 2b: zero params → continue (state-driven routing)
       if (!params.params_json && !params.plan_json && !params.topic) {
-        const result = await manager.continue();
+        // Extract last assistant response for introspection (ADR-0017)
+        const lastAssistant = [...entries].reverse().find((e: any) => e.message?.role === "assistant");
+        const llmText =
+          typeof lastAssistant?.message?.content === "string"
+            ? (lastAssistant.message.content as string).replace(/<tool_calls>[\s\S]*?<\/tool_calls>/g, "").trim()
+            : undefined;
+        const result = await manager.continue(undefined, llmText);
         if (result.inject) pi.sendUserMessage(result.inject, { deliverAs: "steer" });
         if (result.phase === "error") {
           return { content: [{ type: "text", text: `Error: ${result.error}` }], details: { error: result.error } };

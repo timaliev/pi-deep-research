@@ -1,4 +1,4 @@
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { Type } from "typebox";
 import { resolveReportPath, writeReportFile } from "../report-assembly.js";
 import type { SettingsContext } from "../settings-context.js";
@@ -10,10 +10,29 @@ export function createSaveReportTool(settings: SettingsContext) {
     description: "Save the final research report as a markdown file.",
     parameters: Type.Object({
       topic: Type.String({ description: "Research topic (used in filename)" }),
-      markdown: Type.String({ description: "Report content in markdown" }),
+      markdown: Type.Optional(Type.String({ description: "Report content in markdown" })),
+      report_path: Type.Optional(
+        Type.String({
+          description:
+            "Path to an existing report file to re-save (for large reports that can't be passed as markdown)",
+        }),
+      ),
     }),
     async execute(_toolCallId: string, params: any, _signal: any, _onUpdate: any, ctx: any) {
       mkdirSync(settings.reportsDir, { recursive: true });
+
+      // Resolve content: report_path (read from disk) takes priority for large files
+      let markdown: string;
+      if (params.report_path && typeof params.report_path === "string" && existsSync(params.report_path)) {
+        markdown = readFileSync(params.report_path, "utf-8");
+      } else if (params.markdown && typeof params.markdown === "string") {
+        markdown = params.markdown;
+      } else {
+        return {
+          content: [{ type: "text", text: "Error: either markdown or report_path must be provided." }],
+          details: { error: "missing_content" },
+        };
+      }
 
       const entries = ctx.sessionManager.getEntries();
       const reportPathEntry = [...entries].reverse().find((e: any) => e.customType === "deep-research:report-path");
@@ -21,7 +40,6 @@ export function createSaveReportTool(settings: SettingsContext) {
       // Prefer path pre-computed by run_research auto-save
       const storedRunId = (reportPathEntry?.data as any)?.runId as string | undefined;
       const storedPath = reportPathEntry?.data?.path as string | undefined;
-      const storedTelemetry = (reportPathEntry?.data as any)?.telemetry as string | undefined;
 
       let path: string;
       if (storedPath && typeof storedPath === "string" && storedRunId) {
@@ -41,11 +59,10 @@ export function createSaveReportTool(settings: SettingsContext) {
         mkdirSync(settings.reportsDir, { recursive: true });
       }
 
-      writeReportFile(path, params.markdown, storedTelemetry);
+      writeReportFile(path, markdown);
 
-      const hasTelemetry = storedTelemetry && !params.markdown.includes("## Research Telemetry");
       return {
-        content: [{ type: "text", text: `Report saved${hasTelemetry ? " (with telemetry)" : ""}: ${path}` }],
+        content: [{ type: "text", text: `Report saved: ${path}` }],
         details: { report_path: path },
       };
     },

@@ -115,6 +115,12 @@ _Avoid_: file source, document source, local document
 A Model Context Protocol server tool used during Enriched Search to pull data from external systems (e.g., JIRA, Slack, corporate wiki). Specified in `plan.sources.mcp` as server names. The agent invokes `mcp__<server>__<tool>` during the Enriched Search injection. Findings tagged `source: "mcp"` with the tool identifier as `sourceUrl`.
 _Avoid_: MCP data source, external source
 
-**PDF Export**:
+**Settings Report**:
+Transparent disclosure of all active configuration values with provenance tracking. Shows each setting, its resolved value, and which source (env var, settings file path, or built-in default) determined it. Triggered at three points: on session start, at plan_research step 1, and appended to the final report — each independently gated by settingsReport.onSessionStart / .onRunStart / .inReport. Always logged to disk regardless of toggles. Implemented in settings-reporter.ts.
+_Avoid_: settings dump, config report
+
+**Setting Source**:
+A provenance tag on each resolved setting indicating where the winning value came from. Format: "default" (built-in fallback), "env:VAR_NAME" (environment variable), or "file:path" (settings.json, relatived to $HOME with ~ prefix when possible). Tracked as parallel `*Source` fields on SettingsContext.
+_Avoid_: provenance, config origin
 Conversion of a markdown research report to a PDF file. Available as a standalone `export_pdf` tool (always available) and as an automatic post-run step gated by `deepResearch.pdfExport` setting. Uses pandoc + weasyprint as primary method; falls back to agent-injected conversion if system tools are missing.
 _Avoid_: PDF generation, report export

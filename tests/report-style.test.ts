@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import type { ResearchPlan, ResearchPlanProfile } from "../extension/prefilter.js";
@@ -164,6 +164,53 @@ describe("buildDraftingPrompt with reportStyle", () => {
     assert.ok(prompt.includes("Introduction"), "must default to narrative");
     assert.ok(prompt.includes("Recommendations"), "must default to narrative");
   });
+
+  it("caps findings at 20 to prevent unbounded prompt growth", () => {
+    // Create 35 findings — exceeding the 20 cap
+    const manyFindings: Finding[] = [];
+    for (let i = 0; i < 35; i++) {
+      manyFindings.push({
+        text: `Finding number ${i + 1} with some additional descriptive text to simulate real content`,
+        sourceUrl: `https://source-${i + 1}.com`,
+        citation: `...`,
+        iteration: Math.floor(i / 10),
+      });
+    }
+
+    const plan = validPlan({ reportStyle: "narrative" });
+    const prompt = createReportStyle("narrative").buildDraftingPrompt(plan, manyFindings);
+
+    // Must NOT contain ALL 35 findings (use exact pattern to avoid substring false positives)
+    assert.ok(!prompt.includes("Finding number 1 with"), "first finding should be capped out");
+    assert.ok(!prompt.includes("Finding number 5 with"), "early finding should be capped out");
+
+    // Must contain recent findings (last 20)
+    assert.ok(prompt.includes("Finding number 35"), "last finding must be present");
+    assert.ok(prompt.includes("Finding number 16"), "finding at cap boundary must be present");
+
+    // Must NOT exceed reasonable size (20 findings × 200 chars + structure overhead ≈ 5000)
+    const promptLength = prompt.length;
+    assert.ok(promptLength <= 5500, `prompt too long: ${promptLength} chars (max 5500)`);
+  });
+
+  it("subtopics style also caps findings", () => {
+    const manyFindings: Finding[] = [];
+    for (let i = 0; i < 40; i++) {
+      manyFindings.push({
+        text: `Subtopic finding ${i + 1}`,
+        sourceUrl: `https://s-${i + 1}.com`,
+        citation: `...`,
+        iteration: Math.floor(i / 10),
+      });
+    }
+
+    const plan = validPlan({ reportStyle: "subtopics" });
+    const prompt = createReportStyle("subtopics").buildDraftingPrompt(plan, manyFindings);
+
+    assert.ok(!prompt.includes("Subtopic finding 1\n"), "first finding should be capped");
+    assert.ok(prompt.includes("Subtopic finding 40"), "last finding must be present");
+    assert.ok(prompt.length <= 5500, `prompt too long: ${prompt.length} chars`);
+  });
 });
 
 // ─── RED: prefilter prompts mention reportStyle ───────────────────
@@ -216,5 +263,49 @@ describe("prefilter prompts mention reportStyle", () => {
       result.inject!.includes("narrative (default)"),
       "params prompt must mark default report style with '(default)'",
     );
+  });
+});
+
+// ─── ADR-0022: Done phase must NOT inject steer messages ─────
+describe("run_research done phase — no steer messages", () => {
+  it("done phase does NOT call sendUserMessage for PDF fallback", async () => {
+    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "run-research.ts"), "utf-8");
+    // Find the done-phase handler block
+    const doneBlock = src.match(/if \(result\.kind === "done"\)[\s\S]*?^\s+return \{/m);
+    assert.ok(doneBlock, "done phase block must exist");
+    // Must NOT call sendUserMessage inside done block
+    assert.ok(!doneBlock[0].includes("sendUserMessage"), "done phase must not call sendUserMessage");
+  });
+
+  it("done phase shows inline hints instead of steer messages", async () => {
+    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "run-research.ts"), "utf-8");
+    // Inline hints must use 💡 emoji or action callouts
+    assert.ok(src.includes("💡"), "must use inline hint emoji");
+    assert.ok(src.includes("export_pdf"), "must mention export_pdf tool");
+    assert.ok(src.includes("mind_map"), "must mention mind_map tool");
+  });
+});
+
+// ─── Dead telemetry: saveReportPath no longer takes telemetry ──
+describe("saveReportPath — no dead telemetry param", () => {
+  it("session-state.ts saveReportPath has no telemetry param", async () => {
+    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "session-state.ts"), "utf-8");
+    // saveReportPath must NOT have a telemetry parameter
+    const sig = src.match(/saveReportPath\([^)]+\)/);
+    assert.ok(sig, "saveReportPath signature must exist");
+    assert.ok(!sig[0].includes("telemetry"), "saveReportPath must not have telemetry param");
+  });
+
+  it("run-research.ts does not pass empty string to saveReportPath", async () => {
+    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "run-research.ts"), "utf-8");
+    // saveReportPath call must not have "" as a telemetry argument
+    const call = src.match(/saveReportPath\([^)]+\)/);
+    assert.ok(call, "saveReportPath call must exist");
+    assert.ok(!call[0].includes('""'), "must not pass empty string telemetry");
+  });
+
+  it("save-report.ts does not reference storedTelemetry", async () => {
+    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "save-report.ts"), "utf-8");
+    assert.ok(!src.includes("storedTelemetry"), "save_report must not reference storedTelemetry");
   });
 });

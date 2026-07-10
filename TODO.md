@@ -33,23 +33,88 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 - TODO: add source-type breakdown rows (Web/Local/MCP counts) to `buildTelemetrySection()`.
 - TODO: update `buildParamsPrompt` and `buildPlanPrompt` to mention MCP/local sources in prefilter flow.
 
-### ADR-0017: LLM introspection + source-tagged questions (designed 2026-07-09)
+### ADR-0018: Release monitor on session start (implemented 2026-07-10)
 
-- TODO: add `introspectionDone` flag and LLM introspection substate to `PrefilterManager` / `PrefilterSession`.
-- TODO: add LLM introspection injection prompt to `prefilter-prompts.ts` — agent proposes topics from internal knowledge with confidence/importance.
-- TODO: add merge injection prompt to `prefilter-prompts.ts` — merge LLM topics with web search results, tag sources, flag contradictions.
-- TODO: extend `plan_research` tool to dispatch introspection turn (Turn 1: with params_json → inject introspection; Turn 2: no params → run search + inject merge).
-- TODO: add `questionMetadata?: Record<string, {source, confidence, importance, contradictionOf?, debatableFact?}>` to ResearchPlan.
-- TODO: extend subtopics drafting prompt topic tiers: 0-4q → 5-7, 5-7q → 8-12, 8+q → 12-20.
-- TODO: add post-report contradiction analysis in `ResearchRunOrchestrator` — gated by presence of contradiction flags, inject analysis prompt, append `## Contradictions & Debatable Facts` to report.
-- FUTURE: Question 8 — runtime consumption of questionMetadata (priority ordering, prompt enrichment based on confidence).
+- DONE: create `extension/release-monitor.ts` — checkForNewRelease(sendUserMessage) with 6-hour cooldown.
+- DONE: wire `pi.on("session_start", ...)` in `extension/index.ts`.
+- DONE: GitHub API call `GET /repos/timaliev/pi-deep-research/releases/latest`, unauthenticated.
+- DONE: version comparison — GitHub `tag_name` vs local `package.json` `version`.
+- DONE: notify via `pi.sendUserMessage()` only if newer version exists.
 
-### Default report style (implemented 2026-07-09)
+### ADR-0019: TUI confirmation gate (implemented 2026-07-10)
 
-- DONE: add `reportStyle` field to `SettingsContext` — cascade: env `DEEP_RESEARCH_REPORT_STYLE` → local settings.json `deepResearch.defaultReportStyle` → global settings.json → `"narrative"`.
-- DONE: add `defaultReportStyle` field to `ResearchContext` interface and `ResearchStateMachine` constructor.
-- DONE: update `state-machine.ts` fallback: `plan.reportStyle ?? this.defaultReportStyle ?? "narrative"` (4 call sites).
-- DONE: wire `settings.reportStyle` through `index.ts` → `ResearchRunOrchestrator` → `ResearchStateMachine`.
-- DONE: update `prefilter.ts` prompt — show configured default marked with `(default)`, instruct LLM to advise narrative vs subtopics based on topic complexity.
-- DONE: add `"reportStyle"` to `buildParamsPrompt` expected JSON template.
-- DONE: add tests for settings cascade, env override, state machine fallback, prefilter prompt advisory.
+- DONE: intercept `confirm_research` via `pi.on("tool_call", ...)` in `extension/index.ts`.
+- DONE: read plan artifact, show TUI binary choice with plan details.
+- DONE: block in non-interactive mode (ctx.hasUI check).
+- DONE: return `{ block: true }` when user declines.
+
+### ADR-0020: SettingsContext re-init on session_start (implemented 2026-07-10)
+
+- DONE: add `reinit(cwd)` method — re-applies cascade with new working directory.
+- DONE: make fields mutable, extract `compute(cwd)` helper.
+- DONE: wire `pi.on("session_start", ...)` in `extension/index.ts`.
+- DONE: wire SettingsContext into `export_pdf` and `mind_map` tools for default output paths.
+
+### ADR-0021: save_report with report_path (implemented 2026-07-09)
+
+- DONE: add optional `report_path` parameter to `save_report` tool.
+- DONE: read content from disk when `report_path` provided.
+- DONE: markdown made optional (backward-compatible).
+
+### ADR-0022: Remove done-phase steer messages (implemented 2026-07-10)
+
+- DONE: replace `pi.sendUserMessage()` PDF fallback with inline `💡` hint.
+- DONE: replace `pi.sendUserMessage()` mind-map prompt with inline `💡` hint.
+
+### ADR-0023: Settings report — provenance tracking (implemented 2026-07-10)
+
+- DONE: add `*Source` provenance fields to SettingsContext + `settingsReport` group (onSessionStart, onRunStart, inReport).
+- DONE: add `getAllWithSources()` to SettingsContext.
+- DONE: create `extension/settings-reporter.ts` — buildSettingsTable, buildSettingsJson, writeSettingsLog, appendSettingsSection.
+- DONE: wire session_start — always log, inject table if onSessionStart.
+- DONE: wire plan_research step 1 — always log, inject table if onRunStart.
+- DONE: wire orchestrator buildDoneResult — append ## Settings if inReport.
+- DONE: add ADR, README settings docs, CONTEXT.md terms.
+
+### Architecture improvements (from review 2026-07-09)
+
+- DONE: Delete utils.ts pass-through module.
+- DONE: Remove redundant dual waitIfNeeded calls.
+- DONE: Extract RateLimiter module.
+- DONE: De-duplicate artifact-not-found guard.
+- DONE: Consolidate tool factory dependency injection.
+- DONE: Extract prompt builders from prefilter.ts.
+- DONE: Fix brave engine waitIfNeeded error.
+
+### SearXNG custom instance
+
+- TODO: add `searxng: { url: "SEARXNG_URL" }` to settings + env cascade.
+- TODO: read URL in searxng adapter to prepend custom instance before public fallbacks.
+- TODO: custom instance has no fallback to public instances (privacy).
+
+### Engine allowlist (implemented 2026-07-10)
+
+- DONE: add `enabledEngines` field to `SettingsContext` — env `DEEP_RESEARCH_ENABLED_ENGINES` or `deepResearch.enabledEngines` in settings.json. Default: ["duckduckgo", "searxng"].
+- DONE: update `buildEngineStatus()` to filter by allowlist.
+- TODO: has key but not in allowlist → ❌ "not enabled" (new distinct label).
+
+### ADR-0017: LLM introspection (implemented 2026-07-10)
+
+- DONE: add `introspectionDone` flag to `PrefilterManager`.
+- DONE: add `buildIntrospectionPrompt` to `prefilter-prompts.ts`.
+- DONE: add `buildMergePrompt` to `prefilter-prompts.ts`.
+- DONE: extend `plan_research` to dispatch introspection turn.
+- DONE: add `questionMetadata` to `ResearchPlan`.
+- DONE: extend subtopics drafting prompt tiers: 0-4 → 5-7, 5-7 → 8-12, 8+ → 12-20.
+- DONE: add contradiction analysis to `ResearchRunOrchestrator`.
+- FUTURE: Question 8 — runtime consumption of questionMetadata.
+
+### Architecture review 4 (2026-07-09)
+
+- TODO: post-processing pipeline — `PostProcessor` interface, adapters for assemble/PdfExport/mindMap.
+- TODO: plan_research dispatch — extract `execute()` into 4 handler methods.
+- TODO: orchestrator run-and-persist — deduplicate `handleFirstCall`/`handleSubsequentCall`.
+
+### Dead code / stubs
+
+- DONE: `saveReportPath` dead telemetry param removed (2026-07-10).

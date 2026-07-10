@@ -5,6 +5,8 @@ import { JsonlLogger } from "./logger.js";
 import {
   buildApiKeyWarning,
   buildEngineStatus,
+  buildIntrospectionPrompt,
+  buildMergePrompt,
   buildParamsPrompt,
   buildPlanPrompt,
   buildSearchQuery,
@@ -33,6 +35,17 @@ export interface ResearchPlan {
   profile: ResearchPlanProfile;
   /** Report generation style: narrative (5-section) or subtopics (LLM discovers themes). */
   reportStyle?: "narrative" | "subtopics";
+  /** ADR-0017: metadata about each research question (source, confidence, importance). */
+  questionMetadata?: Record<
+    string,
+    {
+      source: "web" | "internal" | "both";
+      confidence: "low" | "medium" | "high";
+      importance: "critical" | "important" | "supplementary";
+      contradictionOf?: string;
+      debatableFact?: string;
+    }
+  >;
   scope: {
     include: string;
     exclude: string;
@@ -85,9 +98,12 @@ export class PrefilterManager {
   private readonly searchCred?: SearchProviderCredentials;
   private readonly sharedRunId?: string;
   private readonly defaultReportStyle: "narrative" | "subtopics";
+  private readonly enabledEngines?: string[];
   private lastSearchResultCount = 0;
   private lastScrapedUrls: string[] = [];
   private finalized = false;
+  private introspectionDone = false;
+  private llmTopics?: string;
 
   constructor(
     searchFn: typeof SearchWebFn,
@@ -98,6 +114,7 @@ export class PrefilterManager {
     searchCred?: SearchProviderCredentials,
     sharedRunId?: string,
     defaultReportStyle?: "narrative" | "subtopics",
+    enabledEngines?: string[],
   ) {
     this.searchFn = searchFn;
     this.scraper = scraper;
@@ -107,6 +124,7 @@ export class PrefilterManager {
     this.searchCred = searchCred;
     this.sharedRunId = sharedRunId;
     this.defaultReportStyle = defaultReportStyle ?? "narrative";
+    this.enabledEngines = enabledEngines;
   }
 
   private runId(): string {
@@ -122,7 +140,7 @@ export class PrefilterManager {
    * Handle a zero-params call — internally routes to the appropriate step.
    * Called by the plan_research tool when no params_json or plan_json are provided.
    */
-  async continue(topic?: string): Promise<PrefilterResult> {
+  async continue(topic?: string, llmResponse?: string): Promise<PrefilterResult> {
     // Fresh state with topic → behave like start()
     if (topic && this.lastSearchResultCount === 0 && this.lastScrapedUrls.length === 0) {
       return this.start(topic);
@@ -130,16 +148,40 @@ export class PrefilterManager {
 
     // Cached params from a prior withParams() → route to next step
     if (this.cachedTopic && this.cachedEngines && this.cachedProfile) {
-      return {
-        phase: "error",
-        runId: this.runId(),
-        error: "continue() after withParams — search+merge not yet implemented (ADR-0017)",
-      };
+      // ADR-0017: introspection → merge flow
+      if (!this.introspectionDone) {
+        this.introspectionDone = true;
+        const inject = buildIntrospectionPrompt(this.cachedTopic);
+        return { phase: "awaiting_plan", runId: this.runId(), inject };
+      }
+      // Introspection complete — run search, then merge
+      if (llmResponse) {
+        this.llmTopics = llmResponse;
+      }
+      return this.doMergeStep();
     }
 
     // No topic, no cached state → error
     return { phase: "error", runId: this.runId(), error: "No topic provided and no cached prefilter state." };
   }
+
+  /** Run preliminary search and inject merge prompt (ADR-0017). */
+  private async doMergeStep(): Promise<PrefilterResult> {
+    if (!this.cachedTopic || !this.cachedEngines) {
+      return { phase: "error", runId: this.runId(), error: "No cached params for merge step." };
+    }
+    const searchQuery = buildSearchQuery(this.cachedTopic);
+    const searchResults = await this.searchFn(
+      searchQuery,
+      5,
+      this.cachedEngines.length > 0 ? this.cachedEngines[0] : "duckduckgo",
+    );
+    this.lastSearchResultCount = searchResults.length;
+    const inject = buildMergePrompt(this.cachedTopic, this.llmTopics ?? "", searchResults);
+    return { phase: "awaiting_plan", runId: this.runId(), inject, searchResults };
+  }
+
+  /** Original continue() for backward compat (no introspection). @deprecated */
 
   /** Step 1: Ask agent to propose engines + profile. */
   async start(topic: string): Promise<PrefilterResult> {
@@ -149,7 +191,7 @@ export class PrefilterManager {
       topic,
       this.profileResolver.getPresets(),
       this.profileResolver?.defaultProfileName ?? "default",
-      buildEngineStatus(this.searchCred),
+      buildEngineStatus(this.searchCred, this.enabledEngines),
       this.defaultReportStyle,
     );
     return { phase: "awaiting_params", runId, inject };
@@ -335,6 +377,7 @@ export class PrefilterSession {
     private readonly searchFn: typeof SearchWebFn = searchWeb,
     private readonly scraper: Scraper = new WebScraper(),
     private readonly defaultReportStyle?: "narrative" | "subtopics",
+    private readonly enabledEngines?: string[],
   ) {}
 
   /** Get existing manager or create a new one. Session entry lookup handled internally. */
@@ -366,6 +409,7 @@ export class PrefilterSession {
       this.searchCred,
       runId,
       this.defaultReportStyle,
+      this.enabledEngines,
     );
     this.managers.set(runId, manager);
     persist(runId);

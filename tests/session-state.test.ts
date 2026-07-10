@@ -58,16 +58,17 @@ describe("SessionState — persistence seam", () => {
     assert.equal(state, undefined);
   });
 
-  it("saveReportPath stores path, dir, telemetry", () => {
+  it("saveReportPath stores path, dir, runId", () => {
     const entries: Array<{ customType: string; data: any }> = [];
     const session = new SessionState({ appendEntry: (t, d) => entries.push({ customType: t, data: d }) });
 
-    session.saveReportPath("/tmp/r.md", "/tmp/reports", "## Telemetry");
+    session.saveReportPath("/tmp/r.md", "/tmp/reports", "run-123");
 
     assert.equal(entries[0].customType, "deep-research:report-path");
     assert.equal(entries[0].data.path, "/tmp/r.md");
     assert.equal(entries[0].data.reportsDir, "/tmp/reports");
-    assert.equal(entries[0].data.telemetry, "## Telemetry");
+    assert.equal(entries[0].data.runId, "run-123");
+    assert.equal(entries[0].data.telemetry, undefined);
   });
 
   it("saveConfirmation stores plan path", () => {
