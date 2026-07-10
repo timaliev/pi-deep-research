@@ -2,6 +2,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { ProfileResolver } from "./profile-resolver.js";
+import { checkForNewRelease } from "./release-monitor.js";
 import { ResearchRunOrchestrator } from "./research-run-orchestrator.js";
 import { WebScraper } from "./scraper.js";
 import { searchWeb } from "./search/web-search.js";
@@ -43,4 +44,7 @@ export default function (pi: ExtensionAPI) {
     orchestrator,
     searchFn: searchWeb,
   });
+
+  // Release monitor — check GitHub for new versions on session start (ADR-0018)
+  pi.on("session_start", () => checkForNewRelease(pi.sendUserMessage.bind(pi)));
 }
