@@ -33,7 +33,6 @@ const ENV = {
   mindMap: "DEEP_RESEARCH_MIND_MAP",
   reportStyle: "DEEP_RESEARCH_REPORT_STYLE",
   enabledEngines: "DEEP_RESEARCH_ENABLED_ENGINES",
-  searxngUrl: "DEEP_RESEARCH_SEARXNG_URL",
   settingsOnSessionStart: "DEEP_RESEARCH_SETTINGS_ON_SESSION_START",
   settingsOnRunStart: "DEEP_RESEARCH_SETTINGS_ON_RUN_START",
   settingsInReport: "DEEP_RESEARCH_SETTINGS_IN_REPORT",
@@ -122,8 +121,6 @@ export class SettingsContext implements SettingsContextData {
   mindMapSource!: SourceTag;
   reportStyleSource!: SourceTag;
   enabledEnginesSource!: SourceTag;
-  searxngUrl!: string;
-  searxngUrlSource!: SourceTag;
   settingsReportOnSessionStartSource!: SourceTag;
   settingsReportOnRunStartSource!: SourceTag;
   settingsReportInReportSource!: SourceTag;
