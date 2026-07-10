@@ -23,6 +23,7 @@ export function createPlanResearchTool(
     searchFn,
     scraper,
     settings.reportStyle,
+    settings.enabledEngines,
   );
 
   return {

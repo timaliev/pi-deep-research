@@ -32,6 +32,7 @@ const ENV = {
   pdfExport: "DEEP_RESEARCH_PDF_EXPORT",
   mindMap: "DEEP_RESEARCH_MIND_MAP",
   reportStyle: "DEEP_RESEARCH_REPORT_STYLE",
+  enabledEngines: "DEEP_RESEARCH_ENABLED_ENGINES",
 } as const;
 
 // ─── Built-in defaults ─────────────────────────────────────────
@@ -39,6 +40,7 @@ const BUILTIN = {
   defaultProfile: "default",
   profiles: DEFAULT_PRESETS,
   reportStyle: "narrative" as "narrative" | "subtopics",
+  enabledEngines: ["duckduckgo", "searxng"],
 };
 
 // ─── Interface ─────────────────────────────────────────────────
@@ -51,6 +53,7 @@ export interface SettingsContextData {
   pdfExport: boolean;
   mindMap: boolean;
   reportStyle: "narrative" | "subtopics";
+  enabledEngines: string[];
 }
 
 export interface InitParams {
@@ -70,6 +73,7 @@ export class SettingsContext implements SettingsContextData {
   readonly pdfExport: boolean;
   readonly mindMap: boolean;
   readonly reportStyle: "narrative" | "subtopics";
+  readonly enabledEngines: string[];
 
   private constructor(params: InitParams) {
     const homeAgentDir = params.homeAgentDir ?? join(homedir(), ".pi", "agent");
@@ -121,6 +125,13 @@ export class SettingsContext implements SettingsContextData {
       globalDr.defaultReportStyle as string | undefined,
     );
 
+    // ─── enabledEngines: env → local → global → built-in ────
+    this.enabledEngines = resolveEnabledEngines(
+      envString(ENV.enabledEngines),
+      localDr.enabledEngines as string[] | undefined,
+      globalDr.enabledEngines as string[] | undefined,
+    );
+
     // ─── Profiles: local → global → built-in (no env) ────────
     const globalProfiles = (globalDr.profiles ?? {}) as Record<string, Partial<ResearchProfile>>;
     const localProfiles = (localDr.profiles ?? {}) as Record<string, Partial<ResearchProfile>>;
@@ -164,6 +175,18 @@ function resolveReportStyle(env?: string, local?: string, global?: string): "nar
   const value = env ?? local ?? global;
   if (value && valid.includes(value)) return value as "narrative" | "subtopics";
   return "narrative";
+}
+
+/** Resolve enabled engines: env (comma-separated) → local → global → built-in default. */
+function resolveEnabledEngines(
+  env?: string,
+  local?: string[],
+  global?: string[],
+): string[] {
+  if (env && env.length > 0) return env.split(",").map((s) => s.trim()).filter(Boolean);
+  if (local && local.length > 0) return local;
+  if (global && global.length > 0) return global;
+  return BUILTIN.enabledEngines;
 }
 
 /** Normalize searchProviders from settings.json into the canonical

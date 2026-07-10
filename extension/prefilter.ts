@@ -85,6 +85,7 @@ export class PrefilterManager {
   private readonly searchCred?: SearchProviderCredentials;
   private readonly sharedRunId?: string;
   private readonly defaultReportStyle: "narrative" | "subtopics";
+  private readonly enabledEngines?: string[];
   private lastSearchResultCount = 0;
   private lastScrapedUrls: string[] = [];
   private finalized = false;
@@ -98,6 +99,7 @@ export class PrefilterManager {
     searchCred?: SearchProviderCredentials,
     sharedRunId?: string,
     defaultReportStyle?: "narrative" | "subtopics",
+    enabledEngines?: string[],
   ) {
     this.searchFn = searchFn;
     this.scraper = scraper;
@@ -107,6 +109,7 @@ export class PrefilterManager {
     this.searchCred = searchCred;
     this.sharedRunId = sharedRunId;
     this.defaultReportStyle = defaultReportStyle ?? "narrative";
+    this.enabledEngines = enabledEngines;
   }
 
   private runId(): string {
@@ -149,7 +152,7 @@ export class PrefilterManager {
       topic,
       this.profileResolver.getPresets(),
       this.profileResolver?.defaultProfileName ?? "default",
-      buildEngineStatus(this.searchCred),
+      buildEngineStatus(this.searchCred, this.enabledEngines),
       this.defaultReportStyle,
     );
     return { phase: "awaiting_params", runId, inject };
@@ -335,6 +338,7 @@ export class PrefilterSession {
     private readonly searchFn: typeof SearchWebFn = searchWeb,
     private readonly scraper: Scraper = new WebScraper(),
     private readonly defaultReportStyle?: "narrative" | "subtopics",
+    private readonly enabledEngines?: string[],
   ) {}
 
   /** Get existing manager or create a new one. Session entry lookup handled internally. */
@@ -366,6 +370,7 @@ export class PrefilterSession {
       this.searchCred,
       runId,
       this.defaultReportStyle,
+      this.enabledEngines,
     );
     this.managers.set(runId, manager);
     persist(runId);

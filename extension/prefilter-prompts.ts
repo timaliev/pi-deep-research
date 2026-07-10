@@ -14,8 +14,8 @@ export function buildSearchQuery(topic: string): string {
   return topic.trim().replace(/\s+/g, " ").substring(0, 300);
 }
 
-/** Build engine availability status (✅/❌ per engine). */
-export function buildEngineStatus(cred?: SearchProviderCredentials): string {
+/** Build engine availability status (✅/❌ per engine, filtered by allowlist). */
+export function buildEngineStatus(cred?: SearchProviderCredentials, enabledEngines?: string[]): string {
   const engines: Array<{ name: string; key: string; available: boolean }> = [
     { name: "duckduckgo", key: "none", available: true },
     { name: "brave", key: "BRAVE_API_KEY", available: cred?.get("brave", "apiKey") != null },
@@ -23,7 +23,10 @@ export function buildEngineStatus(cred?: SearchProviderCredentials): string {
     { name: "yandex", key: "YANDEX_OAUTH_TOKEN", available: cred?.get("yandex", "oauthToken") != null },
     { name: "searxng", key: "none", available: true },
   ];
-  return engines
+  const filtered = enabledEngines && enabledEngines.length > 0
+    ? engines.filter((e) => enabledEngines.includes(e.name))
+    : engines;
+  return filtered
     .map((e) => `  ${e.available ? "✅" : "❌"} ${e.name}${e.key !== "none" ? ` (needs ${e.key})` : ""}`)
     .join("\n");
 }
