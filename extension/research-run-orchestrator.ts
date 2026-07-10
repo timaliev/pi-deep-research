@@ -99,6 +99,19 @@ export class ResearchRunOrchestrator {
     });
   }
 
+  /** Run one machine step and persist state. Single seam for handleFirstCall + handleSubsequentCall. */
+  private async runAndPersist(
+    machine: ResearchStateMachine,
+    snapshot: ResearchSnapshot,
+    plan: ResearchPlan,
+    parsedResponse: string | undefined,
+    extra: Record<string, unknown>,
+  ) {
+    const result = await machine.next(snapshot, plan, parsedResponse);
+    this.saveState?.(result.snapshot, extra);
+    return result;
+  }
+
   async handle(params: OrchestratorParams): Promise<OrchestratorResult> {
     if (params.planArtifactPath) {
       return this.handleFirstCall(params.planArtifactPath, params.entries);
@@ -138,10 +151,7 @@ export class ResearchRunOrchestrator {
     const runLogger = new JsonlLogger(snapshot.runId, join(logsDir, `${snapshot.runId}.log`));
     const machine = this.createMachine(artifactsDir, runLogger);
 
-    const result = await machine.next(snapshot, artifact.plan);
-
-    // Persist state
-    this.saveState?.(result.snapshot, {
+    const result = await this.runAndPersist(machine, snapshot, artifact.plan, undefined, {
       plan: artifact.plan,
       planArtifactPath,
       deepResearchBase,
@@ -188,9 +198,7 @@ export class ResearchRunOrchestrator {
 
     const machine = this.createMachine(artifactsDir);
 
-    const result = await machine.next(snapshot, plan, parsedResponse);
-
-    this.saveState?.(result.snapshot, {
+    const result = await this.runAndPersist(machine, snapshot, plan, parsedResponse, {
       plan,
       planArtifactPath,
       deepResearchBase,
