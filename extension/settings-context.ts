@@ -6,8 +6,8 @@ import type { ResearchProfile } from "./state-machine.js";
 
 /** Resolve credentials: settings.json base, process.env override. */
 export class SearchProviderCredentials {
-  /** Canonical env var for each (engine, key) pair. */
-  private static ENV_MAP: Record<string, Record<string, string>> = {
+  /** Canonical env var for each (engine, key) pair. Public for SettingsContext credential source tracking. */
+  static ENV_MAP: Record<string, Record<string, string>> = {
     brave: { apiKey: "BRAVE_API_KEY" },
     tavily: { apiKey: "TAVILY_API_KEY" },
     yandex: { oauthToken: "YANDEX_OAUTH_TOKEN", folderId: "YANDEX_FOLDER_ID" },
@@ -198,20 +198,17 @@ export class SettingsContext implements SettingsContextData {
     const globalSr = globalDr.settingsReport as Record<string, unknown> | undefined;
     const srBuiltin = BUILTIN.settingsReport;
 
-    let srOnSession: boolean; let srOnSessionSrc: SourceTag;
-    [srOnSession, srOnSessionSrc] = resolveBool(
+    const [srOnSession, srOnSessionSrc] = resolveBool(
       ENV.settingsOnSessionStart, localSr?.onSessionStart, globalSr?.onSessionStart,
       srBuiltin.onSessionStart, localPath, globalPath, homeDir,
     );
 
-    let srOnRun: boolean; let srOnRunSrc: SourceTag;
-    [srOnRun, srOnRunSrc] = resolveBool(
+    const [srOnRun, srOnRunSrc] = resolveBool(
       ENV.settingsOnRunStart, localSr?.onRunStart, globalSr?.onRunStart,
       srBuiltin.onRunStart, localPath, globalPath, homeDir,
     );
 
-    let srInReport: boolean; let srInReportSrc: SourceTag;
-    [srInReport, srInReportSrc] = resolveBool(
+    const [srInReport, srInReportSrc] = resolveBool(
       ENV.settingsInReport, localSr?.inReport, globalSr?.inReport,
       srBuiltin.inReport, localPath, globalPath, homeDir,
     );
@@ -238,7 +235,7 @@ export class SettingsContext implements SettingsContextData {
 
     // ─── Credential sources ────────────────────────────────
     this.credentialSources = {};
-    const credEnvMap = SearchProviderCredentials["ENV_MAP"] as Record<string, Record<string, string>>;
+    const credEnvMap = SearchProviderCredentials.ENV_MAP;
     for (const engine of Object.keys(credEnvMap)) {
       const engineCreds: Record<string, SourceTag> = {};
       for (const key of Object.keys(credEnvMap[engine])) {
@@ -303,7 +300,7 @@ export class SettingsContext implements SettingsContextData {
     ];
 
     // Credentials with masked values
-    const credEnvMap = SearchProviderCredentials["ENV_MAP"] as Record<string, Record<string, string>>;
+    const credEnvMap = SearchProviderCredentials.ENV_MAP;
     for (const engine of Object.keys(credEnvMap)) {
       for (const key of Object.keys(credEnvMap[engine])) {
         const src = this.credentialSources[engine]?.[key] ?? sourceDefault();
