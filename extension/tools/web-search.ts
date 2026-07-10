@@ -8,13 +8,8 @@ export function createWebSearchTool(searchCred: SearchProviderCredentials) {
   return {
     name: "deep_web_search",
     label: "Web Search",
-    description: `Search the web using multiple search engines with delays to emulate user behavior.
-Returns results with title, URL, and snippet.
-Use for finding sources during research or when you need up-to-date information.
-
-Engines: duckduckgo (default, no key), brave (needs BRAVE_API_KEY env), tavily (needs TAVILY_API_KEY env), yandex (needs YANDEX_OAUTH_TOKEN env), searxng (public instances).
-DuckDuckGo uses honest bot UA with exponential backoff on rate limits (based on ddg-search).
-Use "compare" mode to see results from each engine separately without deduplication.`,
+    description: `Search the web via DuckDuckGo, Brave, Tavily, Yandex, or SearXNG with exponential backoff retry.
+Use compare mode to cross-check results across engines.`,
     promptSnippet:
       "Search the web using DuckDuckGo, Brave, Tavily, Yandex, or SearXNG with honest bot User-Agent and exponential backoff retry.",
     promptGuidelines: [

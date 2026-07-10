@@ -36,4 +36,12 @@ describe("deep_web_search tool registration", () => {
     assert.ok(guidelines[0].includes("tavily"), "guidelines must mention tavily");
     assert.ok(guidelines[0].includes("yandex"), "guidelines must mention yandex");
   });
+
+  it("description is concise (under 250 chars, not 700)", () => {
+    const descMatch = indexCode.match(/description:\s*`([^`]+)`/);
+    assert.ok(descMatch, "description must exist");
+    const desc = descMatch[1];
+    assert.ok(desc.length <= 250, `description too long: ${desc.length} chars (max 250)`);
+    assert.ok(!desc.includes("DuckDuckGo uses honest bot UA"), "no engine-specific docs in description");
+  });
 });

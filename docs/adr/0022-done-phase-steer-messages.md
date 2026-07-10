@@ -1,7 +1,7 @@
 # ADR-0022: Remove Redundant Steer Messages from Done Phase
 
 **Date**: 2026-07-10
-**Status**: proposed
+**Status**: accepted ✓ (implemented 2026-07-10)
 
 ## Context
 
