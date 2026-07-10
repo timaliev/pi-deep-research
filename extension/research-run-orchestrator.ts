@@ -59,6 +59,7 @@ export type OrchestratorResult =
       reportPath?: string;
       pdfResult?: any;
       mindMapPrompt?: string;
+      contradictionAnalysis?: string;
     };
 
 const STATE_KEY = "deep-research:state";
@@ -256,12 +257,27 @@ export class ResearchRunOrchestrator {
       mindMapPrompt = buildMindMapPrompt(plan.topic, findingsSummary, undefined, undefined);
     }
 
+    // ADR-0017: contradiction analysis — append to report if contradictions found
+    const contradictions = snapshot.allFindings.filter(
+      (f) => f.text.includes("CONTRADICTION") || f.text.includes("contradiction") || f.text.includes("debatable"),
+    );
+    let contradictionAnalysis: string | undefined;
+    if (contradictions.length > 0) {
+      contradictionAnalysis = [
+        `## Contradictions & Debatable Facts`,
+        ``,
+        ...contradictions.map((f) => `- ${f.text.substring(0, 300)} [Source: ${f.sourceUrl}]`),
+        ``,
+      ].join("\n");
+    }
+
     return {
       kind: "done",
       ...base,
       reportPath,
       pdfResult,
       mindMapPrompt,
+      contradictionAnalysis,
     };
   }
 }

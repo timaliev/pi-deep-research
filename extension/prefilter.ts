@@ -35,6 +35,14 @@ export interface ResearchPlan {
   profile: ResearchPlanProfile;
   /** Report generation style: narrative (5-section) or subtopics (LLM discovers themes). */
   reportStyle?: "narrative" | "subtopics";
+  /** ADR-0017: metadata about each research question (source, confidence, importance). */
+  questionMetadata?: Record<string, {
+    source: "web" | "internal" | "both";
+    confidence: "low" | "medium" | "high";
+    importance: "critical" | "important" | "supplementary";
+    contradictionOf?: string;
+    debatableFact?: string;
+  }>;
   scope: {
     include: string;
     exclude: string;
