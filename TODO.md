@@ -120,14 +120,14 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 
 ### Diagnosis 2026-07-11 — session 019f4dfe issues
 
-- [x] PDF: settings section missing because `appendFileSync` runs after `convertToPdf`. Fix: pass `appendSettingsReport` to `assembleReport` so it's in .md before PDF conversion. (fixed — PostProcessContext + AssembleReportProcessor updated, dead code removed)
-- [x] PDF: repository URL truncated in pandoc. Fix: use markdown link format `[url](url)` instead of bare URL in telemetry. (fixed in report-assembly.ts)
-- [x] Too many session-settings logs — one per `session_start` event. Fix: write only first time per process, or once per timestamp-minute. (fixed — in-memory `lastLogMinute` dedup)
-- [x] `onSessionStart` settings injection triggers deep research skill activation. Fix: prefix with "ℹ️ Informational:". (fixed)
-- [ ] LLM introspection not triggered — agent never calls zero-param plan_research continue path. Fix: SKILL.md protocol should explicitly describe the introspection turn.
-- [x] Extended settings (Node.js version, platform, cwd) missing from settings report. Fix: add system info section to `buildSettingsTable`. (fixed — ### System section)
-- [x] SKILL.md hardcodes profile defaults (4/2/4 etc.) but settings.json can override. Fix: remove hardcoded numbers, reference resolved profiles. (fixed)
-- [x] TUI double confirmation: SKILL.md Phase 3 says "ask user" AND "call confirm_research (TUI dialog)". Fix: remove verbal confirmation, go directly to TUI. (fixed)
-- [x] README `enabledEngines` docs: empty array → falls through to defaults, not "all enabled". (fixed)
-- [x] Telemetry: repo URL should be markdown link `[url](url)`, not bare URL. (fixed in report-assembly.ts)
-- [x] `assembleReport` should accept `appendSettingsReport` + `settings` params instead of side-effect `appendFileSync` in orchestrator. (fixed)
+- DONE: PDF: settings section missing because `appendFileSync` runs after `convertToPdf`. Fix: pass `appendSettingsReport` to `assembleReport` so it's in .md before PDF conversion.
+- DONE: PDF: repository URL truncated in pandoc. Fix: use markdown link format `[url](url)` instead of bare URL in telemetry.
+- DONE: Too many session-settings logs — one per `session_start` event. Fix: write only first time per process, or once per timestamp-minute.
+- DONE: `onSessionStart` settings injection triggers deep research skill activation. Fix: prefix with "ℹ️ Informational:".
+- TODO: LLM introspection not triggered — agent never calls zero-param plan_research continue path. Fix: SKILL.md protocol should explicitly describe the introspection turn.
+- DONE: Extended settings (Node.js version, platform, cwd) missing from settings report. Fix: add system info section to `buildSettingsTable`.
+- DONE: SKILL.md hardcodes profile defaults (4/2/4 etc.) but settings.json can override. Fix: remove hardcoded numbers, reference resolved profiles.
+- DONE: TUI double confirmation: SKILL.md Phase 3 says "ask user" AND "call confirm_research (TUI dialog)". Fix: remove verbal confirmation, go directly to TUI.
+- DONE: README `enabledEngines` docs: empty array → falls through to defaults, not "all enabled".
+- DONE: Telemetry: repo URL should be markdown link `[url](url)`, not bare URL.
+- DONE: `assembleReport` should accept `appendSettingsReport` + `settings` params instead of side-effect `appendFileSync` in orchestrator.
