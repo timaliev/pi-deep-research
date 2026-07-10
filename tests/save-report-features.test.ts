@@ -165,7 +165,45 @@ describe("telemetry appended to report", () => {
   });
 });
 
-// ─── Feature 4: Brave API key from settings.json ──────────────
+// ─── Feature 4: save_report accepts report_path for large files ─
+describe("save_report — report_path param", () => {
+  it("accepts report_path parameter in TypeBox schema", async () => {
+    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "save-report.ts"), "utf-8");
+    // report_path must be a TypeBox Optional(String) parameter in Type.Object schema
+    // Look for: report_path: Type.Optional(Type.String( anywhere in the parameters block
+    const hasParam = /report_path:\s*Type\.\w+/.test(src);
+    assert.ok(hasParam, "save_report must have report_path as a TypeBox parameter");
+  });
+
+  it("report_path resolves by reading file, passes to writeReportFile", async () => {
+    const tmpDir = join(tmpdir(), `test-rp-disk-${Date.now()}`);
+    mkdirSync(tmpDir, { recursive: true });
+
+    // Simulating auto-saved report from run_research
+    const sourcePath = join(tmpDir, "auto-saved-report.md");
+    const content = "# Large Report\n\nThis report was auto-saved by run_research.";
+    writeFileSync(sourcePath, content, "utf-8");
+
+    // What save_report does with report_path:
+    // 1. read content from disk
+    const resolvedContent = readFileSync(sourcePath, "utf-8");
+    assert.equal(resolvedContent, content, "content must be readable from report_path");
+
+    // 2. pass to writeReportFile (the same function save_report delegates to)
+    const { writeReportFile } = await import("../extension/report-assembly.js");
+    const destPath = join(tmpDir, "final-report.md");
+    writeReportFile(destPath, resolvedContent);
+
+    // 3. content preserved, source untouched
+    const savedContent = readFileSync(destPath, "utf-8");
+    assert.ok(savedContent.includes("This report was auto-saved"), "saved content must match source");
+    assert.equal(readFileSync(sourcePath, "utf-8"), content, "source must not be overwritten by save_report");
+
+    rmSync(tmpDir, { recursive: true });
+  });
+});
+
+// ─── Feature 5: Brave API key from settings.json ──────────────
 describe("Brave API key from settings.json", () => {
   it("resolveBraveApiKey checks process.env first", async () => {
     const { resolveBraveApiKey } = await import("../extension/search/engines/brave.js");

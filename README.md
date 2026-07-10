@@ -1,3 +1,12 @@
+<p align="center">
+  <a href="https://github.com/timaliev/pi-deep-research/actions/workflows/test.yml">
+     <img src="https://github.com/timaliev/pi-deep-research/actions/workflows/test.yml/badge.svg" alt="Test & Lint"/>
+   </a>
+  <a href="https://github.com/timaliev/pi-deep-research/actions/workflows/release.yml">
+     <img src="https://github.com/timaliev/pi-deep-research/actions/workflows/release.yml/badge.svg" alt="Release"/>
+   </a>
+</p>
+
 # Deep Research for Pi
 
 A Pi extension and skill that provides autonomous deep web research — planning research questions, searching the web, scraping sources, extracting findings, and synthesizing a structured markdown report — all using the user's current Pi LLM model.
@@ -17,7 +26,7 @@ This clones the repo, installs dependencies, and links the extension via the `pi
 To pin a specific version:
 
 ```bash
-pi install git:github.com/timaliev/pi-deep-research@v0.18.0
+pi install git:github.com/timaliev/pi-deep-research@v0.24.0
 ```
 
 ### Manual
@@ -33,7 +42,7 @@ Pi discovers the extension and skill via `package.json`'s `pi.extensions` and `p
 
 ```bash
 pi update --extensions  # update all extension packages
-pi install git:github.com/timaliev/pi-deep-research@v0.18.0  # pin new version
+pi install git:github.com/timaliev/pi-deep-research@v0.24.0  # pin new version
 ```
 
 ### Uninstall
