@@ -131,3 +131,10 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 - DONE: README `enabledEngines` docs: empty array → falls through to defaults, not "all enabled".
 - DONE: Telemetry: repo URL should be markdown link `[url](url)`, not bare URL.
 - DONE: `assembleReport` should accept `appendSettingsReport` + `settings` params instead of side-effect `appendFileSync` in orchestrator.
+
+### Diagnosis 2026-07-11 — session 019f4dfe (AMD AI Max report) issues
+
+- DONE: Settings section before Telemetry — fixed: `writeReportFile` now accepts appendix, appended after telemetry.
+- TODO: Env vars (`DEEP_RESEARCH_ENABLED_ENGINES`, `DEEP_RESEARCH_MIND_MAP`) not effective at session start when using `pi --session <id>`. Env vars set at launch shell not inherited by extension subprocess. SettingsContext.init/reinit reads `process.env` which is clean in child process. Fix: Pi-level — ensure extension inherits parent env, or deep-research reads env from parent process IPC.
+- TODO: Agent drafting text "Now saving." appears as raw text before `## Settings` section. `ResearchDraft.get()` returns un-stripped LLM response. Fix: strip trailing non-report commentary patterns (`/Now saving\.?/`, `/[Ss]aving report\./`) in `assembleReport` or `ResearchDraft.set()`.
+- TODO: Artifacts section uses relative paths (`../artifacts/...`, `../logs/...`) with no hint what they're relative to. Reader doesn't know it's relative to the reports directory. Fix: add note `*(paths relative to this report's directory)*` before artifact links.
