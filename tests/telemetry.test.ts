@@ -146,4 +146,40 @@ describe("Telemetry", () => {
 
     rmSync(tmpDir, { recursive: true, force: true });
   });
+
+  it("settings section appears after telemetry", () => {
+    const { join } = require("node:path");
+    const { mkdirSync, rmSync, readFileSync } = require("node:fs");
+    const { tmpdir } = require("node:os");
+    const { SettingsContext } = require("../extension/settings-context.js");
+
+    const tmpDir = join(tmpdir(), `settings-order-test-${Date.now()}`);
+    const reportsDir = join(tmpDir, "reports");
+    mkdirSync(reportsDir, { recursive: true });
+
+    const settings = SettingsContext.init({ cwd: tmpDir, homeAgentDir: join(tmpDir, ".pi", "agent") });
+    const { assembleReport } = require("../extension/report-assembly.js");
+
+    const snapshot = ResearchStateMachine.init(MOCK_PLAN, new ProfileResolver({}, "default"));
+    snapshot.runId = "order-test";
+    snapshot.draft = { get: () => "# Test\n\nReport body." };
+
+    const result = assembleReport({
+      snapshot,
+      topic: "Order Test",
+      reportsDir,
+      planArtifactPath: "artifacts/test.json",
+      logsDir: join(tmpDir, "logs"),
+      appendSettingsReport: true,
+      settings,
+    });
+
+    const content = readFileSync(result, "utf-8");
+    const telemetryIdx = content.indexOf("## Research Telemetry");
+    const settingsIdx = content.indexOf("## Settings");
+    assert.ok(telemetryIdx > 0, "must have telemetry section");
+    assert.ok(settingsIdx > telemetryIdx, `Settings (${settingsIdx}) must come after Telemetry (${telemetryIdx})`);
+
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
 });
