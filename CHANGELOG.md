@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.25.2](https://github.com/timaliev/pi-deep-research/compare/v0.25.1..v0.25.2) - 2026-07-11
+
+### Bug Fixes
+
+- **(report)** place settings section after telemetry, not before - ([39e9fc9](https://github.com/timaliev/pi-deep-research/commit/39e9fc942adc3f3d2b892beae1306cb63bff6153)) - Tim Aliev
+
 ## [0.25.1](https://github.com/timaliev/pi-deep-research/compare/v0.25.0..v0.25.1) - 2026-07-10
 
 ### Bug Fixes
