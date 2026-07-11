@@ -14,10 +14,16 @@ export function resolveReportPath(topic: string, reportsDir: string, runId?: str
   return join(reportsDir, filename);
 }
 
-/** Write report markdown to file. Appends telemetry section if not already present. */
-export function writeReportFile(path: string, content: string, telemetry?: string): void {
+/** Write report markdown to file. Appends telemetry section and optional appendix after content. */
+export function writeReportFile(path: string, content: string, telemetry?: string, appendix?: string): void {
   mkdirSync(dirname(path), { recursive: true });
-  const final = telemetry && !content.includes("## Research Telemetry") ? `${content}\n\n${telemetry}\n` : content;
+  let final = content;
+  if (telemetry && !content.includes("## Research Telemetry")) {
+    final += `\n\n${telemetry}\n`;
+  }
+  if (appendix) {
+    final += `\n${appendix}\n`;
+  }
   writeFileSync(path, final, "utf-8");
 }
 
@@ -44,11 +50,12 @@ export function assembleReport(params: ReportAssemblyParams): string {
 
   const reportPath = resolveReportPath(topic, reportsDir);
 
-  let reportText = snapshot.draft.get();
+  const reportText = snapshot.draft.get();
 
-  // ADR-0023: append settings section if requested (must happen before PDF export)
+  // ADR-0023: build settings appendix (appended AFTER telemetry)
+  let settingsAppendix: string | undefined;
   if (params.appendSettingsReport && params.settings) {
-    reportText = appendSettingsSection(reportText, params.settings);
+    settingsAppendix = appendSettingsSection("", params.settings);
   }
 
   const meta = extensionVersion ? { version: extensionVersion } : readExtensionMeta();
@@ -58,7 +65,7 @@ export function assembleReport(params: ReportAssemblyParams): string {
   ];
   const telemetry = buildTelemetrySection(snapshot, meta.version, artifactLinks, profileName, undefined, meta.repoUrl);
 
-  writeReportFile(reportPath, reportText, telemetry);
+  writeReportFile(reportPath, reportText, telemetry, settingsAppendix);
 
   return reportPath;
 }
