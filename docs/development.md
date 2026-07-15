@@ -1,5 +1,9 @@
 # Development
 
+## Workflow
+
+**Test-driven development is required.** Red-green-refactor in vertical slices: write one failing test → make it pass → refactor → repeat. Never write all tests first, then all code. Tests verify behavior through public interfaces, not implementation internals.
+
 ## Pre-commit checklist
 
 Before committing any change, run the full quality gate:
