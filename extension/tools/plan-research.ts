@@ -6,6 +6,7 @@ import type { ProfileResolver } from "../profile-resolver.js";
 import type { Scraper } from "../scraper.js";
 import type { SearchEngine, searchWeb as SearchWebFn } from "../search/web-search.js";
 import { searchWeb } from "../search/web-search.js";
+import type { SessionState } from "../session-state.js";
 import type { SearchProviderCredentials, SettingsContext } from "../settings-context.js";
 
 export function createPlanResearchTool(
@@ -13,6 +14,7 @@ export function createPlanResearchTool(
   settings: SettingsContext,
   profileResolver: ProfileResolver,
   searchCred: SearchProviderCredentials,
+  sessionState: SessionState,
   scraper: Scraper,
   searchFn: typeof SearchWebFn = searchWeb,
 ) {
@@ -92,7 +94,7 @@ export function createPlanResearchTool(
     };
   }
 
-  async function handleFinalize(topic: string | undefined, planJson: string, manager: PrefilterManager) {
+  async function handleFinalize(topic: string | undefined, planJson: string, manager: PrefilterManager, ctx: any) {
     let resolvedTopic = topic as string;
     if (!resolvedTopic) {
       try {
@@ -103,21 +105,70 @@ export function createPlanResearchTool(
     }
     const result = await manager.finalize(resolvedTopic, planJson);
     session.remove(result.runId);
+
+    if (result.phase !== "plan_ready" || !result.plan || !result.planArtifactPath) {
+      return {
+        content: [{ type: "text", text: `## Plan Error ❌\n\n${result.error}` }],
+        details: { phase: result.phase, error: result.error },
+      };
+    }
+
+    const plan = result.plan;
+    const planPath = result.planArtifactPath;
+
+    // Build plan summary for display
+    const style = plan.reportStyle ?? settings.reportStyle ?? "narrative";
+    const prof = plan.profile;
+    const resolvedProf = profileResolver.resolve(prof);
+    const profileDesc =
+      prof.name === "custom"
+        ? `custom (breadth=${prof.breadth}, depth=${prof.depth}, concurrency=${prof.concurrency})`
+        : `${prof.name} (breadth=${resolvedProf.breadth}, depth=${resolvedProf.depth}, concurrency=${resolvedProf.concurrency})`;
+    const cost = plan.estimatedCost;
+    const costDesc = cost?.description ?? `${cost?.searchCalls ?? "?"} searches, ${cost?.scrapeCalls ?? "?"} scrapes`;
+
+    // Inline confirmation — skip LLM, ask user directly
+    let confirmed = false;
+    if (ctx.hasUI) {
+      const choice = await ctx.ui.select(
+        [
+          `🔬 Research Plan Confirmation`,
+          ``,
+          `Topic:      ${plan.topic}`,
+          `Engines:    ${plan.engines.join(", ")}`,
+          `Profile:    ${profileDesc}`,
+          `Style:      ${style}`,
+          `Questions:  ${plan.researchQuestions.length}`,
+          `Cost:       ${costDesc}`,
+          ``,
+          `Start deep research?`,
+        ].join("\n"),
+        ["No — Review plan", "Yes — Start research"],
+      );
+      if (choice?.startsWith("Yes")) {
+        sessionState.saveConfirmation(planPath);
+        confirmed = true;
+      }
+    }
+
+    const confirmationNote = confirmed
+      ? `\n\n▶ Research confirmed. Call run_research to begin.`
+      : ctx.hasUI
+        ? `\n\n⏸ Research not confirmed. Call confirm_research when ready.`
+        : `\n\nNext: show user and ask for confirmation before calling run_research.`;
+
     return {
       content: [
         {
           type: "text",
-          text:
-            result.phase === "plan_ready"
-              ? `## Research Plan Ready ✅\n\nPlan saved to: ${result.planArtifactPath}\n\n**Topic:** ${result.plan?.topic}\n**Engines:** ${result.plan?.engines.join(", ")}\n**Profile:** ${result.plan?.profile.name}\n**Questions:** ${result.plan?.researchQuestions.length}\n\nNext: show user and ask for confirmation before calling run_research.`
-              : `## Plan Error ❌\n\n${result.error}`,
+          text: `## Research Plan Ready ✅\n\nPlan saved to: ${planPath}\n\n**Topic:** ${plan.topic}\n**Engines:** ${plan.engines.join(", ")}\n**Profile:** ${plan.profile.name}\n**Questions:** ${plan.researchQuestions.length}${confirmationNote}`,
         },
       ],
       details: {
         phase: result.phase,
-        plan_artifact_path: result.planArtifactPath,
+        plan_artifact_path: planPath,
         plan: result.plan,
-        error: result.error,
+        confirmed,
       },
     };
   }
@@ -152,7 +203,7 @@ export function createPlanResearchTool(
         return handleContinue(entries, manager);
       }
       if (params.plan_json) {
-        return handleFinalize(params.topic, params.plan_json, manager);
+        return handleFinalize(params.topic, params.plan_json, manager, ctx);
       }
       return { content: [{ type: "text", text: "Error: unexpected state." }], details: { error: "unexpected_state" } };
     },

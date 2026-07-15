@@ -36,7 +36,7 @@ export function registerAllTools(pi: ExtensionAPI, deps: ToolDeps): void {
   pi.registerTool(createExportPdfTool(sendUserMessage, deps.settings));
   pi.registerTool(createMindMapTool(sendUserMessage, deps.settings));
   pi.registerTool(
-    createPlanResearchTool(pi, deps.settings, deps.profileResolver, deps.credentials, deps.scraper, deps.searchFn),
+    createPlanResearchTool(pi, deps.settings, deps.profileResolver, deps.credentials, deps.session, deps.scraper, deps.searchFn),
   );
   pi.registerTool(createEstimateCostTool(deps.profileResolver));
   pi.registerTool(createConfirmPlanTool(deps.session));
