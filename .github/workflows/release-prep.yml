@@ -4,6 +4,10 @@ on:
   push:
     branches: [release]
 
+# Don't forget also permissions on repository level:
+# - Go to https://github.com/YOUR_ORG/YOUR_REPO/settings/actions
+# - Check "Allow GitHub Actions to create and approve pull requests" (will be grayed out until org-level is enabled)
+
 permissions:
   contents: write
   pull-requests: write
