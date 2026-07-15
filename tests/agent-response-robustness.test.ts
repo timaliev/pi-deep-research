@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { ResearchPlan } from "../extension/prefilter.js";
 import { ProfileResolver } from "../extension/profile-resolver.js";
-import { extractTextContent } from "../extension/research-run-orchestrator.js";
+import { extractTextContent } from "../extension/state-machine.js";
 import type { Scraper } from "../extension/scraper.js";
 import type { WebSearchResult } from "../extension/search/web-search.js";
 import { ResearchStateMachine } from "../extension/state-machine.js";

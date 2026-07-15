@@ -1,7 +1,7 @@
 # ADR-0025: State machine resume — move draft restoration inside the machine
 
 **Date:** 2026-07-15
-**Status:** proposed
+**Status:** accepted
 
 ## Context
 

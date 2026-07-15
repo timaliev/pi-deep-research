@@ -6,7 +6,6 @@ import { buildMindMapPrompt } from "./mind-map-injector.js";
 import type { PrefilterArtifact, ResearchPlan } from "./prefilter.js";
 import type { ProfileResolver } from "./profile-resolver.js";
 import { assembleReport } from "./report-assembly.js";
-import { ResearchDraft } from "./research-draft.js";
 import { STATE_KEY } from "./session-state.js";
 import type { Scraper } from "./scraper.js";
 import type { searchWeb as SearchWebFn } from "./search/web-search.js";
@@ -201,9 +200,7 @@ export class ResearchRunOrchestrator {
 
   private async handleSubsequentCall(entries: OrchestratorParams["entries"]): Promise<OrchestratorResult> {
     const lastAssistant = [...entries].reverse().find((e) => e.message?.role === "assistant");
-    const rawResponse = lastAssistant?.message?.content as string | undefined;
-    // Parse once — used for both draft recovery and state machine phases
-    const parsedResponse = extractTextContent(rawResponse) || undefined;
+    const rawResponse = lastAssistant?.message?.content;
 
     const lastStateEntry = [...entries].reverse().find((e) => e.customType === STATE_KEY);
     if (!lastStateEntry) {
@@ -211,30 +208,23 @@ export class ResearchRunOrchestrator {
     }
 
     const stateData = lastStateEntry.data as Record<string, unknown>;
-    const snapshot = stateData as unknown as ResearchSnapshot;
     const plan = stateData.plan as ResearchPlan;
     const planArtifactPath = stateData.planArtifactPath as string;
-
-    // Restore draft from encoded blob — works for any phase
-    const draftEncoded = stateData.draftEncoded as string | undefined;
-    snapshot.draft = draftEncoded ? ResearchDraft.decode(draftEncoded) : new ResearchDraft();
 
     let deepResearchBase = (stateData.deepResearchBase as string) || join(dirname(planArtifactPath), "..");
     if (!deepResearchBase.startsWith("/")) deepResearchBase = join(process.cwd(), deepResearchBase);
     const logsDir = join(deepResearchBase, "logs");
     const artifactsDir = join(deepResearchBase, "artifacts");
 
-    if (!plan || !snapshot) {
+    if (!plan) {
       return { kind: "error", error: "corrupted_state", details: {} };
     }
 
     const machine = this.createMachine(artifactsDir);
 
-    const result = await this.runAndPersist(machine, snapshot, plan, parsedResponse, {
-      plan,
-      planArtifactPath,
-      deepResearchBase,
-    });
+    // Machine owns draft restoration + agent response parsing via resume()
+    const result = await machine.resume(stateData, rawResponse, plan);
+    this.saveState?.(result.snapshot, { plan, planArtifactPath, deepResearchBase });
 
     if (result.phase === "done") {
       return this.buildDoneResult(result.snapshot, plan, planArtifactPath, deepResearchBase, logsDir);
@@ -364,20 +354,4 @@ class ContradictionProcessor implements PostProcessor {
       ].join("\n"),
     };
   }
-}
-
-/** Extract plain text from agent response (handles string and content blocks array).
- *  Strips <tool_calls>...</tool_calls> XML blocks from string input. */
-export function extractTextContent(agentResponse?: unknown): string {
-  if (!agentResponse) return "";
-  if (typeof agentResponse === "string") {
-    return agentResponse.replace(/<tool_calls>[\s\S]*?<\/tool_calls>/g, "").trim();
-  }
-  if (Array.isArray(agentResponse)) {
-    return (agentResponse as any[])
-      .filter((b: any) => b.type === "text" && b.text)
-      .map((b: any) => b.text)
-      .join("\n");
-  }
-  return "";
 }

@@ -303,12 +303,45 @@ export class ResearchStateMachine {
     this.logger?.event("phase_changed", { from: "saving", to: "done", draftLength: snapshot.draft.get().length });
     return { phase: "done", snapshot: { ...snapshot, phase: "done" } };
   }
+
+  /**
+   * Restore machine state from a session blob and advance to the next phase.
+   * Owns draft decoding and agent response parsing — the orchestrator no longer
+   * needs to know about ResearchDraft.decode() or extractTextContent().
+   */
+  async resume(
+    stateBlob: Record<string, unknown>,
+    rawAgentResponse: unknown,
+    plan: ResearchPlan,
+  ): Promise<ResearchStateResult> {
+    const parsedResponse = extractTextContent(rawAgentResponse) || undefined;
+    const draftEncoded = stateBlob.draftEncoded as string | undefined;
+    const snapshot = stateBlob as unknown as ResearchSnapshot;
+    snapshot.draft = draftEncoded ? ResearchDraft.decode(draftEncoded) : new ResearchDraft();
+    return this.next(snapshot, plan, parsedResponse);
+  }
 }
 
 /** Pure function: decide next phase after extraction. Returns "questioning" or "drafting". */
 export function phaseRouter(snapshot: ResearchSnapshot): "questioning" | "drafting" {
   const shouldDeepen = !snapshot.softLimitTriggered && snapshot.currentDepth < snapshot.totalDepth;
   return shouldDeepen ? "questioning" : "drafting";
+}
+
+/** Extract plain text from agent response (handles string and content blocks array).
+ *  Strips <tool_calls>...</tool_calls> XML blocks from string input. */
+export function extractTextContent(agentResponse?: unknown): string {
+  if (!agentResponse) return "";
+  if (typeof agentResponse === "string") {
+    return agentResponse.replace(/<tool_calls>[\s\S]*?<\/tool_calls>/g, "").trim();
+  }
+  if (Array.isArray(agentResponse)) {
+    return (agentResponse as any[])
+      .filter((b: any) => b.type === "text" && b.text)
+      .map((b: any) => b.text)
+      .join("\n");
+  }
+  return "";
 }
 
 const stateMachineDir = dirname(fileURLToPath(import.meta.url));
