@@ -471,6 +471,7 @@ cd extension && node --import tsx --test ../tests/*.test.ts
 ## Related Documents
 
 - [CONTEXT.md](CONTEXT.md) — domain glossary
+- [Architecture Review (July 2026)](docs/architecture-review-2026-07.md) — deepening opportunities
 
 ### Architecture Decisions (ADRs)
 
@@ -498,3 +499,5 @@ cd extension && node --import tsx --test ../tests/*.test.ts
 | [0020](docs/adr/0020-settings-reinit-session-start.md) | proposed | SettingsContext re-init on session_start |
 | [0021](docs/adr/0021-save-report-report-path.md) | accepted | save_report report_path for large reports |
 | [0022](docs/adr/0022-done-phase-steer-messages.md) | accepted | Remove redundant steer from done phase |
+| [0024](docs/adr/0024-prefilter-context-bundle.md) | proposed | PrefilterContext — bundled constructor for PrefilterManager |
+| [0025](docs/adr/0025-state-machine-resume.md) | proposed | State machine resume — move draft restoration inside the machine |
