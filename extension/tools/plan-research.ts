@@ -7,6 +7,7 @@ import type { ProfileResolver } from "../profile-resolver.js";
 import type { Scraper } from "../scraper.js";
 import type { SearchEngine, searchWeb as SearchWebFn } from "../search/web-search.js";
 import { searchWeb } from "../search/web-search.js";
+import { PREFILTER_RUN_KEY } from "../session-state.js";
 import type { SessionState } from "../session-state.js";
 import type { SearchProviderCredentials, SettingsContext } from "../settings-context.js";
 
@@ -161,7 +162,7 @@ export function createPlanResearchTool(
       mkdirSync(settings.artifactsDir, { recursive: true });
       const entries = ctx.sessionManager.getEntries();
       const manager = session.getOrCreate(params.topic ?? "", entries, (runId) =>
-        pi.appendEntry("deep-research:prefilter-run", { runId, topic: params.topic }),
+        pi.appendEntry(PREFILTER_RUN_KEY, { runId, topic: params.topic }),
       );
 
       // Router — 4 branches, one per protocol step

@@ -7,6 +7,7 @@ import type { PrefilterArtifact, ResearchPlan } from "./prefilter.js";
 import type { ProfileResolver } from "./profile-resolver.js";
 import { assembleReport } from "./report-assembly.js";
 import { ResearchDraft } from "./research-draft.js";
+import { STATE_KEY } from "./session-state.js";
 import type { Scraper } from "./scraper.js";
 import type { searchWeb as SearchWebFn } from "./search/web-search.js";
 import type { SearchProviderCredentials, SettingsContext } from "./settings-context.js";
@@ -86,8 +87,6 @@ export interface PostProcessor {
   enabled(settings?: SettingsContext): boolean;
   process(ctx: PostProcessContext): Promise<PostProcessResult>;
 }
-
-const STATE_KEY = "deep-research:state";
 
 export class ResearchRunOrchestrator {
   private readonly searchFn: typeof SearchWebFn;

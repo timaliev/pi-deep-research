@@ -17,6 +17,7 @@ import { WebScraper } from "./scraper.js";
 import type { SearchEngine, searchWeb as SearchWebFn, WebSearchResult } from "./search/web-search.js";
 import { searchWeb } from "./search/web-search.js";
 import type { SearchProviderCredentials } from "./settings-context.js";
+import { PREFILTER_RUN_KEY } from "./session-state.js";
 
 export interface ResearchPlanProfile {
   name: "default" | "fast" | "deep" | "custom";
@@ -386,9 +387,7 @@ export class PrefilterSession {
     sessionEntries: Array<{ customType?: string; data?: unknown }>,
     persist: (runId: string) => void,
   ): PrefilterManager {
-    const prefilterEntry = [...sessionEntries]
-      .reverse()
-      .find((e: any) => e.customType === "deep-research:prefilter-run");
+    const prefilterEntry = [...sessionEntries].reverse().find((e: any) => e.customType === PREFILTER_RUN_KEY);
     const existingRunId = prefilterEntry?.data?.runId as string | undefined;
 
     if (existingRunId && this.managers.has(existingRunId)) {
