@@ -84,6 +84,18 @@ export interface PrefilterResult {
   error?: string;
 }
 
+/** Bundled dependencies for PrefilterManager and PrefilterSession (ADR-0024). */
+export interface PrefilterContext {
+  searchFn: typeof SearchWebFn;
+  scraper: Scraper;
+  artifactsDir: string;
+  logger?: Logger;
+  profileResolver?: ProfileResolver;
+  searchCred?: SearchProviderCredentials;
+  defaultReportStyle?: "narrative" | "subtopics";
+  enabledEngines?: string[];
+}
+
 /**
  * Manages the research prefilter workflow:
  * 1. Preliminary search + scrape
@@ -95,7 +107,7 @@ export class PrefilterManager {
   private readonly scraper: Scraper;
   private readonly artifactsDir: string;
   private readonly logger?: Logger;
-  private readonly profileResolver?: ProfileResolver;
+  private readonly profileResolver: ProfileResolver;
   private readonly searchCred?: SearchProviderCredentials;
   private readonly sharedRunId?: string;
   private readonly defaultReportStyle: "narrative" | "subtopics";
@@ -106,26 +118,16 @@ export class PrefilterManager {
   private introspectionDone = false;
   private llmTopics?: string;
 
-  constructor(
-    searchFn: typeof SearchWebFn,
-    scraper: Scraper,
-    artifactsDir: string,
-    logger?: Logger,
-    profileResolver?: ProfileResolver,
-    searchCred?: SearchProviderCredentials,
-    sharedRunId?: string,
-    defaultReportStyle?: "narrative" | "subtopics",
-    enabledEngines?: string[],
-  ) {
-    this.searchFn = searchFn;
-    this.scraper = scraper;
-    this.artifactsDir = artifactsDir;
-    this.logger = logger;
-    this.profileResolver = profileResolver ?? new ProfileResolver({}, "default");
-    this.searchCred = searchCred;
+  constructor(ctx: PrefilterContext, sharedRunId?: string) {
+    this.searchFn = ctx.searchFn;
+    this.scraper = ctx.scraper;
+    this.artifactsDir = ctx.artifactsDir;
+    this.logger = ctx.logger;
+    this.profileResolver = ctx.profileResolver ?? new ProfileResolver({}, "default");
+    this.searchCred = ctx.searchCred;
     this.sharedRunId = sharedRunId;
-    this.defaultReportStyle = defaultReportStyle ?? "narrative";
-    this.enabledEngines = enabledEngines;
+    this.defaultReportStyle = ctx.defaultReportStyle ?? "narrative";
+    this.enabledEngines = ctx.enabledEngines;
   }
 
   private runId(): string {
@@ -371,15 +373,7 @@ export class PrefilterManager {
 export class PrefilterSession {
   private managers = new Map<string, PrefilterManager>();
 
-  constructor(
-    private readonly artifactsDir: string,
-    private readonly profileResolver: ProfileResolver,
-    private readonly searchCred?: SearchProviderCredentials,
-    private readonly searchFn: typeof SearchWebFn = searchWeb,
-    private readonly scraper: Scraper = new WebScraper(),
-    private readonly defaultReportStyle?: "narrative" | "subtopics",
-    private readonly enabledEngines?: string[],
-  ) {}
+  constructor(private readonly ctx: PrefilterContext) {}
 
   /** Get existing manager or create a new one. Session entry lookup handled internally. */
   getOrCreate(
@@ -397,19 +391,9 @@ export class PrefilterSession {
     // New prefilter session — clear stale managers
     this.managers.clear();
     const runId = generateRunId();
-    const logsDir = join(this.artifactsDir, "..", "logs");
+    const logsDir = join(this.ctx.artifactsDir, "..", "logs");
     const logger = new JsonlLogger(runId, join(logsDir, `${runId}-prefilter.log`));
-    const manager = new PrefilterManager(
-      this.searchFn,
-      this.scraper,
-      this.artifactsDir,
-      logger,
-      this.profileResolver,
-      this.searchCred,
-      runId,
-      this.defaultReportStyle,
-      this.enabledEngines,
-    );
+    const manager = new PrefilterManager({ ...this.ctx, logger }, runId);
     this.managers.set(runId, manager);
     persist(runId);
     return manager;

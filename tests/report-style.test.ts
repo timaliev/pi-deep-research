@@ -59,7 +59,11 @@ describe("reportStyle in ResearchPlan validation", () => {
   });
 
   it("rejects invalid reportStyle value", async () => {
-    const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(MOCK_RESULTS),
+      scraper: mockScraper(mockScrapedPages()),
+      artifactsDir: TEST_ARTIFACTS,
+    });
 
     const planJson = JSON.stringify({
       ...validPlan(),
@@ -72,7 +76,11 @@ describe("reportStyle in ResearchPlan validation", () => {
   });
 
   it("accepts reportStyle: 'narrative'", async () => {
-    const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(MOCK_RESULTS),
+      scraper: mockScraper(mockScrapedPages()),
+      artifactsDir: TEST_ARTIFACTS,
+    });
 
     const planJson = JSON.stringify({
       ...validPlan(),
@@ -84,7 +92,11 @@ describe("reportStyle in ResearchPlan validation", () => {
   });
 
   it("accepts reportStyle: 'subtopics'", async () => {
-    const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(MOCK_RESULTS),
+      scraper: mockScraper(mockScrapedPages()),
+      artifactsDir: TEST_ARTIFACTS,
+    });
 
     const planJson = JSON.stringify({
       ...validPlan(),
@@ -96,7 +108,11 @@ describe("reportStyle in ResearchPlan validation", () => {
   });
 
   it("accepts plan without reportStyle (backward compat)", async () => {
-    const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(MOCK_RESULTS),
+      scraper: mockScraper(mockScrapedPages()),
+      artifactsDir: TEST_ARTIFACTS,
+    });
 
     const planJson = JSON.stringify(validPlan()); // no reportStyle
 
@@ -224,7 +240,11 @@ describe("prefilter prompts mention reportStyle", () => {
   });
 
   it("buildParamsPrompt mentions reportStyle choice", async () => {
-    const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(MOCK_RESULTS),
+      scraper: mockScraper(mockScrapedPages()),
+      artifactsDir: TEST_ARTIFACTS,
+    });
     const result = await manager.start("test");
 
     assert.ok(
@@ -237,7 +257,11 @@ describe("prefilter prompts mention reportStyle", () => {
   });
 
   it("buildPlanPrompt includes reportStyle in JSON template", async () => {
-    const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(MOCK_RESULTS),
+      scraper: mockScraper(mockScrapedPages()),
+      artifactsDir: TEST_ARTIFACTS,
+    });
     const result = await manager.withParams("test", ["duckduckgo"], { name: "fast" });
 
     assert.ok(
@@ -248,13 +272,12 @@ describe("prefilter prompts mention reportStyle", () => {
 
   it("buildParamsPrompt shows (default) next to configured report style", async () => {
     const resolver = new (await import("../extension/profile-resolver.js")).ProfileResolver({});
-    const manager = new PrefilterManager(
-      mockSearchFn(MOCK_RESULTS),
-      mockScraper(mockScrapedPages()),
-      TEST_ARTIFACTS,
-      undefined,
-      resolver,
-    );
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(MOCK_RESULTS),
+      scraper: mockScraper(mockScrapedPages()),
+      artifactsDir: TEST_ARTIFACTS,
+      profileResolver: resolver,
+    });
     const result = await manager.start("test");
 
     // Prompt must have "narrative (default)" to mark the default report style

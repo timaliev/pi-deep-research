@@ -33,7 +33,12 @@ describe("checkApiKeys with SearchProviderCredentials", () => {
       brave: { apiKey: "bsa-key" },
     });
 
-    const manager = new PrefilterManager(mockSearchFn(), mockScraper(), TEST_DIR, undefined, undefined, cred);
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(),
+      scraper: mockScraper(),
+      artifactsDir: TEST_DIR,
+      searchCred: cred,
+    });
     const result = await manager.withParams("test", ["brave"], { name: "default" });
 
     assert.notEqual(result.phase, "awaiting_params", "must NOT loop back — credentials found in settings");
@@ -45,7 +50,12 @@ describe("checkApiKeys with SearchProviderCredentials", () => {
     try {
       const cred = new SearchProviderCredentials({});
 
-      const manager = new PrefilterManager(mockSearchFn(), mockScraper(), TEST_DIR, undefined, undefined, cred);
+      const manager = new PrefilterManager({
+        searchFn: mockSearchFn(),
+        scraper: mockScraper(),
+        artifactsDir: TEST_DIR,
+        searchCred: cred,
+      });
       const result = await manager.withParams("test", ["brave"], { name: "default" });
 
       assert.equal(result.phase, "awaiting_params", "must loop back when brave selected but no api key");
@@ -60,7 +70,12 @@ describe("checkApiKeys with SearchProviderCredentials", () => {
     process.env.BRAVE_API_KEY = "env-bsa";
     const cred = new SearchProviderCredentials({});
 
-    const manager = new PrefilterManager(mockSearchFn(), mockScraper(), TEST_DIR, undefined, undefined, cred);
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(),
+      scraper: mockScraper(),
+      artifactsDir: TEST_DIR,
+      searchCred: cred,
+    });
     const result = await manager.withParams("test", ["brave"], { name: "default" });
 
     // Should pass because env var is set

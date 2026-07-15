@@ -112,13 +112,12 @@ describe("buildParamsPrompt with ProfileResolver", () => {
   it("lists user-added profile names in prompt", async () => {
     const resolver = new ProfileResolver({ exhaustive: { breadth: 10, depth: 5, concurrency: 8 } }, "default");
 
-    const manager = new PrefilterManager(
-      mockSearchFn(MOCK_RESULTS),
-      mockScraper(MOCK_PAGES),
-      TEST_CWD,
-      undefined,
-      resolver,
-    );
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(MOCK_RESULTS),
+      scraper: mockScraper(MOCK_PAGES),
+      artifactsDir: TEST_CWD,
+      profileResolver: resolver,
+    });
 
     const result = await manager.start("test");
 
@@ -130,13 +129,12 @@ describe("buildParamsPrompt with ProfileResolver", () => {
   it("highlights custom defaultProfile in prompt", async () => {
     const resolver = new ProfileResolver({}, "deep");
 
-    const manager = new PrefilterManager(
-      mockSearchFn(MOCK_RESULTS),
-      mockScraper(MOCK_PAGES),
-      TEST_CWD,
-      undefined,
-      resolver,
-    );
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(MOCK_RESULTS),
+      scraper: mockScraper(MOCK_PAGES),
+      artifactsDir: TEST_CWD,
+      profileResolver: resolver,
+    });
 
     const result = await manager.start("test");
 
@@ -157,13 +155,12 @@ describe("buildPlanPrompt with ProfileResolver", () => {
   it("shows resolved breadth/depth/concurrency from merged profile", async () => {
     const resolver = new ProfileResolver({ deep: { breadth: 8, depth: 4 } }, "default");
 
-    const manager = new PrefilterManager(
-      mockSearchFn(MOCK_RESULTS),
-      mockScraper(MOCK_PAGES),
-      TEST_CWD,
-      undefined,
-      resolver,
-    );
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(MOCK_RESULTS),
+      scraper: mockScraper(MOCK_PAGES),
+      artifactsDir: TEST_CWD,
+      profileResolver: resolver,
+    });
 
     const result = await manager.withParams("test", ["duckduckgo"], { name: "deep" });
 
@@ -175,13 +172,12 @@ describe("buildPlanPrompt with ProfileResolver", () => {
   it("lists merged profile names in plan prompt", async () => {
     const resolver = new ProfileResolver({ exhaustive: { breadth: 10, depth: 5, concurrency: 8 } }, "default");
 
-    const manager = new PrefilterManager(
-      mockSearchFn(MOCK_RESULTS),
-      mockScraper(MOCK_PAGES),
-      TEST_CWD,
-      undefined,
-      resolver,
-    );
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(MOCK_RESULTS),
+      scraper: mockScraper(MOCK_PAGES),
+      artifactsDir: TEST_CWD,
+      profileResolver: resolver,
+    });
 
     const result = await manager.withParams("test", ["duckduckgo"], { name: "default" });
 

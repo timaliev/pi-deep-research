@@ -61,7 +61,11 @@ describe("Integration: full research pipeline", () => {
 
   it("three-step prefilter: start → withParams → finalize → artifact saved", async () => {
     const artifactsDir = join(TEST_DIR, "artifacts");
-    const manager = new PrefilterManager(mockSearchFn(), mockScraper(), artifactsDir);
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(),
+      scraper: mockScraper(),
+      artifactsDir: artifactsDir,
+    });
 
     // Step 1: start → params prompt
     const r1 = await manager.start("state machine libraries");
@@ -87,7 +91,11 @@ describe("Integration: full research pipeline", () => {
 
   it("run phase: state machine completes full cycle → done", async () => {
     const artifactsDir = join(TEST_DIR, "artifacts");
-    const manager = new PrefilterManager(mockSearchFn(), mockScraper(), artifactsDir);
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(),
+      scraper: mockScraper(),
+      artifactsDir: artifactsDir,
+    });
     await manager.start("state machines");
     await manager.withParams("state machines", ["duckduckgo"], { name: "default" });
     const planResult = await manager.finalize("state machines", VALID_PLAN_JSON);
@@ -165,7 +173,11 @@ describe("Integration: full research pipeline", () => {
     const reportsDir = join(TEST_DIR, "reports");
     mkdirSync(reportsDir, { recursive: true });
 
-    const manager = new PrefilterManager(mockSearchFn(), mockScraper(), artifactsDir);
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(),
+      scraper: mockScraper(),
+      artifactsDir: artifactsDir,
+    });
     await manager.start("ts state machines");
     const r2 = await manager.withParams("ts state machines", ["duckduckgo"], { name: "fast" });
     assert.equal(r2.phase, "awaiting_plan");

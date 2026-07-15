@@ -1,7 +1,7 @@
 # ADR-0024: PrefilterContext — bundled constructor for PrefilterManager
 
 **Date:** 2026-07-15
-**Status:** proposed
+**Status:** accepted
 
 ## Context
 

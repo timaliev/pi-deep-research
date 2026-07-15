@@ -20,15 +20,15 @@ export function createPlanResearchTool(
   scraper: Scraper,
   searchFn: typeof SearchWebFn = searchWeb,
 ) {
-  const session = new PrefilterSession(
-    settings.artifactsDir,
+  const session = new PrefilterSession({
+    artifactsDir: settings.artifactsDir,
     profileResolver,
     searchCred,
     searchFn,
     scraper,
-    settings.reportStyle,
-    settings.enabledEngines,
-  );
+    defaultReportStyle: settings.reportStyle,
+    enabledEngines: settings.enabledEngines,
+  });
 
   // ─── Handler methods ──────────────────────────────────────
 

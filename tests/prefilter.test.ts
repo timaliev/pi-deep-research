@@ -62,7 +62,11 @@ describe("PrefilterManager", () => {
 
   describe("start", () => {
     it("returns awaiting_params with engines+profile prompt", async () => {
-      const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+      const manager = new PrefilterManager({
+        searchFn: mockSearchFn(MOCK_RESULTS),
+        scraper: mockScraper(mockScrapedPages()),
+        artifactsDir: TEST_ARTIFACTS,
+      });
       const result = await manager.start("state machines");
 
       assert.equal(result.phase, "awaiting_params");
@@ -74,7 +78,11 @@ describe("PrefilterManager", () => {
 
   describe("withParams", () => {
     it("returns search results and plan inject for awaiting_plan", async () => {
-      const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+      const manager = new PrefilterManager({
+        searchFn: mockSearchFn(MOCK_RESULTS),
+        scraper: mockScraper(mockScrapedPages()),
+        artifactsDir: TEST_ARTIFACTS,
+      });
       await manager.start("state machines");
 
       const result = await manager.withParams("state machines", ["duckduckgo"], { name: "default" });
@@ -87,7 +95,11 @@ describe("PrefilterManager", () => {
     });
 
     it("requires JSON output in plan prompt", async () => {
-      const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+      const manager = new PrefilterManager({
+        searchFn: mockSearchFn(MOCK_RESULTS),
+        scraper: mockScraper(mockScrapedPages()),
+        artifactsDir: TEST_ARTIFACTS,
+      });
       const result = await manager.withParams("test", ["duckduckgo"], { name: "default" });
       assert.ok(result.inject!.includes("JSON"), "inject must ask for JSON");
     });
@@ -95,7 +107,11 @@ describe("PrefilterManager", () => {
 
   describe("finalize", () => {
     it("saves valid plan as artifact", async () => {
-      const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+      const manager = new PrefilterManager({
+        searchFn: mockSearchFn(MOCK_RESULTS),
+        scraper: mockScraper(mockScrapedPages()),
+        artifactsDir: TEST_ARTIFACTS,
+      });
       await manager.start("state machines");
 
       const result = await manager.finalize("state machines", VALID_PLAN);
@@ -112,14 +128,22 @@ describe("PrefilterManager", () => {
     });
 
     it("rejects invalid JSON", async () => {
-      const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+      const manager = new PrefilterManager({
+        searchFn: mockSearchFn(MOCK_RESULTS),
+        scraper: mockScraper(mockScrapedPages()),
+        artifactsDir: TEST_ARTIFACTS,
+      });
       await manager.start("test");
       const result = await manager.finalize("test", "not valid json {{{");
       assert.equal(result.phase, "error");
     });
 
     it("rejects JSON missing required fields", async () => {
-      const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+      const manager = new PrefilterManager({
+        searchFn: mockSearchFn(MOCK_RESULTS),
+        scraper: mockScraper(mockScrapedPages()),
+        artifactsDir: TEST_ARTIFACTS,
+      });
       await manager.start("test");
       const result = await manager.finalize(
         "test",
@@ -134,7 +158,11 @@ describe("PrefilterManager", () => {
     });
 
     it("rejects plan with empty research questions", async () => {
-      const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+      const manager = new PrefilterManager({
+        searchFn: mockSearchFn(MOCK_RESULTS),
+        scraper: mockScraper(mockScrapedPages()),
+        artifactsDir: TEST_ARTIFACTS,
+      });
       await manager.start("test");
       const result = await manager.finalize(
         "test",
@@ -154,12 +182,11 @@ describe("PrefilterManager", () => {
     it("uses shared runId across all three steps when set via constructor", async () => {
       const sharedRunId = "shared-run-001";
       const manager = new PrefilterManager(
-        mockSearchFn(MOCK_RESULTS),
-        mockScraper(mockScrapedPages()),
-        TEST_ARTIFACTS,
-        undefined,
-        undefined,
-        undefined,
+        {
+          searchFn: mockSearchFn(MOCK_RESULTS),
+          scraper: mockScraper(mockScrapedPages()),
+          artifactsDir: TEST_ARTIFACTS,
+        },
         sharedRunId,
       );
 
@@ -177,13 +204,21 @@ describe("PrefilterManager", () => {
     });
 
     it("generates its own runId when no shared runId provided", async () => {
-      const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+      const manager = new PrefilterManager({
+        searchFn: mockSearchFn(MOCK_RESULTS),
+        scraper: mockScraper(mockScrapedPages()),
+        artifactsDir: TEST_ARTIFACTS,
+      });
       const r1 = await manager.start("test");
       assert.match(r1.runId, /^\d{8}-\d{6}$/, "must generate valid runId");
     });
 
     it("stores actual search result count and scraped URLs in artifact (same instance)", async () => {
-      const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+      const manager = new PrefilterManager({
+        searchFn: mockSearchFn(MOCK_RESULTS),
+        scraper: mockScraper(mockScrapedPages()),
+        artifactsDir: TEST_ARTIFACTS,
+      });
       await manager.start("state machines");
       const paramsResult = await manager.withParams("state machines", ["duckduckgo"], { name: "default" });
       const finalResult = await manager.finalize("state machines", VALID_PLAN);
@@ -202,7 +237,11 @@ describe("PrefilterManager", () => {
     });
 
     it("fresh instance starts with empty results (caller must reuse same instance)", async () => {
-      const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+      const manager = new PrefilterManager({
+        searchFn: mockSearchFn(MOCK_RESULTS),
+        scraper: mockScraper(mockScrapedPages()),
+        artifactsDir: TEST_ARTIFACTS,
+      });
       // Skip withParams — results are empty without it
       const result = await manager.finalize("state machines", VALID_PLAN);
       const artifact = JSON.parse(readFileSync(result.planArtifactPath!, "utf-8"));
@@ -211,7 +250,11 @@ describe("PrefilterManager", () => {
     });
 
     it("rejects duplicate finalize (idempotency guard)", async () => {
-      const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+      const manager = new PrefilterManager({
+        searchFn: mockSearchFn(MOCK_RESULTS),
+        scraper: mockScraper(mockScrapedPages()),
+        artifactsDir: TEST_ARTIFACTS,
+      });
       await manager.start("test");
       await manager.withParams("test", ["duckduckgo"], { name: "default" });
 
