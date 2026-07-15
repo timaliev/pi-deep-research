@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { Type } from "typebox";
+import { confirmPlanDialog } from "../confirm-dialog.js";
 import type { ResearchPlanProfile } from "../prefilter.js";
 import { type PrefilterManager, PrefilterSession } from "../prefilter.js";
 import type { ProfileResolver } from "../profile-resolver.js";
@@ -116,39 +117,10 @@ export function createPlanResearchTool(
     const plan = result.plan;
     const planPath = result.planArtifactPath;
 
-    // Build plan summary for display
-    const style = plan.reportStyle ?? settings.reportStyle ?? "narrative";
-    const prof = plan.profile;
-    const resolvedProf = profileResolver.resolve(prof);
-    const profileDesc =
-      prof.name === "custom"
-        ? `custom (breadth=${prof.breadth}, depth=${prof.depth}, concurrency=${prof.concurrency})`
-        : `${prof.name} (breadth=${resolvedProf.breadth}, depth=${resolvedProf.depth}, concurrency=${resolvedProf.concurrency})`;
-    const cost = plan.estimatedCost;
-    const costDesc = cost?.description ?? `${cost?.searchCalls ?? "?"} searches, ${cost?.scrapeCalls ?? "?"} scrapes`;
-
-    // Inline confirmation — skip LLM, ask user directly
-    let confirmed = false;
-    if (ctx.hasUI) {
-      const choice = await ctx.ui.select(
-        [
-          `🔬 Research Plan Confirmation`,
-          ``,
-          `Topic:      ${plan.topic}`,
-          `Engines:    ${plan.engines.join(", ")}`,
-          `Profile:    ${profileDesc}`,
-          `Style:      ${style}`,
-          `Questions:  ${plan.researchQuestions.length}`,
-          `Cost:       ${costDesc}`,
-          ``,
-          `Start deep research?`,
-        ].join("\n"),
-        ["No — Review plan", "Yes — Start research"],
-      );
-      if (choice?.startsWith("Yes")) {
-        sessionState.saveConfirmation(planPath);
-        confirmed = true;
-      }
+    // Inline confirmation — skip LLM, ask user directly (idempotent via shared dialog)
+    const confirmed = await confirmPlanDialog(ctx, plan, profileResolver, settings);
+    if (confirmed) {
+      sessionState.saveConfirmation(planPath);
     }
 
     const confirmationNote = confirmed

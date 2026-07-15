@@ -2,7 +2,7 @@ import type { ResearchSnapshot } from "./state-machine.js";
 
 const STATE_KEY = "deep-research:state";
 const REPORT_PATH_KEY = "deep-research:report-path";
-const CONFIRMATION_KEY = "deep-research:plan-confirmed";
+export const CONFIRMATION_KEY = "deep-research:plan-confirmed";
 
 export interface EntryWriter {
   appendEntry(customType: string, data?: unknown): void;
