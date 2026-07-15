@@ -446,26 +446,12 @@ See [Environment Variables](#environment-variables) for API key configuration.
 
 ## Development
 
-```bash
-# Run tests
-cd extension && node --import tsx --test ../tests/*.test.ts
+See [docs/development.md](docs/development.md) for the full quality gate checklist.
 
-# 363 tests across 53 files covering:
-# - PrefilterManager (three-step, validation, API key checks, engine status)
-# - ResearchStateMachine (full cycle, concurrency, soft limits, deepening)
-# - Engine adapters (DDG, Brave, SearXNG, Tavily, Yandex — per-engine tests)
-# - WebScraper (title/content extraction, error handling, text content)
-# - JsonlLogger (write, append, metadata)
-# - SearchProviderCredentials (settings.json + env resolution)
-# - ProfileResolver (built-in merge, user override, validation)
-# - ResearchRunOrchestrator (plan confirmation, report assembly)
-# - Report styles (narrative, subtopics template tests)
-# - SessionState (persistence, draft restore)
-# - SettingsContext (cascade, path resolution)
-# - SearchQueue (concurrency control)
-# - Tool handlers (save_report, plan_research, run_research extraction)
-# - Telemetry (markdown table generation, version)
-# - Integration (end-to-end research run)
+```bash
+npm test              # 429 tests across 53 files
+npm run format        # auto-format with biome
+npm run lint          # biome lint
 ```
 
 ## Related Documents
