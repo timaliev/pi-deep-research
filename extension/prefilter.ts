@@ -87,8 +87,9 @@ export interface PrefilterArtifact {
   plan: ResearchPlan;
   preliminarySearch: {
     query: string;
-    resultsCount: number;
-    scrapedUrls: string[];
+    resultsCount?: number;
+    scrapedUrls?: string[];
+    note?: string;
   };
 }
 
@@ -135,6 +136,7 @@ export class PrefilterManager {
   private readonly enabledEngines?: string[];
   private lastSearchResultCount = 0;
   private lastScrapedUrls: string[] = [];
+  private searchWasRun = false;
   private finalized = false;
   private prefilterPhase: "awaiting_params" | "awaiting_plan" | "introspecting" | "merging" = "awaiting_params";
   private llmTopics?: string;
@@ -233,6 +235,7 @@ export class PrefilterManager {
     this.cachedTopic = topic;
     this.cachedEngines = engines;
     this.cachedProfile = profile;
+    this.searchWasRun = true;
 
     // Enforce enabledEngines allowlist — agent may propose disabled engines
     engines = enforceEngineAllowlist(engines, this.enabledEngines, this.logger);
@@ -303,6 +306,17 @@ export class PrefilterManager {
       };
     }
 
+    // Guard: require full prefilter flow (withParams → continue) before plan submission.
+    // Direct plan_json submission without prior search bypasses LLM introspection.
+    if (!this.searchWasRun) {
+      return {
+        phase: "error",
+        runId: this.runId(),
+        error:
+          "Plan submitted directly without preliminary search. Use the full prefilter flow: start with the topic, then call plan_research with params_json for engine/profile selection, then continue() for LLM introspection, then submit your plan.",
+      };
+    }
+
     // Validate required fields
     const validationError = this.validatePlan(plan);
     if (validationError) {
@@ -334,11 +348,13 @@ export class PrefilterManager {
       createdAt: new Date().toISOString(),
       inputTopic: topic,
       plan,
-      preliminarySearch: {
-        query: buildSearchQuery(topic),
-        resultsCount: this.lastSearchResultCount,
-        scrapedUrls: this.lastScrapedUrls,
-      },
+      preliminarySearch: this.searchWasRun
+        ? {
+            query: buildSearchQuery(topic),
+            resultsCount: this.lastSearchResultCount,
+            scrapedUrls: this.lastScrapedUrls,
+          }
+        : { query: buildSearchQuery(topic), note: "plan submitted directly — no preliminary search run" },
     };
 
     const fileName = `${runId}-prefilter.json`;

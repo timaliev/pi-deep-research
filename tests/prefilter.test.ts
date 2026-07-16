@@ -112,7 +112,7 @@ describe("PrefilterManager", () => {
         scraper: mockScraper(mockScrapedPages()),
         artifactsDir: TEST_ARTIFACTS,
       });
-      await manager.start("state machines");
+      await manager.withParams("state machines", ["duckduckgo"], { name: "default" });
 
       const result = await manager.finalize("state machines", VALID_PLAN);
 
@@ -236,17 +236,16 @@ describe("PrefilterManager", () => {
       );
     });
 
-    it("fresh instance starts with empty results (caller must reuse same instance)", async () => {
+    it("rejects direct plan submission without prior search (enforce introspection flow)", async () => {
       const manager = new PrefilterManager({
         searchFn: mockSearchFn(MOCK_RESULTS),
         scraper: mockScraper(mockScrapedPages()),
         artifactsDir: TEST_ARTIFACTS,
       });
-      // Skip withParams — results are empty without it
+      // Direct plan_json without withParams() → rejected
       const result = await manager.finalize("state machines", VALID_PLAN);
-      const artifact = JSON.parse(readFileSync(result.planArtifactPath!, "utf-8"));
-      assert.equal(artifact.preliminarySearch.resultsCount, 0, "fresh instance has no prior search results");
-      assert.equal(artifact.preliminarySearch.scrapedUrls.length, 0, "fresh instance has no scraped URLs");
+      assert.equal(result.phase, "error", "must reject direct plan submission");
+      assert.ok(result.error!.includes("preliminary search"), "error must mention preliminary search");
     });
 
     it("rejects duplicate finalize (idempotency guard)", async () => {
