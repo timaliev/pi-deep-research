@@ -65,9 +65,9 @@ Add a `resume(stateBlob, agentResponse)` method on `ResearchStateMachine`. It in
 
 ---
 
-## 3. Make PrefilterManager.continue() an explicit state machine
+## 3. ~~Make PrefilterManager.continue() an explicit state machine~~ ✅ DONE
 
-**Strength:** Worth exploring
+**Strength:** Worth exploring — **Implemented July 2026**
 **Files:** `extension/prefilter.ts`, `extension/tools/plan-research.ts`
 
 ### Problem
@@ -86,9 +86,9 @@ Make `continue()` a proper phase dispatch: `awaitingParams → awaitingPlan → 
 
 ---
 
-## 4. Collapse always-on PostProcessors into the done-phase method
+## 4. ~~Collapse always-on PostProcessors into the done-phase method~~ ✅ DONE
 
-**Strength:** Worth exploring
+**Strength:** Worth exploring — **Implemented July 2026**
 **Files:** `extension/research-run-orchestrator.ts`
 
 ### Problem
@@ -109,9 +109,9 @@ Inline report assembly and contradiction detection into `buildDoneResult()`. Kee
 
 ---
 
-## 5. Make ReportStyle factory reject unknown styles
+## 5. ~~Make ReportStyle factory reject unknown styles~~ ✅ DONE
 
-**Strength:** Speculative
+**Strength:** Speculative — **Implemented July 2026**
 **Files:** `extension/report-styles.ts`
 
 ### Problem
@@ -131,4 +131,4 @@ Return `undefined` for unknown names, or throw. Push the defaulting decision to 
 
 ## Top Recommendation
 
-**#1 and #2 implemented July 2026.** Remaining: #3 (PrefilterManager.continue() FSM), #4 (PostProcessor cleanup), #5 (ReportStyle validation).
+**All 5 findings implemented July 2026.**
