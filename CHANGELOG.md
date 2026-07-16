@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.26.1](https://github.com/timaliev/pi-deep-research/compare/v0.26.0..v0.26.1) - 2026-07-16
+
+### Bug Fixes
+
+- **(skill)** add Phase 3 guardrails for confirmation states - ([c0f7ba7](https://github.com/timaliev/pi-deep-research/commit/c0f7ba7ffae1708d844cc73a85a9f2515378a764)) - Tim Aliev
+- **(skill)** add Phase 3 guardrails for confirmation states - ([7882311](https://github.com/timaliev/pi-deep-research/commit/7882311213017f4f37bfef6b2940070725ce6df5)) - Tim Aliev
+
 ## [0.26.0](https://github.com/timaliev/pi-deep-research/compare/v0.25.2..v0.26.0) - 2026-07-16
 
 ### Features
