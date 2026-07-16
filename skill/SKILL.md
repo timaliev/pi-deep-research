@@ -46,7 +46,7 @@ Environment variables take precedence over settings.json. Example settings.json:
    ```
    **Engines:** `duckduckgo` (always available), `brave`, `tavily`, `yandex`, `searxng`.
    **Profiles:** `default` (4/2/4 breadth/depth/concurrency), `fast` (2/1/2), `deep` (6/3/4), `custom` (specify numbers).
-   **Report styles:** `narrative` (fixed 5-section template: Introduction/Findings/Analysis/Recommendations/Sources) or `subtopics` (LLM discovers 5–10 thematic sections with subsections).
+   **Report styles:** `narrative` (fixed 5-section template: Introduction/Findings/Analysis/Recommendations/Sources) or `subtopics` (LLM discovers thematic sections: 5–7 for ≤4 questions, 8–12 for 5–7, 12–20 for 8+).
 
 3. Call `plan_research` again with the params:
    ```
@@ -71,7 +71,7 @@ Environment variables take precedence over settings.json. Example settings.json:
    }
    ```
    For custom profiles, include `breadth`, `depth`, `concurrency`: `{"name": "custom", "breadth": 5, "depth": 2}`.
-   **Report styles:** `"narrative"` (fixed 5-section: Introduction/Findings/Analysis/Recommendations/Sources) or `"subtopics"` (LLM discovers 5–10 thematic sections from findings).
+   **Report styles:** `"narrative"` (fixed 5-section: Introduction/Findings/Analysis/Recommendations/Sources) or `"subtopics"` (LLM discovers thematic sections: 5–7 for ≤4 questions, 8–12 for 5–7, 12–20 for 8+).
 
 3. Call `plan_research` again with your plan. `topic` is optional when `plan_json` is provided (extracted from the plan):
    ```

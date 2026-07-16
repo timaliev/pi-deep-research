@@ -103,6 +103,33 @@ describe("Engine allowlist enforcement", () => {
       assert.deepEqual(result.plan!.enabledEngines, ["duckduckgo"], "must freeze allowlist into plan");
     });
 
+    it("expands plan engines to include all enabled engines the agent missed", async () => {
+      const manager = new PrefilterManager({
+        searchFn: mockSearchFn(MOCK_RESULTS),
+        scraper: mockScraper(),
+        artifactsDir: TEST_DIR,
+        enabledEngines: ["duckduckgo", "tavily"],
+      });
+
+      await manager.withParams("test", ["duckduckgo", "tavily"], { name: "fast" });
+      // Agent only writes duckduckgo in the plan — but both are allowed
+      const plan = JSON.stringify({
+        topic: "test",
+        goal: "test",
+        researchQuestions: ["q1"],
+        engines: ["duckduckgo"],
+        profile: { name: "fast" },
+        scope: { include: "", exclude: "" },
+        estimatedCost: { searchCalls: 1, scrapeCalls: 1, description: "1" },
+      });
+      const result = await manager.finalize("test", plan);
+
+      assert.equal(result.phase, "plan_ready");
+      assert.equal(result.plan!.engines.length, 2);
+      assert.ok(result.plan!.engines.includes("duckduckgo"));
+      assert.ok(result.plan!.engines.includes("tavily"), "tavily must be added from enabledEngines");
+    });
+
     it("still succeeds when plan has only disallowed engines (fallback to duckduckgo)", async () => {
       const manager = new PrefilterManager({
         searchFn: mockSearchFn(MOCK_RESULTS),
