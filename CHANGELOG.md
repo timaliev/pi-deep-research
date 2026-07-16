@@ -39,6 +39,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **(adr)** add architecture review and ADRs 0024, 0025 - ([6385f4c](https://github.com/timaliev/pi-deep-research/commit/6385f4cee8a5fef3492fceb6e31bf81981c11ade)) - Tim Aliev
 - **(todo)** document session 019f4dfe diagnosis items - ([768f49e](https://github.com/timaliev/pi-deep-research/commit/768f49e976807995a06cadabd3e06997db9bf54e)) - Tim Aliev
+- **(todo)** document session 019f4dfe diagnosis items - ([093ffca](https://github.com/timaliev/pi-deep-research/commit/093ffcabeabd8052e3a0ace963d40339d69bce80)) - Tim Aliev
+- Add comment about required repo permissions for release workflow - ([6917271](https://github.com/timaliev/pi-deep-research/commit/69172718e0e1a54d62de7b69bca1b6173ceea374)) - Tim Aliev
+- add development guide with pre-commit quality gate - ([555291f](https://github.com/timaliev/pi-deep-research/commit/555291f3b266b10793f1dd02b4285ddb439fba7c)) - Tim Aliev
+- add TDD requirement to development guide - ([3619d08](https://github.com/timaliev/pi-deep-research/commit/3619d081f0a8362a97c6a298f7bd1efd33003eca)) - Tim Aliev
+- update stale ADR statuses and architecture review - ([597852d](https://github.com/timaliev/pi-deep-research/commit/597852d6e7d2c8c70751cf302d4497f71c1e953f)) - Tim Aliev
+- mark all architecture review findings done - ([f203996](https://github.com/timaliev/pi-deep-research/commit/f203996d085be88cde2527754823aff15790819a)) - Tim Aliev
+- mark ADR-0017 Q8 done - ([d6a4dbf](https://github.com/timaliev/pi-deep-research/commit/d6a4dbf6daa3af3069ba389c28d4d63946e5a11d)) - Tim Aliev
+- move development.md to root and update README link - ([31d45bb](https://github.com/timaliev/pi-deep-research/commit/31d45bb8527645693502a82fd58ad0257cac24ec)) - Tim Aliev
+
+## [0.26.0](https://github.com/timaliev/pi-deep-research/compare/v0.25.2..v0.26.0) - 2026-07-16
+
+### Features
+
+- **(prefilter)** inline confirmation TUI in plan_research, bypass LLM - ([2e65dbb](https://github.com/timaliev/pi-deep-research/commit/2e65dbb0029e6d9e222f4e4f1db8f193eae72bb0)) - Tim Aliev
+- **(state-machine)** consume questionMetadata at runtime (ADR-0017 Q8) - ([f3b7a3f](https://github.com/timaliev/pi-deep-research/commit/f3b7a3fc599bcf307a43c287c949ec4b9527cd0c)) - Tim Aliev
+
+### Bug Fixes
+
+- **(report)** add relative path hint to artifact links, close stale TODOs - ([7929e07](https://github.com/timaliev/pi-deep-research/commit/7929e072906bf6da0744b18a4dbec66e206866ce)) - Tim Aliev
+
+### Refactoring
+
+- **(confirm)** extract shared confirmPlanDialog, make idempotent - ([31e6fd3](https://github.com/timaliev/pi-deep-research/commit/31e6fd3fe5797465bee7c13f9856ea1b4a716e7b)) - Tim Aliev
+- **(engines)** consolidate engine list into single source of truth - ([38bfbd7](https://github.com/timaliev/pi-deep-research/commit/38bfbd7e3059faa7dcb540eba4b1695cc69acca1)) - Tim Aliev
+- **(prefilter)** implement PrefilterContext bundle (ADR-0024) - ([5dccc8c](https://github.com/timaliev/pi-deep-research/commit/5dccc8c59619d3f34cc69645e844207f149ffef1)) - Tim Aliev
+- **(prompts)** bundle buildPlanPrompt 9 positional params into PlanPromptContext - ([9dcfa1f](https://github.com/timaliev/pi-deep-research/commit/9dcfa1fb8f500ba98b9c235055b90e3edf935ce4)) - Tim Aliev
+- **(session)** consolidate session key constants in SessionState - ([ad4460a](https://github.com/timaliev/pi-deep-research/commit/ad4460a433fd30f52359434905732118a43936e7)) - Tim Aliev
+- **(settings)** extract SearchProviderCredentials to own module - ([956d952](https://github.com/timaliev/pi-deep-research/commit/956d9523f80538306be1c52318d36f10abf09821)) - Tim Aliev
+- **(state-machine)** add resume(), move extractTextContent (ADR-0025) - ([f0f4356](https://github.com/timaliev/pi-deep-research/commit/f0f4356dd66acd96ab09adca6fd92c6313920fd6)) - Tim Aliev
+- implement deferred architecture review findings #3, #4, #5 - ([153e839](https://github.com/timaliev/pi-deep-research/commit/153e8391f3443c732e09ff283caba273c61132f0)) - Tim Aliev
+
+### Documentation
+
+- **(adr)** add architecture review and ADRs 0024, 0025 - ([6385f4c](https://github.com/timaliev/pi-deep-research/commit/6385f4cee8a5fef3492fceb6e31bf81981c11ade)) - Tim Aliev
+- **(todo)** document session 019f4dfe diagnosis items - ([768f49e](https://github.com/timaliev/pi-deep-research/commit/768f49e976807995a06cadabd3e06997db9bf54e)) - Tim Aliev
 - Add comment about required repo permissions for release workflow - ([6917271](https://github.com/timaliev/pi-deep-research/commit/69172718e0e1a54d62de7b69bca1b6173ceea374)) - Tim Aliev
 - add development guide with pre-commit quality gate - ([555291f](https://github.com/timaliev/pi-deep-research/commit/555291f3b266b10793f1dd02b4285ddb439fba7c)) - Tim Aliev
 - add TDD requirement to development guide - ([3619d08](https://github.com/timaliev/pi-deep-research/commit/3619d081f0a8362a97c6a298f7bd1efd33003eca)) - Tim Aliev
