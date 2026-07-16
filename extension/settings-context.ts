@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { ALL_ENGINES, ENGINE_META } from "./search/engines.js";
 import { DEFAULT_PRESETS, mergeProfiles } from "./profile-resolver.js";
 import type { ResearchProfile } from "./state-machine.js";
 
@@ -43,7 +44,7 @@ const BUILTIN = {
   defaultProfile: "default",
   profiles: DEFAULT_PRESETS,
   reportStyle: "narrative" as "narrative" | "subtopics",
-  enabledEngines: ["duckduckgo", "searxng"],
+  enabledEngines: ALL_ENGINES.filter((name) => ENGINE_META[name].free),
   settingsReport: { onSessionStart: false, onRunStart: false, inReport: false },
 };
 

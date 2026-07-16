@@ -1,6 +1,6 @@
 import { StringEnum } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
-import type { SearchEngine } from "../search/web-search.js";
+import { ALL_ENGINES, type SearchEngine } from "../search/engines.js";
 import { multiEngineWebSearch } from "../search/web-search.js";
 import type { SearchProviderCredentials } from "../settings-context.js";
 
@@ -20,7 +20,7 @@ Use compare mode to cross-check results across engines.`,
       query: Type.String({ description: "Search query" }),
       max_results: Type.Optional(Type.Number({ description: "Max results per engine (default 5)" })),
       engines: Type.Optional(
-        Type.Array(StringEnum(["duckduckgo", "brave", "tavily", "yandex", "searxng"] as const), {
+        Type.Array(StringEnum(ALL_ENGINES), {
           description: "Search engines to query (default: ['duckduckgo'])",
         }),
       ),
