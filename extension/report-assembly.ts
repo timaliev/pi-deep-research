@@ -116,7 +116,14 @@ export function buildTelemetrySection(
     ...rows,
     ``,
     ...(artifactLinks && artifactLinks.length > 0
-      ? [`## Artifacts`, ``, ...artifactLinks.map((p) => `- [${p}](${p})`), ``]
+      ? [
+          `## Artifacts`,
+          ``,
+          `*(paths relative to this report's directory)*`,
+          ``,
+          ...artifactLinks.map((p) => `- [${p}](${p})`),
+          ``,
+        ]
       : []),
     ``,
   ].join("\n");
