@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.26.6](https://github.com/timaliev/pi-deep-research/compare/v0.26.5..v0.26.6) - 2026-07-16
+
+### Bug Fixes
+
+- require introspection before plan submission, fix style ReferenceError - ([5ad65b6](https://github.com/timaliev/pi-deep-research/commit/5ad65b633fe44f6bfb83383d29417249516d10e0)) - Tim Aliev
+- require introspection before plan submission, fix style ReferenceError - ([0259711](https://github.com/timaliev/pi-deep-research/commit/025971148d6dfcf81c4c8677e18537bae49e3cdc)) - Tim Aliev
+
 ## [0.26.5](https://github.com/timaliev/pi-deep-research/compare/v0.26.4..v0.26.5) - 2026-07-16
 
 ### Bug Fixes
