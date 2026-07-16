@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.26.3](https://github.com/timaliev/pi-deep-research/compare/v0.26.2..v0.26.3) - 2026-07-16
 
+### Bug Fixes
+
+- **(engines)** expand plan engines to include all enabled engines - ([b41b088](https://github.com/timaliev/pi-deep-research/commit/b41b0880144b3ed97244370188ccddc9fdcbe2d8)) - Tim Aliev
+
 ### Documentation
 
 - **(skill)** update subtopics description to show tiered section counts (5–20) - ([cfb7f5e](https://github.com/timaliev/pi-deep-research/commit/cfb7f5e46b4f70fd7f358168286126c05b09b245)) - Tim Aliev
