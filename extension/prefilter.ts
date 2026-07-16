@@ -313,6 +313,14 @@ export class PrefilterManager {
     // Enforce engine allowlist on the plan — freeze at plan time
     plan.engines = enforceEngineAllowlist(plan.engines, this.enabledEngines, this.logger);
     plan.enabledEngines = this.enabledEngines;
+    // Expand to include all enabled engines the agent didn't explicitly exclude
+    if (this.enabledEngines && this.enabledEngines.length > 0) {
+      const missing = this.enabledEngines.filter((e) => !plan.engines.includes(e as SearchEngine));
+      if (missing.length > 0) {
+        plan.engines = [...plan.engines, ...(missing as SearchEngine[])];
+        this.logger?.event("engines_expanded", { added: missing, final: plan.engines });
+      }
+    }
 
     // Save artifact
     const fs = await import("node:fs/promises");
