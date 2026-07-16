@@ -180,7 +180,20 @@ export class ResearchStateMachine {
     const maxResultsPerQuery = snapshot.softLimitTriggered ? 2 : 3;
     const breadth = snapshot.softLimitTriggered ? Math.min(2, prof.breadth) : prof.breadth;
 
-    const activeQuestions = questions.slice(0, breadth);
+    // ADR-0017 Q8: prioritize by importance when questionMetadata is available (iteration 0 only)
+    const meta = plan.questionMetadata;
+    const isIterationZero = snapshot.currentDepth === 0;
+    const sorted =
+      meta && isIterationZero
+        ? [...questions].sort((a, b) => {
+            const ia = meta[a]?.importance;
+            const ib = meta[b]?.importance;
+            const rank = (i: string | undefined) => (i === "critical" ? 0 : i === "important" ? 1 : 2);
+            return rank(ia) - rank(ib);
+          })
+        : questions;
+
+    const activeQuestions = sorted.slice(0, breadth);
     const semaphore = new ConcurrencySemaphore(prof.concurrency);
     const engines = plan.engines.length > 0 ? plan.engines : ["duckduckgo"];
 
@@ -214,7 +227,19 @@ export class ResearchStateMachine {
     this.checkSoftLimits(nextSnapshot);
 
     const style = this.style!;
-    const inject = style.buildExtractionPrompt(round.searchResults, round.scrapedPages, nextDepth, snapshot.totalDepth);
+    let inject = style.buildExtractionPrompt(round.searchResults, round.scrapedPages, nextDepth, snapshot.totalDepth);
+
+    // ADR-0017 Q8: enrich extraction prompt with question metadata (source, confidence, importance)
+    if (meta && activeQuestions.some((q) => meta[q])) {
+      const metaContext = activeQuestions
+        .filter((q) => meta[q])
+        .map((q) => {
+          const m = meta[q];
+          return `- **${q}** — source: ${m.source}, confidence: ${m.confidence}, importance: ${m.importance}${m.debatableFact ? `, ⚠ debatable: ${m.debatableFact}` : ""}`;
+        })
+        .join("\n");
+      inject = `### Question Metadata\n\nResearch questions with expected provenance and confidence. Use this to weight findings appropriately.\n\n${metaContext}\n\n---\n\n${inject}`;
+    }
     this.logger?.event("phase_changed", { from: "searching", to: "extracting", depth: nextDepth });
     this.logger?.event("inject_sent", { type: "extraction", length: inject.length, depth: nextDepth });
     return { phase: "extracting", snapshot: nextSnapshot, inject };
