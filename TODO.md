@@ -138,3 +138,7 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 - CLOSED: Env vars not inherited by extension subprocess. This is a Pi-level issue — Pi spawns the extension process without inheriting the parent shell's env. Not fixable in deep-research. Report upstream.
 - CLOSED: Agent drafting text "Now saving." appears as raw text. No longer reproducible — the improved drafting prompt ("Write the report as your response text directly — do NOT call any tools") prevents trailing tool-call commentary. No reports observed with this issue since prompt fix.
 - DONE: Artifacts section uses relative paths with no hint. Fixed: added `*(paths relative to this report's directory)*` note before artifact links in `buildTelemetrySection()`.
+
+### Pending
+
+- TODO: export_pdf tool computes wrong default output path for relative report_path. Uses `join(reportsDir, reportPath.replace(/.md$/, "") + ".pdf")` which nests the directory when report_path is relative (e.g. `reportsDir/deep-research/reports/foo.pdf`). Fix: extract basename before replacing extension.
