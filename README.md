@@ -446,7 +446,7 @@ See [Environment Variables](#environment-variables) for API key configuration.
 
 ## Development
 
-See [docs/development.md](docs/development.md) for the full quality gate checklist.
+See [development.md](development.md) for the full quality gate checklist.
 
 ```bash
 npm test              # 429 tests across 53 files

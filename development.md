@@ -41,3 +41,12 @@ npm run check         # format + lint combined
 - `noExplicitAny` — use `Record<string, unknown>` for session entries and JSON-like blobs instead of `any`
 - `noUnusedVariables` — prefix unused vars with `_`
 - `useTemplate` — prefer template literals over string concatenation
+
+## Git operations
+
+- MUST always follow skill:git-skill to work with Git
+- release MUST follow this steps:
+  - merge `develop` branch to `release` branch (strict `release` without any version tags);
+  - wait until new PR (made by GitHub workflow) from `release` branch to `master` branch is ready and inform user;
+  - wait until user confirms this PR and it is merged to `master` branch;
+  - wait until new release is created by GitHub workflow.
