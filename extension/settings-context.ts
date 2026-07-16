@@ -132,18 +132,6 @@ export class SettingsContext implements SettingsContextData {
     const global = readJsonFile(globalPath);
     const local = readJsonFile(localPath);
 
-    // [DEBUG-d4f1] Log local settings resolution for Bug #2 diagnosis
-    if (local) {
-      const localEngines = (local?.deepResearch as any)?.enabledEngines;
-      if (localEngines) {
-        process.stderr.write(
-          `[DEBUG-d4f1] local settings found at ${localPath}: enabledEngines=${JSON.stringify(localEngines)}\n`,
-        );
-      }
-    } else {
-      process.stderr.write(`[DEBUG-d4f1] no local settings at ${localPath} (cwd=${cwd})\n`);
-    }
-
     const globalDr = (global?.deepResearch ?? {}) as Record<string, unknown>;
     const localDr = (local?.deepResearch ?? {}) as Record<string, unknown>;
 

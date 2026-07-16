@@ -195,7 +195,11 @@ export class ResearchStateMachine {
 
     const activeQuestions = sorted.slice(0, breadth);
     const semaphore = new ConcurrencySemaphore(prof.concurrency);
-    const engines = plan.engines.length > 0 ? plan.engines : ["duckduckgo"];
+    // Runtime enforcement: filter engines against plan's allowlist (frozen at plan time)
+    const rawEngines = plan.engines.length > 0 ? plan.engines : ["duckduckgo"];
+    const allowlist = plan.enabledEngines;
+    const engines = allowlist && allowlist.length > 0 ? rawEngines.filter((e) => allowlist.includes(e)) : rawEngines;
+    if (engines.length === 0) engines.push("duckduckgo");
 
     const round = await executeResearchRound({
       searchFn: this.searchFn,
