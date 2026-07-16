@@ -45,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - update stale ADR statuses and architecture review - ([597852d](https://github.com/timaliev/pi-deep-research/commit/597852d6e7d2c8c70751cf302d4497f71c1e953f)) - Tim Aliev
 - mark all architecture review findings done - ([f203996](https://github.com/timaliev/pi-deep-research/commit/f203996d085be88cde2527754823aff15790819a)) - Tim Aliev
 - mark ADR-0017 Q8 done - ([d6a4dbf](https://github.com/timaliev/pi-deep-research/commit/d6a4dbf6daa3af3069ba389c28d4d63946e5a11d)) - Tim Aliev
+- move development.md to root and update README link - ([31d45bb](https://github.com/timaliev/pi-deep-research/commit/31d45bb8527645693502a82fd58ad0257cac24ec)) - Tim Aliev
 
 ## [0.25.2](https://github.com/timaliev/pi-deep-research/compare/v0.25.1..v0.25.2) - 2026-07-11
 
