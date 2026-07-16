@@ -13,3 +13,5 @@ node_modules/
 ## Artifacts ##
 artifacts/
 logs/
+extension/coverage/
+coverage/

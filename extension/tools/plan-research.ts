@@ -134,7 +134,7 @@ export function createPlanResearchTool(
       content: [
         {
           type: "text",
-          text: `## Research Plan Ready ✅\n\nPlan saved to: ${planPath}\n\n**Topic:** ${plan.topic}\n**Engines:** ${plan.engines.join(", ")}\n**Profile:** ${plan.profile.name}\n**Questions:** ${plan.researchQuestions.length}${confirmationNote}`,
+          text: `## Research Plan Ready ✅\n\nPlan saved to: ${planPath}\n\n**Topic:** ${plan.topic}\n**Engines:** ${plan.engines.join(", ")}\n**Profile:** ${plan.profile.name}\n**Style:** ${style}\n**Questions:** ${plan.researchQuestions.length}${confirmationNote}`,
         },
       ],
       details: {

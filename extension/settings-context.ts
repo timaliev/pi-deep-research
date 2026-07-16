@@ -190,8 +190,8 @@ export class SettingsContext implements SettingsContextData {
     // ─── reportStyle ───────────────────────────────────────
     [this.reportStyle, this.reportStyleSource] = resolveReportStyleWithSource(
       envString(ENV.reportStyle),
-      localDr.defaultReportStyle,
-      globalDr.defaultReportStyle,
+      localDr.reportStyle,
+      globalDr.reportStyle,
       localPath,
       globalPath,
       homeDir,

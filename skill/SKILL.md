@@ -57,7 +57,12 @@ Environment variables take precedence over settings.json. Example settings.json:
 ### Phase 2: Plan Research
 
 1. The tool runs a preliminary search with your chosen engines and sends you a prompt with results.
-2. Analyze the results and produce a JSON research plan:
+2. **Guardrail:** The tool now requires the full prefilter flow. You must complete ALL steps below — direct plan_json submission without the prior steps will be rejected with an error.
+3. Call `plan_research` with no parameters to start LLM introspection. The tool will ask you to propose topics from your internal knowledge. Respond with structured markdown listing topics with confidence/importance ratings.
+   ```
+   plan_research()
+   ```
+4. Call `plan_research` again with no parameters. The tool will merge your topics with web search results and ask you to produce the final plan. Analyze the merged results and produce a JSON research plan:
    ```json
    {
      "topic": "The research topic",
@@ -73,11 +78,11 @@ Environment variables take precedence over settings.json. Example settings.json:
    For custom profiles, include `breadth`, `depth`, `concurrency`: `{"name": "custom", "breadth": 5, "depth": 2}`.
    **Report styles:** `"narrative"` (fixed 5-section: Introduction/Findings/Analysis/Recommendations/Sources) or `"subtopics"` (LLM discovers thematic sections: 5–7 for ≤4 questions, 8–12 for 5–7, 12–20 for 8+).
 
-3. Call `plan_research` again with your plan. `topic` is optional when `plan_json` is provided (extracted from the plan):
+5. Call `plan_research` again with your plan. `topic` is optional when `plan_json` is provided (extracted from the plan):
    ```
    plan_research({ plan_json: "<your JSON>" })
    ```
-4. **Guardrail:** If the result has `phase: "error"`, fix the JSON and retry.
+6. **Guardrail:** If the result has `phase: "error"`, fix the JSON and retry. If the error says "without running the full prefilter flow", you skipped steps 3-4 — go back and complete them.
 
 ### Phase 3: Confirm Cost
 

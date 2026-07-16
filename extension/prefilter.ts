@@ -313,7 +313,7 @@ export class PrefilterManager {
         phase: "error",
         runId: this.runId(),
         error:
-          "Plan submitted directly without preliminary search. Use the full prefilter flow: start with the topic, then call plan_research with params_json for engine/profile selection, then continue() for LLM introspection, then submit your plan.",
+          "Plan submitted directly without running the full prefilter flow. To create or update a plan: (1) call plan_research with the topic, (2) call plan_research with params_json to select engines and profile, (3) call plan_research without params for LLM introspection, (4) submit your plan_json. This ensures LLM knowledge is incorporated into the research plan.",
       };
     }
 

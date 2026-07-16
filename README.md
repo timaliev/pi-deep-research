@@ -134,6 +134,16 @@ Which profile name is the default (shown in prompts, used when agent doesn't spe
 "defaultProfile": "deep"
 ```
 
+#### `reportStyle`
+
+Default report generation style. One of `"narrative"` (5-section fixed template) or `"subtopics"` (LLM discovers thematic sections scaled to question count). Defaults to `"narrative"`.
+
+```json
+"reportStyle": "subtopics"
+```
+
+Also configurable via `DEEP_RESEARCH_REPORT_STYLE` env var. The agent can override this in the plan JSON.
+
 #### `searchProviders`
 
 API keys for search engines. Alternative to environment variables — see [Environment Variables](#environment-variables). Env vars win over `settings.json` when both are set.
@@ -228,6 +238,7 @@ All settings can be configured via environment variables. Env vars take priority
 | `DEEP_RESEARCH_REPORTS_DIR` | `<cwd>/deep-research/reports` | Report output directory |
 | `DEEP_RESEARCH_ARTIFACTS_DIR` | `<cwd>/deep-research/artifacts` | Artifact output directory |
 | `DEEP_RESEARCH_DEFAULT_PROFILE` | `default` | Default research profile name |
+| `DEEP_RESEARCH_REPORT_STYLE` | `narrative` | Default report style (`narrative` or `subtopics`) |
 | `DEEP_RESEARCH_PDF_EXPORT` | `false` | Auto-export reports to PDF (`true`) |
 | `DEEP_RESEARCH_MIND_MAP` | `false` | Auto-generate mind map after research (`true`) |
 | `DEEP_RESEARCH_SETTINGS_ON_SESSION_START` | `false` | Show settings table on session start (`true`) |
