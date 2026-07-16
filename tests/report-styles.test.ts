@@ -99,4 +99,25 @@ describe("createReportStyle dispatch", () => {
     const prompt = style.buildDraftingPrompt(plan, []);
     assert.ok(prompt.includes("Introduction"));
   });
+
+  it("includes research engines in drafting prompt", () => {
+    const prompt = createReportStyle("narrative")!.buildDraftingPrompt(
+      {
+        topic: "t",
+        goal: "g",
+        researchQuestions: [],
+        engines: ["duckduckgo", "tavily"],
+        profile: { name: "default" },
+        scope: { include: "", exclude: "" },
+        estimatedCost: { searchCalls: 0, scrapeCalls: 0, description: "" },
+      } as any,
+      [],
+    );
+    assert.ok(prompt.includes("duckduckgo") && prompt.includes("tavily"), "drafting prompt must mention all engines");
+  });
+
+  it("omits engines line when plan has no engines", () => {
+    const prompt = createReportStyle("narrative")!.buildDraftingPrompt({ ...plan, engines: [] }, []);
+    assert.ok(!prompt.includes("Research conducted using"));
+  });
 });

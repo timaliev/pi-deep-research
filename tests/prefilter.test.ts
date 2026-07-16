@@ -245,8 +245,8 @@ describe("PrefilterManager", () => {
       // Skip withParams — results are empty without it
       const result = await manager.finalize("state machines", VALID_PLAN);
       const artifact = JSON.parse(readFileSync(result.planArtifactPath!, "utf-8"));
-      assert.equal(artifact.preliminarySearch.resultsCount, 0, "fresh instance has no prior search results");
-      assert.equal(artifact.preliminarySearch.scrapedUrls.length, 0, "fresh instance has no scraped URLs");
+      assert.equal(artifact.preliminarySearch.resultsCount, undefined, "direct plan submission has no resultsCount");
+      assert.ok(artifact.preliminarySearch.note, "direct plan submission must have note");
     });
 
     it("rejects duplicate finalize (idempotency guard)", async () => {
