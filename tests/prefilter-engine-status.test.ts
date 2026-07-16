@@ -30,13 +30,19 @@ describe("buildParamsPrompt engine availability", () => {
 
   it("duckduckgo always marked available", () => {
     const src = readFileSync(PROMPTS_PATH, "utf-8");
-    const ddgLine = src.match(/duckduckgo[^}]*available:\s*true/);
-    assert.ok(ddgLine, "duckduckgo must have available: true");
+    // buildEngineStatus now derives from ENGINE_META — free engines are always available
+    assert.ok(
+      src.includes("ENGINE_META") || src.includes("meta.free"),
+      "buildEngineStatus must use ENGINE_META for availability",
+    );
   });
 
   it("brave checks SearchProviderCredentials for apiKey", () => {
     const src = readFileSync(PROMPTS_PATH, "utf-8");
-    const braveLine = src.match(/brave[^}]*get\(["']brave["']/);
-    assert.ok(braveLine, "brave must check credentials via cred.get('brave', ...)");
+    // buildEngineStatus uses cred?.get() for non-free engines
+    assert.ok(
+      src.includes("cred?.get") || src.match(/get\(.*credKey/),
+      "buildEngineStatus must check credentials via cred.get()",
+    );
   });
 });

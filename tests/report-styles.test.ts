@@ -89,8 +89,14 @@ describe("createReportStyle dispatch", () => {
     assert.ok(!prompt.includes("1. **Introduction**"));
   });
 
-  it("falls back to narrative for unknown style", () => {
-    const prompt = createReportStyle("unknown").buildDraftingPrompt(plan, []);
+  it("returns undefined for unknown style", () => {
+    assert.equal(createReportStyle("unknown"), undefined);
+  });
+
+  it("caller must fall back to narrative for unknown style", () => {
+    // Call-site pattern: pick style, fall back to narrative on undefined
+    const style = createReportStyle("unknown") ?? createReportStyle("narrative")!;
+    const prompt = style.buildDraftingPrompt(plan, []);
     assert.ok(prompt.includes("Introduction"));
   });
 });

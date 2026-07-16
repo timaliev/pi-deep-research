@@ -1,11 +1,14 @@
 import { mkdirSync } from "node:fs";
 import { Type } from "typebox";
+import { confirmPlanDialog } from "../confirm-dialog.js";
 import type { ResearchPlanProfile } from "../prefilter.js";
 import { type PrefilterManager, PrefilterSession } from "../prefilter.js";
 import type { ProfileResolver } from "../profile-resolver.js";
 import type { Scraper } from "../scraper.js";
 import type { SearchEngine, searchWeb as SearchWebFn } from "../search/web-search.js";
 import { searchWeb } from "../search/web-search.js";
+import { PREFILTER_RUN_KEY } from "../session-state.js";
+import type { SessionState } from "../session-state.js";
 import type { SearchProviderCredentials, SettingsContext } from "../settings-context.js";
 
 export function createPlanResearchTool(
@@ -13,18 +16,19 @@ export function createPlanResearchTool(
   settings: SettingsContext,
   profileResolver: ProfileResolver,
   searchCred: SearchProviderCredentials,
+  sessionState: SessionState,
   scraper: Scraper,
   searchFn: typeof SearchWebFn = searchWeb,
 ) {
-  const session = new PrefilterSession(
-    settings.artifactsDir,
+  const session = new PrefilterSession({
+    artifactsDir: settings.artifactsDir,
     profileResolver,
     searchCred,
     searchFn,
     scraper,
-    settings.reportStyle,
-    settings.enabledEngines,
-  );
+    defaultReportStyle: settings.reportStyle,
+    enabledEngines: settings.enabledEngines,
+  });
 
   // ─── Handler methods ──────────────────────────────────────
 
@@ -92,7 +96,7 @@ export function createPlanResearchTool(
     };
   }
 
-  async function handleFinalize(topic: string | undefined, planJson: string, manager: PrefilterManager) {
+  async function handleFinalize(topic: string | undefined, planJson: string, manager: PrefilterManager, ctx: any) {
     let resolvedTopic = topic as string;
     if (!resolvedTopic) {
       try {
@@ -103,21 +107,41 @@ export function createPlanResearchTool(
     }
     const result = await manager.finalize(resolvedTopic, planJson);
     session.remove(result.runId);
+
+    if (result.phase !== "plan_ready" || !result.plan || !result.planArtifactPath) {
+      return {
+        content: [{ type: "text", text: `## Plan Error ❌\n\n${result.error}` }],
+        details: { phase: result.phase, error: result.error },
+      };
+    }
+
+    const plan = result.plan;
+    const planPath = result.planArtifactPath;
+
+    // Inline confirmation — skip LLM, ask user directly (idempotent via shared dialog)
+    const confirmed = await confirmPlanDialog(ctx, plan, profileResolver, settings);
+    if (confirmed) {
+      sessionState.saveConfirmation(planPath);
+    }
+
+    const confirmationNote = confirmed
+      ? `\n\n▶ Research confirmed. Call run_research to begin.`
+      : ctx.hasUI
+        ? `\n\n⏸ Research not confirmed. Call confirm_research when ready.`
+        : `\n\nNext: show user and ask for confirmation before calling run_research.`;
+
     return {
       content: [
         {
           type: "text",
-          text:
-            result.phase === "plan_ready"
-              ? `## Research Plan Ready ✅\n\nPlan saved to: ${result.planArtifactPath}\n\n**Topic:** ${result.plan?.topic}\n**Engines:** ${result.plan?.engines.join(", ")}\n**Profile:** ${result.plan?.profile.name}\n**Questions:** ${result.plan?.researchQuestions.length}\n\nNext: show user and ask for confirmation before calling run_research.`
-              : `## Plan Error ❌\n\n${result.error}`,
+          text: `## Research Plan Ready ✅\n\nPlan saved to: ${planPath}\n\n**Topic:** ${plan.topic}\n**Engines:** ${plan.engines.join(", ")}\n**Profile:** ${plan.profile.name}\n**Questions:** ${plan.researchQuestions.length}${confirmationNote}`,
         },
       ],
       details: {
         phase: result.phase,
-        plan_artifact_path: result.planArtifactPath,
+        plan_artifact_path: planPath,
         plan: result.plan,
-        error: result.error,
+        confirmed,
       },
     };
   }
@@ -138,7 +162,7 @@ export function createPlanResearchTool(
       mkdirSync(settings.artifactsDir, { recursive: true });
       const entries = ctx.sessionManager.getEntries();
       const manager = session.getOrCreate(params.topic ?? "", entries, (runId) =>
-        pi.appendEntry("deep-research:prefilter-run", { runId, topic: params.topic }),
+        pi.appendEntry(PREFILTER_RUN_KEY, { runId, topic: params.topic }),
       );
 
       // Router — 4 branches, one per protocol step
@@ -152,7 +176,7 @@ export function createPlanResearchTool(
         return handleContinue(entries, manager);
       }
       if (params.plan_json) {
-        return handleFinalize(params.topic, params.plan_json, manager);
+        return handleFinalize(params.topic, params.plan_json, manager, ctx);
       }
       return { content: [{ type: "text", text: "Error: unexpected state." }], details: { error: "unexpected_state" } };
     },

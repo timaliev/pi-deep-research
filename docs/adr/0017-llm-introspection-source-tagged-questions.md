@@ -1,7 +1,7 @@
 # ADR-0017: LLM introspection + source-tagged research questions
 
 **Date:** 2026-07-09
-**Status:** proposed
+**Status:** accepted (except Q8 — runtime consumption of questionMetadata, tracked in TODO.md)
 
 ## Context
 

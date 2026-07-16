@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { Type } from "typebox";
 import { resolveReportPath, writeReportFile } from "../report-assembly.js";
+import { REPORT_PATH_KEY } from "../session-state.js";
 import type { SettingsContext } from "../settings-context.js";
 
 export function createSaveReportTool(settings: SettingsContext) {
@@ -35,7 +36,7 @@ export function createSaveReportTool(settings: SettingsContext) {
       }
 
       const entries = ctx.sessionManager.getEntries();
-      const reportPathEntry = [...entries].reverse().find((e: any) => e.customType === "deep-research:report-path");
+      const reportPathEntry = [...entries].reverse().find((e: any) => e.customType === REPORT_PATH_KEY);
 
       // Prefer path pre-computed by run_research auto-save
       const storedRunId = (reportPathEntry?.data as any)?.runId as string | undefined;

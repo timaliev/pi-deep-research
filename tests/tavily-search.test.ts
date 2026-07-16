@@ -20,9 +20,12 @@ const prefilterCode = readFileSync(join(import.meta.dirname ?? ".", "..", "exten
 
 describe("Tavily search integration", () => {
   it("SearchEngine type includes tavily", () => {
-    const match = webSearchCode.match(/export type SearchEngine = ["'\w\s|]+/);
-    assert.ok(match, "SearchEngine type must exist");
-    assert.ok(match[0].includes("tavily"), "SearchEngine type must include 'tavily'");
+    // SearchEngine is now derived from ALL_ENGINES in engines.ts
+    const enginesSrc = readFileSync(
+      join(import.meta.dirname ?? ".", "..", "extension", "search", "engines.ts"),
+      "utf-8",
+    );
+    assert.ok(enginesSrc.includes('"tavily"'), "ALL_ENGINES must include tavily");
   });
 
   it("searchTavily function exists with API key check", () => {

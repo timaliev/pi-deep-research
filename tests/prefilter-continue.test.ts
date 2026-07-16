@@ -34,13 +34,12 @@ describe("PrefilterManager.continue()", () => {
 
   it("continue() dispatches to start() when no cached params and topic provided", async () => {
     const resolver = new ProfileResolver({});
-    const manager = new PrefilterManager(
-      mockSearchFn(MOCK_RESULTS),
-      mockScraper(MOCK_PAGES),
-      TEST_DIR,
-      undefined,
-      resolver,
-    );
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(MOCK_RESULTS),
+      scraper: mockScraper(MOCK_PAGES),
+      artifactsDir: TEST_DIR,
+      profileResolver: resolver,
+    });
     // Fresh manager — continue() should behave like start() when given a topic
     const result = await manager.continue("test topic");
     assert.equal(result.phase, "awaiting_params");
@@ -49,13 +48,12 @@ describe("PrefilterManager.continue()", () => {
 
   it("continue() returns error when no cached params and no topic", async () => {
     const resolver = new ProfileResolver({});
-    const manager = new PrefilterManager(
-      mockSearchFn(MOCK_RESULTS),
-      mockScraper(MOCK_PAGES),
-      TEST_DIR,
-      undefined,
-      resolver,
-    );
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(MOCK_RESULTS),
+      scraper: mockScraper(MOCK_PAGES),
+      artifactsDir: TEST_DIR,
+      profileResolver: resolver,
+    });
     // Fresh manager with no topic — should error
     const result = await manager.continue();
     assert.equal(result.phase, "error");
@@ -64,13 +62,12 @@ describe("PrefilterManager.continue()", () => {
 
   it("continue() routes to search after withParams completes", async () => {
     const resolver = new ProfileResolver({});
-    const manager = new PrefilterManager(
-      mockSearchFn(MOCK_RESULTS),
-      mockScraper(MOCK_PAGES),
-      TEST_DIR,
-      undefined,
-      resolver,
-    );
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(MOCK_RESULTS),
+      scraper: mockScraper(MOCK_PAGES),
+      artifactsDir: TEST_DIR,
+      profileResolver: resolver,
+    });
     // First: withParams() runs the search
     const wpResult = await manager.withParams("test", ["duckduckgo"], { name: "default" });
     assert.equal(wpResult.phase, "awaiting_plan");

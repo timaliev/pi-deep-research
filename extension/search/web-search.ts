@@ -150,7 +150,7 @@ function deduplicateByUrl(results: WebSearchResult[]): WebSearchResult[] {
 
 // --- Public API ---
 
-export type SearchEngine = "duckduckgo" | "brave" | "searxng" | "tavily" | "yandex";
+export type { SearchEngine } from "./engines.js";
 
 export type EngineSearchFn = (
   query: string,

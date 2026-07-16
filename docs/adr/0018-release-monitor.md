@@ -1,7 +1,7 @@
 # ADR-0018: Release monitor on session start
 
 **Date:** 2026-07-09
-**Status:** proposed
+**Status:** accepted
 
 ## Context
 

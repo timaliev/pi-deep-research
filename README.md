@@ -446,31 +446,18 @@ See [Environment Variables](#environment-variables) for API key configuration.
 
 ## Development
 
-```bash
-# Run tests
-cd extension && node --import tsx --test ../tests/*.test.ts
+See [development.md](development.md) for the full quality gate checklist.
 
-# 363 tests across 53 files covering:
-# - PrefilterManager (three-step, validation, API key checks, engine status)
-# - ResearchStateMachine (full cycle, concurrency, soft limits, deepening)
-# - Engine adapters (DDG, Brave, SearXNG, Tavily, Yandex — per-engine tests)
-# - WebScraper (title/content extraction, error handling, text content)
-# - JsonlLogger (write, append, metadata)
-# - SearchProviderCredentials (settings.json + env resolution)
-# - ProfileResolver (built-in merge, user override, validation)
-# - ResearchRunOrchestrator (plan confirmation, report assembly)
-# - Report styles (narrative, subtopics template tests)
-# - SessionState (persistence, draft restore)
-# - SettingsContext (cascade, path resolution)
-# - SearchQueue (concurrency control)
-# - Tool handlers (save_report, plan_research, run_research extraction)
-# - Telemetry (markdown table generation, version)
-# - Integration (end-to-end research run)
+```bash
+npm test              # 429 tests across 53 files
+npm run format        # auto-format with biome
+npm run lint          # biome lint
 ```
 
 ## Related Documents
 
 - [CONTEXT.md](CONTEXT.md) — domain glossary
+- [Architecture Review (July 2026)](docs/architecture-review-2026-07.md) — deepening opportunities
 
 ### Architecture Decisions (ADRs)
 
@@ -492,9 +479,11 @@ cd extension && node --import tsx --test ../tests/*.test.ts
 | [0014](docs/adr/0014-pdf-export.md) | accepted | PDF export of research reports |
 | [0015](docs/adr/0015-research-draft-module.md) | accepted | ResearchDraft module — collapse triple-path draft |
 | [0016](docs/adr/0016-orchestrator-post-processing.md) | accepted | Move post-processing to orchestrator |
-| [0017](docs/adr/0017-llm-introspection-source-tagged-questions.md) | proposed | LLM introspection + source-tagged questions |
+| [0017](docs/adr/0017-llm-introspection-source-tagged-questions.md) | accepted | LLM introspection + source-tagged questions (Q8 deferred) |
 | [0018](docs/adr/0018-release-monitor.md) | accepted | Release monitor on session start |
 | [0019](docs/adr/0019-tui-confirmation-gate.md) | accepted | TUI confirmation gate for research plans |
-| [0020](docs/adr/0020-settings-reinit-session-start.md) | proposed | SettingsContext re-init on session_start |
+| [0020](docs/adr/0020-settings-reinit-session-start.md) | accepted | SettingsContext re-init on session_start |
 | [0021](docs/adr/0021-save-report-report-path.md) | accepted | save_report report_path for large reports |
 | [0022](docs/adr/0022-done-phase-steer-messages.md) | accepted | Remove redundant steer from done phase |
+| [0024](docs/adr/0024-prefilter-context-bundle.md) | accepted | PrefilterContext — bundled constructor for PrefilterManager |
+| [0025](docs/adr/0025-state-machine-resume.md) | accepted | State machine resume — move draft restoration inside the machine |

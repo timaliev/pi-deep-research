@@ -15,8 +15,12 @@ describe("Engine allowlist — SettingsContext.enabledEngines", () => {
   });
 
   it("defaults to duckduckgo plus searxng", () => {
+    // Default enabledEngines derives from ALL_ENGINES.filter free engines
     const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "settings-context.ts"), "utf-8");
-    assert.ok(src.includes('"duckduckgo"') && src.includes('"searxng"'), "default must include duckduckgo and searxng");
+    assert.ok(
+      src.includes("ALL_ENGINES") && src.includes("ENGINE_META"),
+      "default must derive from ALL_ENGINES + ENGINE_META",
+    );
   });
 
   it("reads from DEEP_RESEARCH_ENABLED_ENGINES env var", () => {

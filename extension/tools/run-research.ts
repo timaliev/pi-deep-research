@@ -1,5 +1,6 @@
 import { Type } from "typebox";
 import type { ResearchRunOrchestrator } from "../research-run-orchestrator.js";
+import { CONFIRMATION_KEY } from "../session-state.js";
 import type { SessionState } from "../session-state.js";
 import type { SettingsContext } from "../settings-context.js";
 
@@ -22,7 +23,7 @@ export function createRunResearchTool(
 
       // Confirmation gate — only for first call
       if (params.plan_artifact_path) {
-        const confirmed = [...entries].reverse().find((e: any) => e.customType === "deep-research:plan-confirmed");
+        const confirmed = [...entries].reverse().find((e: any) => e.customType === CONFIRMATION_KEY);
         if (!confirmed) {
           return {
             content: [

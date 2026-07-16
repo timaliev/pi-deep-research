@@ -56,7 +56,11 @@ describe("PrefilterManager — plan-driven params", () => {
   });
 
   it("start() returns awaiting_params with params inject prompt", async () => {
-    const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(MOCK_RESULTS),
+      scraper: mockScraper(mockScrapedPages()),
+      artifactsDir: TEST_ARTIFACTS,
+    });
     const result = await manager.start("test topic");
 
     assert.equal(result.phase, "awaiting_params");
@@ -66,7 +70,11 @@ describe("PrefilterManager — plan-driven params", () => {
   });
 
   it("withParams() runs preliminary search and returns awaiting_plan", async () => {
-    const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(MOCK_RESULTS),
+      scraper: mockScraper(mockScrapedPages()),
+      artifactsDir: TEST_ARTIFACTS,
+    });
     const result = await manager.withParams("test topic", ["duckduckgo"], { name: "default" });
 
     assert.equal(result.phase, "awaiting_plan");
@@ -76,7 +84,11 @@ describe("PrefilterManager — plan-driven params", () => {
   });
 
   it("withParams() inject shows resolved profile params and that profile can be changed", async () => {
-    const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(MOCK_RESULTS),
+      scraper: mockScraper(mockScrapedPages()),
+      artifactsDir: TEST_ARTIFACTS,
+    });
 
     // Test with named profile
     const r1 = await manager.withParams("test", ["duckduckgo"], { name: "deep" });
@@ -101,7 +113,11 @@ describe("PrefilterManager — plan-driven params", () => {
     const oldKey = process.env.BRAVE_API_KEY;
     delete process.env.BRAVE_API_KEY;
 
-    const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(MOCK_RESULTS),
+      scraper: mockScraper(mockScrapedPages()),
+      artifactsDir: TEST_ARTIFACTS,
+    });
     const result = await manager.withParams("test", ["brave", "duckduckgo"], { name: "fast" });
 
     // Restore
@@ -112,7 +128,11 @@ describe("PrefilterManager — plan-driven params", () => {
   });
 
   it("finalize() validates engines and profile in plan JSON", async () => {
-    const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(MOCK_RESULTS),
+      scraper: mockScraper(mockScrapedPages()),
+      artifactsDir: TEST_ARTIFACTS,
+    });
 
     // Missing engines
     const badPlan = JSON.stringify({
@@ -130,7 +150,11 @@ describe("PrefilterManager — plan-driven params", () => {
   });
 
   it("finalize() validates profile.name must be valid", async () => {
-    const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(MOCK_RESULTS),
+      scraper: mockScraper(mockScrapedPages()),
+      artifactsDir: TEST_ARTIFACTS,
+    });
 
     const badPlan = JSON.stringify({
       topic: "test",
@@ -148,7 +172,11 @@ describe("PrefilterManager — plan-driven params", () => {
   });
 
   it("finalize() validates custom profile has breadth and depth", async () => {
-    const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(MOCK_RESULTS),
+      scraper: mockScraper(mockScrapedPages()),
+      artifactsDir: TEST_ARTIFACTS,
+    });
 
     const badPlan = JSON.stringify({
       topic: "test",
@@ -166,7 +194,11 @@ describe("PrefilterManager — plan-driven params", () => {
   });
 
   it("finalize() accepts valid plan with engines + profile", async () => {
-    const manager = new PrefilterManager(mockSearchFn(MOCK_RESULTS), mockScraper(mockScrapedPages()), TEST_ARTIFACTS);
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(MOCK_RESULTS),
+      scraper: mockScraper(mockScrapedPages()),
+      artifactsDir: TEST_ARTIFACTS,
+    });
 
     await manager.start("test");
 

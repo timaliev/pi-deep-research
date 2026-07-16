@@ -11,18 +11,17 @@ const indexCode = readFileSync(join(import.meta.dirname ?? ".", "..", "extension
 
 describe("deep_web_search tool registration", () => {
   it("StringEnum includes duckduckgo, brave, searxng, tavily, yandex", () => {
-    const match = indexCode.match(/StringEnum\(\[([^\]]+)\]/);
-    assert.ok(match, "StringEnum for engines must exist");
-    const engines = match[1]
-      .replace(/"/g, "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    assert.ok(engines.includes("duckduckgo"), "must include duckduckgo");
-    assert.ok(engines.includes("brave"), "must include brave");
-    assert.ok(engines.includes("searxng"), "must include searxng");
-    assert.ok(engines.includes("tavily"), "must include tavily");
-    assert.ok(engines.includes("yandex"), "must include yandex");
+    // StringEnum now derives from ALL_ENGINES constant
+    assert.ok(indexCode.includes("ALL_ENGINES"), "StringEnum must use ALL_ENGINES");
+    const enginesSrc = readFileSync(
+      join(import.meta.dirname ?? ".", "..", "extension", "search", "engines.ts"),
+      "utf-8",
+    );
+    assert.ok(enginesSrc.includes('"duckduckgo"'), "ALL_ENGINES must include duckduckgo");
+    assert.ok(enginesSrc.includes('"brave"'), "ALL_ENGINES must include brave");
+    assert.ok(enginesSrc.includes('"searxng"'), "ALL_ENGINES must include searxng");
+    assert.ok(enginesSrc.includes('"tavily"'), "ALL_ENGINES must include tavily");
+    assert.ok(enginesSrc.includes('"yandex"'), "ALL_ENGINES must include yandex");
   });
 
   it("description mentions all 5 engines", () => {

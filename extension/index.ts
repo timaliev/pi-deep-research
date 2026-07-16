@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { confirmPlanDialog } from "./confirm-dialog.js";
 import { ProfileResolver } from "./profile-resolver.js";
 import { checkForNewRelease } from "./release-monitor.js";
 import { ResearchRunOrchestrator } from "./research-run-orchestrator.js";
@@ -77,38 +78,8 @@ export default function (pi: ExtensionAPI) {
       return { block: true, reason: `Cannot read plan: ${artifact.error}` };
     }
 
-    const plan = artifact.artifact.plan;
-    const style = plan.reportStyle ?? settings.reportStyle ?? "narrative";
-    const prof = plan.profile;
-    const profileDesc =
-      prof.name === "custom"
-        ? `custom (breadth=${prof.breadth}, depth=${prof.depth}, concurrency=${prof.concurrency})`
-        : `${prof.name} (breadth=${profileResolver.resolve(prof).breadth}, depth=${profileResolver.resolve(prof).depth}, concurrency=${profileResolver.resolve(prof).concurrency})`;
-
-    if (!ctx.hasUI) {
-      return { block: true, reason: "Confirmation requires interactive mode." };
-    }
-
-    const cost = plan.estimatedCost;
-    const costDesc = cost?.description ?? `${cost?.searchCalls ?? "?"} searches, ${cost?.scrapeCalls ?? "?"} scrapes`;
-
-    const choice = await ctx.ui.select(
-      [
-        `🔬 Research Plan Confirmation`,
-        ``,
-        `Topic:      ${plan.topic}`,
-        `Engines:    ${plan.engines.join(", ")}`,
-        `Profile:    ${profileDesc}`,
-        `Style:      ${style}`,
-        `Questions:  ${plan.researchQuestions.length}`,
-        `Cost:       ${costDesc}`,
-        ``,
-        `Start deep research?`,
-      ].join("\n"),
-      ["No — Review plan", "Yes — Start research"],
-    );
-
-    if (!choice || !choice.startsWith("Yes")) {
+    const confirmed = await confirmPlanDialog(ctx, artifact.artifact.plan, profileResolver, settings);
+    if (!confirmed) {
       return { block: true, reason: "Confirmation declined by user" };
     }
   });

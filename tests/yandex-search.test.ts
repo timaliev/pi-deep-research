@@ -18,9 +18,11 @@ const yandexCode = readFileSync(
 
 describe("Yandex search integration", () => {
   it("SearchEngine type includes yandex", () => {
-    const match = webSearchCode.match(/export type SearchEngine = ["'\w\s|]+/);
-    assert.ok(match, "SearchEngine type must exist");
-    assert.ok(match[0].includes("yandex"), "SearchEngine type must include 'yandex'");
+    const enginesSrc = readFileSync(
+      join(import.meta.dirname ?? ".", "..", "extension", "search", "engines.ts"),
+      "utf-8",
+    );
+    assert.ok(enginesSrc.includes('"yandex"'), "ALL_ENGINES must include yandex");
   });
 
   it("searchYandex function exists with credential check", () => {

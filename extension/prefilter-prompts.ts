@@ -6,7 +6,8 @@
  */
 
 import type { ScrapedPage } from "../scraper.js";
-import type { SearchEngine, WebSearchResult } from "../search/web-search.js";
+import { ALL_ENGINES, ENGINE_META, type SearchEngine } from "./search/engines.js";
+import type { WebSearchResult } from "../search/web-search.js";
 import type { SearchProviderCredentials } from "../settings-context.js";
 
 /** Build the seed search query from a topic string. */
@@ -16,20 +17,14 @@ export function buildSearchQuery(topic: string): string {
 
 /** Build engine availability status (✅/❌ per engine, filtered by allowlist). */
 export function buildEngineStatus(cred?: SearchProviderCredentials, enabledEngines?: string[]): string {
-  const engines: Array<{ name: string; key: string; available: boolean }> = [
-    { name: "duckduckgo", key: "none", available: true },
-    { name: "brave", key: "BRAVE_API_KEY", available: cred?.get("brave", "apiKey") != null },
-    { name: "tavily", key: "TAVILY_API_KEY", available: cred?.get("tavily", "apiKey") != null },
-    { name: "yandex", key: "YANDEX_OAUTH_TOKEN", available: cred?.get("yandex", "oauthToken") != null },
-    { name: "searxng", key: "none", available: true },
-  ];
-  return engines
-    .map((e) => {
-      const allowed = !enabledEngines || enabledEngines.length === 0 || enabledEngines.includes(e.name);
-      if (!allowed) return `  ❌ ${e.name} (not enabled)`;
-      return `  ${e.available ? "✅" : "❌"} ${e.name}${e.key !== "none" ? ` (needs ${e.key})` : ""}`;
-    })
-    .join("\n");
+  return ALL_ENGINES.map((name) => {
+    const meta = ENGINE_META[name];
+    const allowed = !enabledEngines || enabledEngines.length === 0 || enabledEngines.includes(name);
+    if (!allowed) return `  ❌ ${name} (not enabled)`;
+    const available = meta.free || (meta.credKey ? cred?.get(name, meta.credKey) != null : false);
+    const keyNote = !meta.free && meta.envKey ? ` (needs ${meta.envKey})` : "";
+    return `  ${available ? "✅" : "❌"} ${name}${keyNote}`;
+  }).join("\n");
 }
 
 /** Build warning when API keys are missing for selected engines. */
@@ -57,17 +52,30 @@ export function buildParamsPrompt(
 }
 
 /** Build the second prompt: produce a full Research Plan JSON. */
-export function buildPlanPrompt(
-  topic: string,
-  engines: SearchEngine[],
-  profileName: string,
-  resolvedBreadth: number,
-  resolvedDepth: number,
-  resolvedConcurrency: number,
-  presets: Record<string, { breadth: number; depth: number; concurrency: number }>,
-  searchResults: WebSearchResult[],
-  scrapedContent: ScrapedPage[],
-): string {
+export interface PlanPromptContext {
+  topic: string;
+  engines: SearchEngine[];
+  profileName: string;
+  resolvedBreadth: number;
+  resolvedDepth: number;
+  resolvedConcurrency: number;
+  presets: Record<string, { breadth: number; depth: number; concurrency: number }>;
+  searchResults: WebSearchResult[];
+  scrapedContent: ScrapedPage[];
+}
+
+export function buildPlanPrompt(ctx: PlanPromptContext): string {
+  const {
+    topic,
+    engines,
+    profileName,
+    resolvedBreadth,
+    resolvedDepth,
+    resolvedConcurrency,
+    presets,
+    searchResults,
+    scrapedContent,
+  } = ctx;
   const profileList = Object.entries(presets)
     .map(([name, p]) => `  ${name}: breadth=${p.breadth}, depth=${p.depth}, concurrency=${p.concurrency}`)
     .join("\n");

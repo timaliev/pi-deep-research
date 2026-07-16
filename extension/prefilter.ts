@@ -17,6 +17,7 @@ import { WebScraper } from "./scraper.js";
 import type { SearchEngine, searchWeb as SearchWebFn, WebSearchResult } from "./search/web-search.js";
 import { searchWeb } from "./search/web-search.js";
 import type { SearchProviderCredentials } from "./settings-context.js";
+import { PREFILTER_RUN_KEY } from "./session-state.js";
 
 export interface ResearchPlanProfile {
   name: "default" | "fast" | "deep" | "custom";
@@ -83,6 +84,18 @@ export interface PrefilterResult {
   error?: string;
 }
 
+/** Bundled dependencies for PrefilterManager and PrefilterSession (ADR-0024). */
+export interface PrefilterContext {
+  searchFn: typeof SearchWebFn;
+  scraper: Scraper;
+  artifactsDir: string;
+  logger?: Logger;
+  profileResolver?: ProfileResolver;
+  searchCred?: SearchProviderCredentials;
+  defaultReportStyle?: "narrative" | "subtopics";
+  enabledEngines?: string[];
+}
+
 /**
  * Manages the research prefilter workflow:
  * 1. Preliminary search + scrape
@@ -94,7 +107,7 @@ export class PrefilterManager {
   private readonly scraper: Scraper;
   private readonly artifactsDir: string;
   private readonly logger?: Logger;
-  private readonly profileResolver?: ProfileResolver;
+  private readonly profileResolver: ProfileResolver;
   private readonly searchCred?: SearchProviderCredentials;
   private readonly sharedRunId?: string;
   private readonly defaultReportStyle: "narrative" | "subtopics";
@@ -102,29 +115,19 @@ export class PrefilterManager {
   private lastSearchResultCount = 0;
   private lastScrapedUrls: string[] = [];
   private finalized = false;
-  private introspectionDone = false;
+  private prefilterPhase: "awaiting_params" | "awaiting_plan" | "introspecting" | "merging" = "awaiting_params";
   private llmTopics?: string;
 
-  constructor(
-    searchFn: typeof SearchWebFn,
-    scraper: Scraper,
-    artifactsDir: string,
-    logger?: Logger,
-    profileResolver?: ProfileResolver,
-    searchCred?: SearchProviderCredentials,
-    sharedRunId?: string,
-    defaultReportStyle?: "narrative" | "subtopics",
-    enabledEngines?: string[],
-  ) {
-    this.searchFn = searchFn;
-    this.scraper = scraper;
-    this.artifactsDir = artifactsDir;
-    this.logger = logger;
-    this.profileResolver = profileResolver ?? new ProfileResolver({}, "default");
-    this.searchCred = searchCred;
+  constructor(ctx: PrefilterContext, sharedRunId?: string) {
+    this.searchFn = ctx.searchFn;
+    this.scraper = ctx.scraper;
+    this.artifactsDir = ctx.artifactsDir;
+    this.logger = ctx.logger;
+    this.profileResolver = ctx.profileResolver ?? new ProfileResolver({}, "default");
+    this.searchCred = ctx.searchCred;
     this.sharedRunId = sharedRunId;
-    this.defaultReportStyle = defaultReportStyle ?? "narrative";
-    this.enabledEngines = enabledEngines;
+    this.defaultReportStyle = ctx.defaultReportStyle ?? "narrative";
+    this.enabledEngines = ctx.enabledEngines;
   }
 
   private runId(): string {
@@ -137,31 +140,32 @@ export class PrefilterManager {
   private cachedProfile?: ResearchPlanProfile;
 
   /**
-   * Handle a zero-params call — internally routes to the appropriate step.
+   * Handle a zero-params call — dispatches by prefilter phase.
    * Called by the plan_research tool when no params_json or plan_json are provided.
    */
   async continue(topic?: string, llmResponse?: string): Promise<PrefilterResult> {
-    // Fresh state with topic → behave like start()
-    if (topic && this.lastSearchResultCount === 0 && this.lastScrapedUrls.length === 0) {
+    // Phase: awaiting_params + topic → behave like start()
+    if (topic && this.prefilterPhase === "awaiting_params") {
       return this.start(topic);
     }
 
-    // Cached params from a prior withParams() → route to next step
-    if (this.cachedTopic && this.cachedEngines && this.cachedProfile) {
-      // ADR-0017: introspection → merge flow
-      if (!this.introspectionDone) {
-        this.introspectionDone = true;
-        const inject = buildIntrospectionPrompt(this.cachedTopic);
-        return { phase: "awaiting_plan", runId: this.runId(), inject };
-      }
-      // Introspection complete — run search, then merge
+    // Phase: awaiting_plan → inject introspection prompt (ADR-0017)
+    if (this.prefilterPhase === "awaiting_plan") {
+      this.prefilterPhase = "introspecting";
+      const inject = buildIntrospectionPrompt(this.cachedTopic ?? topic ?? "");
+      return { phase: "awaiting_plan", runId: this.runId(), inject };
+    }
+
+    // Phase: introspecting → run search + merge
+    if (this.prefilterPhase === "introspecting") {
+      this.prefilterPhase = "merging";
       if (llmResponse) {
         this.llmTopics = llmResponse;
       }
       return this.doMergeStep();
     }
 
-    // No topic, no cached state → error
+    // No valid phase → error
     return { phase: "error", runId: this.runId(), error: "No topic provided and no cached prefilter state." };
   }
 
@@ -185,6 +189,7 @@ export class PrefilterManager {
 
   /** Step 1: Ask agent to propose engines + profile. */
   async start(topic: string): Promise<PrefilterResult> {
+    this.prefilterPhase = "awaiting_params";
     const runId = this.runId();
     this.logger?.event("prefilter_started", { topic });
     const inject = buildParamsPrompt(
@@ -199,6 +204,7 @@ export class PrefilterManager {
 
   /** Step 2: Agent chose engines + profile. Prelim search, ask for full plan. */
   async withParams(topic: string, engines: SearchEngine[], profile: ResearchPlanProfile): Promise<PrefilterResult> {
+    this.prefilterPhase = "awaiting_plan";
     const runId = this.runId();
     this.logger?.event("prefilter_params_set", { engines, profile });
 
@@ -233,17 +239,17 @@ export class PrefilterManager {
     }
 
     const resolved = this.profileResolver.resolve(profile);
-    const inject = buildPlanPrompt(
+    const inject = buildPlanPrompt({
       topic,
       engines,
-      profile.name,
-      resolved.breadth,
-      resolved.depth,
-      resolved.concurrency,
-      this.profileResolver.getPresets(),
+      profileName: profile.name,
+      resolvedBreadth: resolved.breadth,
+      resolvedDepth: resolved.depth,
+      resolvedConcurrency: resolved.concurrency,
+      presets: this.profileResolver.getPresets(),
       searchResults,
       scrapedContent,
-    );
+    });
     return { phase: "awaiting_plan", runId, inject, engines, profile, searchResults, scrapedContent };
   }
 
@@ -370,15 +376,7 @@ export class PrefilterManager {
 export class PrefilterSession {
   private managers = new Map<string, PrefilterManager>();
 
-  constructor(
-    private readonly artifactsDir: string,
-    private readonly profileResolver: ProfileResolver,
-    private readonly searchCred?: SearchProviderCredentials,
-    private readonly searchFn: typeof SearchWebFn = searchWeb,
-    private readonly scraper: Scraper = new WebScraper(),
-    private readonly defaultReportStyle?: "narrative" | "subtopics",
-    private readonly enabledEngines?: string[],
-  ) {}
+  constructor(private readonly ctx: PrefilterContext) {}
 
   /** Get existing manager or create a new one. Session entry lookup handled internally. */
   getOrCreate(
@@ -386,9 +384,7 @@ export class PrefilterSession {
     sessionEntries: Array<{ customType?: string; data?: unknown }>,
     persist: (runId: string) => void,
   ): PrefilterManager {
-    const prefilterEntry = [...sessionEntries]
-      .reverse()
-      .find((e: any) => e.customType === "deep-research:prefilter-run");
+    const prefilterEntry = [...sessionEntries].reverse().find((e: any) => e.customType === PREFILTER_RUN_KEY);
     const existingRunId = prefilterEntry?.data?.runId as string | undefined;
 
     if (existingRunId && this.managers.has(existingRunId)) {
@@ -398,19 +394,9 @@ export class PrefilterSession {
     // New prefilter session — clear stale managers
     this.managers.clear();
     const runId = generateRunId();
-    const logsDir = join(this.artifactsDir, "..", "logs");
+    const logsDir = join(this.ctx.artifactsDir, "..", "logs");
     const logger = new JsonlLogger(runId, join(logsDir, `${runId}-prefilter.log`));
-    const manager = new PrefilterManager(
-      this.searchFn,
-      this.scraper,
-      this.artifactsDir,
-      logger,
-      this.profileResolver,
-      this.searchCred,
-      runId,
-      this.defaultReportStyle,
-      this.enabledEngines,
-    );
+    const manager = new PrefilterManager({ ...this.ctx, logger }, runId);
     this.managers.set(runId, manager);
     persist(runId);
     return manager;

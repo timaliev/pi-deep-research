@@ -6,7 +6,7 @@ import { buildMindMapPrompt } from "./mind-map-injector.js";
 import type { PrefilterArtifact, ResearchPlan } from "./prefilter.js";
 import type { ProfileResolver } from "./profile-resolver.js";
 import { assembleReport } from "./report-assembly.js";
-import { ResearchDraft } from "./research-draft.js";
+import { STATE_KEY } from "./session-state.js";
 import type { Scraper } from "./scraper.js";
 import type { searchWeb as SearchWebFn } from "./search/web-search.js";
 import type { SearchProviderCredentials, SettingsContext } from "./settings-context.js";
@@ -87,8 +87,6 @@ export interface PostProcessor {
   process(ctx: PostProcessContext): Promise<PostProcessResult>;
 }
 
-const STATE_KEY = "deep-research:state";
-
 export class ResearchRunOrchestrator {
   private readonly searchFn: typeof SearchWebFn;
   private readonly scraper: Scraper;
@@ -111,12 +109,7 @@ export class ResearchRunOrchestrator {
     this.saveState = deps.saveState;
     this.profileResolver = deps.profileResolver;
     this.settings = deps.settings;
-    this.postProcessors = [
-      new AssembleReportProcessor(),
-      new PdfExportProcessor(),
-      new MindMapProcessor(),
-      new ContradictionProcessor(),
-    ];
+    this.postProcessors = [new PdfExportProcessor(), new MindMapProcessor()];
   }
 
   /** Single construction site for ResearchStateMachine. Optional logger covers the only variance between first and subsequent calls. */
@@ -202,9 +195,7 @@ export class ResearchRunOrchestrator {
 
   private async handleSubsequentCall(entries: OrchestratorParams["entries"]): Promise<OrchestratorResult> {
     const lastAssistant = [...entries].reverse().find((e) => e.message?.role === "assistant");
-    const rawResponse = lastAssistant?.message?.content as string | undefined;
-    // Parse once — used for both draft recovery and state machine phases
-    const parsedResponse = extractTextContent(rawResponse) || undefined;
+    const rawResponse = lastAssistant?.message?.content;
 
     const lastStateEntry = [...entries].reverse().find((e) => e.customType === STATE_KEY);
     if (!lastStateEntry) {
@@ -212,30 +203,23 @@ export class ResearchRunOrchestrator {
     }
 
     const stateData = lastStateEntry.data as Record<string, unknown>;
-    const snapshot = stateData as unknown as ResearchSnapshot;
     const plan = stateData.plan as ResearchPlan;
     const planArtifactPath = stateData.planArtifactPath as string;
-
-    // Restore draft from encoded blob — works for any phase
-    const draftEncoded = stateData.draftEncoded as string | undefined;
-    snapshot.draft = draftEncoded ? ResearchDraft.decode(draftEncoded) : new ResearchDraft();
 
     let deepResearchBase = (stateData.deepResearchBase as string) || join(dirname(planArtifactPath), "..");
     if (!deepResearchBase.startsWith("/")) deepResearchBase = join(process.cwd(), deepResearchBase);
     const logsDir = join(deepResearchBase, "logs");
     const artifactsDir = join(deepResearchBase, "artifacts");
 
-    if (!plan || !snapshot) {
+    if (!plan) {
       return { kind: "error", error: "corrupted_state", details: {} };
     }
 
     const machine = this.createMachine(artifactsDir);
 
-    const result = await this.runAndPersist(machine, snapshot, plan, parsedResponse, {
-      plan,
-      planArtifactPath,
-      deepResearchBase,
-    });
+    // Machine owns draft restoration + agent response parsing via resume()
+    const result = await machine.resume(stateData, rawResponse, plan);
+    this.saveState?.(result.snapshot, { plan, planArtifactPath, deepResearchBase });
 
     if (result.phase === "done") {
       return this.buildDoneResult(result.snapshot, plan, planArtifactPath, deepResearchBase, logsDir);
@@ -267,13 +251,44 @@ export class ResearchRunOrchestrator {
       return { kind: "done", ...base };
     }
 
+    const profileName =
+      typeof plan.profile === "object" && "name" in plan.profile ? (plan.profile as any).name : undefined;
+
+    // Always run: report assembly (was AssembleReportProcessor)
+    const reportPath = assembleReport({
+      snapshot,
+      topic: plan.topic,
+      reportsDir: this.settings.reportsDir,
+      planArtifactPath,
+      logsDir,
+      profileName,
+      appendSettingsReport: this.settings.settingsReport.inReport ?? false,
+      settings: this.settings,
+    });
+
+    // Always run: contradiction detection (was ContradictionProcessor)
+    let contradictionAnalysis: string | undefined;
+    const contradictions = snapshot.allFindings.filter(
+      (f) => f.text.includes("CONTRADICTION") || f.text.includes("contradiction") || f.text.includes("debatable"),
+    );
+    if (contradictions.length > 0) {
+      contradictionAnalysis = [
+        `## Contradictions & Debatable Facts`,
+        ``,
+        ...contradictions.map((f) => `- ${f.text.substring(0, 300)} [Source: ${f.sourceUrl}]`),
+        ``,
+      ].join("\n");
+    }
+
+    // Run gated PostProcessor pipeline (PDF, MindMap only)
     const ctx: PostProcessContext = {
       snapshot,
       plan,
       reportsDir: this.settings.reportsDir,
       planArtifactPath,
       logsDir,
-      profileName: typeof plan.profile === "object" && "name" in plan.profile ? (plan.profile as any).name : undefined,
+      reportPath,
+      profileName,
       settings: this.settings,
     };
 
@@ -289,33 +304,14 @@ export class ResearchRunOrchestrator {
     return {
       kind: "done",
       ...base,
+      reportPath,
+      contradictionAnalysis,
       ...merged,
     };
   }
 }
 
-// ─── PostProcessor adapters ──────────────────────────────────
-
-class AssembleReportProcessor implements PostProcessor {
-  name = "assemble-report";
-  enabled() {
-    return true;
-  }
-  async process(ctx: PostProcessContext): Promise<PostProcessResult> {
-    const reportPath = assembleReport({
-      snapshot: ctx.snapshot,
-      topic: ctx.plan.topic,
-      reportsDir: ctx.reportsDir,
-      planArtifactPath: ctx.planArtifactPath,
-      logsDir: ctx.logsDir,
-      profileName: ctx.profileName,
-      appendSettingsReport: ctx.settings?.settingsReport.inReport ?? false,
-      settings: ctx.settings,
-    });
-    ctx.reportPath = reportPath;
-    return { reportPath };
-  }
-}
+// ─── PostProcessor adapters (gated only) ────────────────────
 
 class PdfExportProcessor implements PostProcessor {
   name = "pdf-export";
@@ -344,41 +340,4 @@ class MindMapProcessor implements PostProcessor {
       .join("\n");
     return { mindMapPrompt: buildMindMapPrompt(ctx.plan.topic, summary) };
   }
-}
-
-class ContradictionProcessor implements PostProcessor {
-  name = "contradiction";
-  enabled() {
-    return true;
-  }
-  async process(ctx: PostProcessContext): Promise<PostProcessResult> {
-    const contradictions = ctx.snapshot.allFindings.filter(
-      (f) => f.text.includes("CONTRADICTION") || f.text.includes("contradiction") || f.text.includes("debatable"),
-    );
-    if (contradictions.length === 0) return {};
-    return {
-      contradictionAnalysis: [
-        `## Contradictions & Debatable Facts`,
-        ``,
-        ...contradictions.map((f) => `- ${f.text.substring(0, 300)} [Source: ${f.sourceUrl}]`),
-        ``,
-      ].join("\n"),
-    };
-  }
-}
-
-/** Extract plain text from agent response (handles string and content blocks array).
- *  Strips <tool_calls>...</tool_calls> XML blocks from string input. */
-export function extractTextContent(agentResponse?: unknown): string {
-  if (!agentResponse) return "";
-  if (typeof agentResponse === "string") {
-    return agentResponse.replace(/<tool_calls>[\s\S]*?<\/tool_calls>/g, "").trim();
-  }
-  if (Array.isArray(agentResponse)) {
-    return (agentResponse as any[])
-      .filter((b: any) => b.type === "text" && b.text)
-      .map((b: any) => b.text)
-      .join("\n");
-  }
-  return "";
 }

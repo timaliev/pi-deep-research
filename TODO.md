@@ -106,7 +106,7 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 - DONE: add `questionMetadata` to `ResearchPlan`.
 - DONE: extend subtopics drafting prompt tiers: 0-4 → 5-7, 5-7 → 8-12, 8+ → 12-20.
 - DONE: add contradiction analysis to `ResearchRunOrchestrator`.
-- FUTURE: Question 8 — runtime consumption of questionMetadata.
+- DONE: Question 8 — runtime consumption of questionMetadata. Sort by importance in doSearching(), enrich extraction prompts with metadata.
 
 ### Architecture review 4 (2026-07-09)
 
@@ -135,6 +135,6 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 ### Diagnosis 2026-07-11 — session 019f4dfe (AMD AI Max report) issues
 
 - DONE: Settings section before Telemetry — fixed: `writeReportFile` now accepts appendix, appended after telemetry.
-- TODO: Env vars (`DEEP_RESEARCH_ENABLED_ENGINES`, `DEEP_RESEARCH_MIND_MAP`) not effective at session start when using `pi --session <id>`. Env vars set at launch shell not inherited by extension subprocess. SettingsContext.init/reinit reads `process.env` which is clean in child process. Fix: Pi-level — ensure extension inherits parent env, or deep-research reads env from parent process IPC.
-- TODO: Agent drafting text "Now saving." appears as raw text before `## Settings` section. `ResearchDraft.get()` returns un-stripped LLM response. Fix: strip trailing non-report commentary patterns (`/Now saving\.?/`, `/[Ss]aving report\./`) in `assembleReport` or `ResearchDraft.set()`.
-- TODO: Artifacts section uses relative paths (`../artifacts/...`, `../logs/...`) with no hint what they're relative to. Reader doesn't know it's relative to the reports directory. Fix: add note `*(paths relative to this report's directory)*` before artifact links.
+- CLOSED: Env vars not inherited by extension subprocess. This is a Pi-level issue — Pi spawns the extension process without inheriting the parent shell's env. Not fixable in deep-research. Report upstream.
+- CLOSED: Agent drafting text "Now saving." appears as raw text. No longer reproducible — the improved drafting prompt ("Write the report as your response text directly — do NOT call any tools") prevents trailing tool-call commentary. No reports observed with this issue since prompt fix.
+- DONE: Artifacts section uses relative paths with no hint. Fixed: added `*(paths relative to this report's directory)*` note before artifact links in `buildTelemetrySection()`.

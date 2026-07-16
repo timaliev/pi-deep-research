@@ -128,7 +128,7 @@ export class ResearchStateMachine {
     }
     // Resolve report style once per run
     if (!this.style) {
-      this.style = createReportStyle(plan.reportStyle ?? this.defaultReportStyle ?? "narrative");
+      this.style = createReportStyle(plan.reportStyle ?? this.defaultReportStyle) ?? createReportStyle("narrative")!;
     }
     // Agent response already parsed by orchestrator — phase handlers receive clean text or undefined
     switch (snapshot.phase) {
@@ -180,7 +180,20 @@ export class ResearchStateMachine {
     const maxResultsPerQuery = snapshot.softLimitTriggered ? 2 : 3;
     const breadth = snapshot.softLimitTriggered ? Math.min(2, prof.breadth) : prof.breadth;
 
-    const activeQuestions = questions.slice(0, breadth);
+    // ADR-0017 Q8: prioritize by importance when questionMetadata is available (iteration 0 only)
+    const meta = plan.questionMetadata;
+    const isIterationZero = snapshot.currentDepth === 0;
+    const sorted =
+      meta && isIterationZero
+        ? [...questions].sort((a, b) => {
+            const ia = meta[a]?.importance;
+            const ib = meta[b]?.importance;
+            const rank = (i: string | undefined) => (i === "critical" ? 0 : i === "important" ? 1 : 2);
+            return rank(ia) - rank(ib);
+          })
+        : questions;
+
+    const activeQuestions = sorted.slice(0, breadth);
     const semaphore = new ConcurrencySemaphore(prof.concurrency);
     const engines = plan.engines.length > 0 ? plan.engines : ["duckduckgo"];
 
@@ -214,7 +227,19 @@ export class ResearchStateMachine {
     this.checkSoftLimits(nextSnapshot);
 
     const style = this.style!;
-    const inject = style.buildExtractionPrompt(round.searchResults, round.scrapedPages, nextDepth, snapshot.totalDepth);
+    let inject = style.buildExtractionPrompt(round.searchResults, round.scrapedPages, nextDepth, snapshot.totalDepth);
+
+    // ADR-0017 Q8: enrich extraction prompt with question metadata (source, confidence, importance)
+    if (meta && activeQuestions.some((q) => meta[q])) {
+      const metaContext = activeQuestions
+        .filter((q) => meta[q])
+        .map((q) => {
+          const m = meta[q];
+          return `- **${q}** — source: ${m.source}, confidence: ${m.confidence}, importance: ${m.importance}${m.debatableFact ? `, ⚠ debatable: ${m.debatableFact}` : ""}`;
+        })
+        .join("\n");
+      inject = `### Question Metadata\n\nResearch questions with expected provenance and confidence. Use this to weight findings appropriately.\n\n${metaContext}\n\n---\n\n${inject}`;
+    }
     this.logger?.event("phase_changed", { from: "searching", to: "extracting", depth: nextDepth });
     this.logger?.event("inject_sent", { type: "extraction", length: inject.length, depth: nextDepth });
     return { phase: "extracting", snapshot: nextSnapshot, inject };
@@ -303,12 +328,45 @@ export class ResearchStateMachine {
     this.logger?.event("phase_changed", { from: "saving", to: "done", draftLength: snapshot.draft.get().length });
     return { phase: "done", snapshot: { ...snapshot, phase: "done" } };
   }
+
+  /**
+   * Restore machine state from a session blob and advance to the next phase.
+   * Owns draft decoding and agent response parsing — the orchestrator no longer
+   * needs to know about ResearchDraft.decode() or extractTextContent().
+   */
+  async resume(
+    stateBlob: Record<string, unknown>,
+    rawAgentResponse: unknown,
+    plan: ResearchPlan,
+  ): Promise<ResearchStateResult> {
+    const parsedResponse = extractTextContent(rawAgentResponse) || undefined;
+    const draftEncoded = stateBlob.draftEncoded as string | undefined;
+    const snapshot = stateBlob as unknown as ResearchSnapshot;
+    snapshot.draft = draftEncoded ? ResearchDraft.decode(draftEncoded) : new ResearchDraft();
+    return this.next(snapshot, plan, parsedResponse);
+  }
 }
 
 /** Pure function: decide next phase after extraction. Returns "questioning" or "drafting". */
 export function phaseRouter(snapshot: ResearchSnapshot): "questioning" | "drafting" {
   const shouldDeepen = !snapshot.softLimitTriggered && snapshot.currentDepth < snapshot.totalDepth;
   return shouldDeepen ? "questioning" : "drafting";
+}
+
+/** Extract plain text from agent response (handles string and content blocks array).
+ *  Strips <tool_calls>...</tool_calls> XML blocks from string input. */
+export function extractTextContent(agentResponse?: unknown): string {
+  if (!agentResponse) return "";
+  if (typeof agentResponse === "string") {
+    return agentResponse.replace(/<tool_calls>[\s\S]*?<\/tool_calls>/g, "").trim();
+  }
+  if (Array.isArray(agentResponse)) {
+    return (agentResponse as any[])
+      .filter((b: any) => b.type === "text" && b.text)
+      .map((b: any) => b.text)
+      .join("\n");
+  }
+  return "";
 }
 
 const stateMachineDir = dirname(fileURLToPath(import.meta.url));
