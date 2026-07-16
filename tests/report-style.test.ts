@@ -71,6 +71,8 @@ describe("reportStyle in ResearchPlan validation", () => {
       reportStyle: "invalid_value",
     });
 
+    await manager.continue();
+    await manager.continue("x");
     const result = await manager.finalize("test", planJson);
     assert.equal(result.phase, "error");
     assert.ok(result.error!.includes("reportStyle"), `error must mention reportStyle, got: ${result.error}`);
@@ -89,6 +91,8 @@ describe("reportStyle in ResearchPlan validation", () => {
       reportStyle: "narrative",
     });
 
+    await manager.continue();
+    await manager.continue("x");
     const result = await manager.finalize("test", planJson);
     assert.equal(result.phase, "plan_ready");
   });
@@ -106,6 +110,8 @@ describe("reportStyle in ResearchPlan validation", () => {
       reportStyle: "subtopics",
     });
 
+    await manager.continue();
+    await manager.continue("x");
     const result = await manager.finalize("test", planJson);
     assert.equal(result.phase, "plan_ready");
   });
@@ -120,6 +126,8 @@ describe("reportStyle in ResearchPlan validation", () => {
 
     const planJson = JSON.stringify(validPlan()); // no reportStyle
 
+    await manager.continue();
+    await manager.continue("x");
     const result = await manager.finalize("test", planJson);
     assert.equal(result.phase, "plan_ready");
   });

@@ -114,6 +114,8 @@ describe("PrefilterManager", () => {
       });
       await manager.withParams("state machines", ["duckduckgo"], { name: "default" });
 
+      await manager.continue();
+      await manager.continue("x");
       const result = await manager.finalize("state machines", VALID_PLAN);
 
       assert.equal(result.phase, "plan_ready");
@@ -134,6 +136,8 @@ describe("PrefilterManager", () => {
         artifactsDir: TEST_ARTIFACTS,
       });
       await manager.start("test");
+      await manager.continue();
+      await manager.continue("x");
       const result = await manager.finalize("test", "not valid json {{{");
       assert.equal(result.phase, "error");
     });
@@ -145,6 +149,8 @@ describe("PrefilterManager", () => {
         artifactsDir: TEST_ARTIFACTS,
       });
       await manager.start("test");
+      await manager.continue();
+      await manager.continue("x");
       const result = await manager.finalize(
         "test",
         JSON.stringify({
@@ -164,6 +170,8 @@ describe("PrefilterManager", () => {
         artifactsDir: TEST_ARTIFACTS,
       });
       await manager.start("test");
+      await manager.continue();
+      await manager.continue("x");
       const result = await manager.finalize(
         "test",
         JSON.stringify({
@@ -195,6 +203,8 @@ describe("PrefilterManager", () => {
 
       const r2 = await manager.withParams("state machines", ["duckduckgo"], { name: "default" });
       assert.equal(r2.runId, sharedRunId, "withParams must use shared runId");
+      await manager.continue();
+      await manager.continue("x");
 
       const r3 = await manager.finalize("state machines", VALID_PLAN);
       assert.equal(r3.runId, sharedRunId, "finalize must use shared runId");
@@ -221,6 +231,8 @@ describe("PrefilterManager", () => {
       });
       await manager.start("state machines");
       const paramsResult = await manager.withParams("state machines", ["duckduckgo"], { name: "default" });
+      await manager.continue();
+      await manager.continue("x");
       const finalResult = await manager.finalize("state machines", VALID_PLAN);
 
       const artifact = JSON.parse(readFileSync(finalResult.planArtifactPath!, "utf-8"));
@@ -236,16 +248,32 @@ describe("PrefilterManager", () => {
       );
     });
 
-    it("rejects direct plan submission without prior search (enforce introspection flow)", async () => {
+    it("rejects finalize when continue() not called (introspection skipped)", async () => {
       const manager = new PrefilterManager({
         searchFn: mockSearchFn(MOCK_RESULTS),
         scraper: mockScraper(mockScrapedPages()),
         artifactsDir: TEST_ARTIFACTS,
       });
-      // Direct plan_json without withParams() → rejected
+      await manager.withParams("state machines", ["duckduckgo"], { name: "default" });
+      // skip continue() → should reject
       const result = await manager.finalize("state machines", VALID_PLAN);
-      assert.equal(result.phase, "error", "must reject direct plan submission");
-      assert.ok(result.error!.includes("prefilter flow"), "error must mention prefilter flow");
+      assert.equal(result.phase, "error", "must reject when continue() skipped");
+      assert.ok(result.error!.includes("introspection"), "error must mention introspection");
+    });
+
+    it("accepts finalize after full flow: withParams → continue → continue → finalize", async () => {
+      const manager = new PrefilterManager({
+        searchFn: mockSearchFn(MOCK_RESULTS),
+        scraper: mockScraper(mockScrapedPages()),
+        artifactsDir: TEST_ARTIFACTS,
+      });
+      await manager.withParams("state machines", ["duckduckgo"], { name: "default" });
+      await manager.continue(); // introspection
+      await manager.continue("some llm response"); // merge
+      await manager.continue();
+      await manager.continue("x");
+      const result = await manager.finalize("state machines", VALID_PLAN);
+      assert.equal(result.phase, "plan_ready", "must accept after full flow");
     });
 
     it("rejects duplicate finalize (idempotency guard)", async () => {
@@ -256,6 +284,8 @@ describe("PrefilterManager", () => {
       });
       await manager.start("test");
       await manager.withParams("test", ["duckduckgo"], { name: "default" });
+      await manager.continue();
+      await manager.continue("x");
 
       const r1 = await manager.finalize("test", VALID_PLAN);
       assert.equal(r1.phase, "plan_ready", "first finalize must succeed");

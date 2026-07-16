@@ -306,14 +306,14 @@ export class PrefilterManager {
       };
     }
 
-    // Guard: require full prefilter flow (withParams → continue) before plan submission.
-    // Direct plan_json submission without prior search bypasses LLM introspection.
-    if (!this.searchWasRun) {
+    // Guard: require full prefilter flow (start → withParams → continue) before plan submission.
+    // Direct plan_json submission without introspection bypasses ADR-0017 LLM knowledge topics.
+    if (this.prefilterPhase !== "introspecting" && this.prefilterPhase !== "merging") {
       return {
         phase: "error",
         runId: this.runId(),
         error:
-          "Plan submitted directly without running the full prefilter flow. To create or update a plan: (1) call plan_research with the topic, (2) call plan_research with params_json to select engines and profile, (3) call plan_research without params for LLM introspection, (4) submit your plan_json. This ensures LLM knowledge is incorporated into the research plan.",
+          "Plan submitted without completing LLM introspection. Call plan_research() with NO parameters to run the introspection step, respond with your internal knowledge topics when prompted, then call plan_research() again to merge, then submit your plan.",
       };
     }
 
