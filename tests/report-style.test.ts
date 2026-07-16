@@ -64,6 +64,7 @@ describe("reportStyle in ResearchPlan validation", () => {
       scraper: mockScraper(mockScrapedPages()),
       artifactsDir: TEST_ARTIFACTS,
     });
+    await manager.withParams("test", ["duckduckgo"], { name: "default" });
 
     const planJson = JSON.stringify({
       ...validPlan(),
@@ -81,6 +82,7 @@ describe("reportStyle in ResearchPlan validation", () => {
       scraper: mockScraper(mockScrapedPages()),
       artifactsDir: TEST_ARTIFACTS,
     });
+    await manager.withParams("test", ["duckduckgo"], { name: "default" });
 
     const planJson = JSON.stringify({
       ...validPlan(),
@@ -97,6 +99,7 @@ describe("reportStyle in ResearchPlan validation", () => {
       scraper: mockScraper(mockScrapedPages()),
       artifactsDir: TEST_ARTIFACTS,
     });
+    await manager.withParams("test", ["duckduckgo"], { name: "default" });
 
     const planJson = JSON.stringify({
       ...validPlan(),
@@ -113,6 +116,7 @@ describe("reportStyle in ResearchPlan validation", () => {
       scraper: mockScraper(mockScrapedPages()),
       artifactsDir: TEST_ARTIFACTS,
     });
+    await manager.withParams("test", ["duckduckgo"], { name: "default" });
 
     const planJson = JSON.stringify(validPlan()); // no reportStyle
 

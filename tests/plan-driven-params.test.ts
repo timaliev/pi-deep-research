@@ -133,6 +133,7 @@ describe("PrefilterManager — plan-driven params", () => {
       scraper: mockScraper(mockScrapedPages()),
       artifactsDir: TEST_ARTIFACTS,
     });
+    await manager.withParams("test", ["duckduckgo"], { name: "default" });
 
     // Missing engines
     const badPlan = JSON.stringify({
@@ -155,6 +156,7 @@ describe("PrefilterManager — plan-driven params", () => {
       scraper: mockScraper(mockScrapedPages()),
       artifactsDir: TEST_ARTIFACTS,
     });
+    await manager.withParams("test", ["duckduckgo"], { name: "default" });
 
     const badPlan = JSON.stringify({
       topic: "test",
@@ -177,6 +179,7 @@ describe("PrefilterManager — plan-driven params", () => {
       scraper: mockScraper(mockScrapedPages()),
       artifactsDir: TEST_ARTIFACTS,
     });
+    await manager.withParams("test", ["duckduckgo"], { name: "default" });
 
     const badPlan = JSON.stringify({
       topic: "test",
@@ -200,7 +203,7 @@ describe("PrefilterManager — plan-driven params", () => {
       artifactsDir: TEST_ARTIFACTS,
     });
 
-    await manager.start("test");
+    await manager.withParams("test", ["duckduckgo"], { name: "deep" });
 
     const validPlan = JSON.stringify({
       topic: "test",
