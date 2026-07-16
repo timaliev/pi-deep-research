@@ -81,6 +81,14 @@ Environment variables take precedence over settings.json. Example settings.json:
 
 ### Phase 3: Confirm Cost
 
+**Guardrail:** Read the plan_research result carefully before proceeding.
+
+- **If the result says "Research confirmed"** (▶ Research confirmed): skip directly to Phase 4. Do NOT call estimate_research_cost or confirm_research.
+- **If the result says "Research not confirmed"** (⏸ Research not confirmed): **STOP here.** Do NOT call any tools. The user declined. Wait for the user to modify the plan parameters or manually call confirm_research.
+- **If neither message appears** (non-interactive mode): use the manual flow below.
+
+**Manual flow (non-interactive only):**
+
 1. Call `estimate_research_cost`:
    ```
    estimate_research_cost({ plan_artifact_path: "<path from plan_research result>" })
