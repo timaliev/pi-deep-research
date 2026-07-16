@@ -1,7 +1,7 @@
 # ADR-0019: TUI confirmation gate for research plans
 
 **Date:** 2026-07-09
-**Status:** proposed
+**Status:** accepted
 
 ## Context
 

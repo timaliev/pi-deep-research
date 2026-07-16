@@ -479,11 +479,11 @@ npm run lint          # biome lint
 | [0014](docs/adr/0014-pdf-export.md) | accepted | PDF export of research reports |
 | [0015](docs/adr/0015-research-draft-module.md) | accepted | ResearchDraft module — collapse triple-path draft |
 | [0016](docs/adr/0016-orchestrator-post-processing.md) | accepted | Move post-processing to orchestrator |
-| [0017](docs/adr/0017-llm-introspection-source-tagged-questions.md) | proposed | LLM introspection + source-tagged questions |
+| [0017](docs/adr/0017-llm-introspection-source-tagged-questions.md) | accepted | LLM introspection + source-tagged questions (Q8 deferred) |
 | [0018](docs/adr/0018-release-monitor.md) | accepted | Release monitor on session start |
 | [0019](docs/adr/0019-tui-confirmation-gate.md) | accepted | TUI confirmation gate for research plans |
-| [0020](docs/adr/0020-settings-reinit-session-start.md) | proposed | SettingsContext re-init on session_start |
+| [0020](docs/adr/0020-settings-reinit-session-start.md) | accepted | SettingsContext re-init on session_start |
 | [0021](docs/adr/0021-save-report-report-path.md) | accepted | save_report report_path for large reports |
 | [0022](docs/adr/0022-done-phase-steer-messages.md) | accepted | Remove redundant steer from done phase |
-| [0024](docs/adr/0024-prefilter-context-bundle.md) | proposed | PrefilterContext — bundled constructor for PrefilterManager |
-| [0025](docs/adr/0025-state-machine-resume.md) | proposed | State machine resume — move draft restoration inside the machine |
+| [0024](docs/adr/0024-prefilter-context-bundle.md) | accepted | PrefilterContext — bundled constructor for PrefilterManager |
+| [0025](docs/adr/0025-state-machine-resume.md) | accepted | State machine resume — move draft restoration inside the machine |

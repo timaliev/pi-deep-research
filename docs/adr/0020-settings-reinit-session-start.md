@@ -1,7 +1,7 @@
 # ADR-0020: SettingsContext re-init on session_start + standalone tool defaults
 
 **Date:** 2026-07-09
-**Status:** proposed
+**Status:** accepted
 
 ## Context
 

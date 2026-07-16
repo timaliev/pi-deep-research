@@ -6,11 +6,11 @@ Vocabulary: **module**, **interface**, **implementation**, **depth**, **shallow*
 
 ---
 
-## 1. Bundle PrefilterManager constructor into PrefilterContext
+## 1. ~~Bundle PrefilterManager constructor into PrefilterContext~~ ✅ DONE (ADR-0024)
 
-**Strength:** Strong
+**Strength:** Strong — **Implemented July 2026**
 **Files:** `extension/prefilter.ts`, `extension/tools/plan-research.ts`
-**ADR:** [0024-prefilter-context-bundle.md](adr/0024-prefilter-context-bundle.md)
+**ADR:** [0024-prefilter-context-bundle.md](adr/0024-prefilter-context-bundle.md) (accepted)
 
 ### Problem
 
@@ -35,11 +35,11 @@ Introduce a `PrefilterContext` bundle — a typed object passed to the construct
 
 ---
 
-## 2. Stop orchestrator from decoding the state machine's draft blob
+## 2. ~~Stop orchestrator from decoding the state machine's draft blob~~ ✅ DONE (ADR-0025)
 
-**Strength:** Strong
+**Strength:** Strong — **Implemented July 2026**
 **Files:** `extension/research-run-orchestrator.ts`, `extension/state-machine.ts`
-**ADR:** [0025-state-machine-resume.md](adr/0025-state-machine-resume.md)
+**ADR:** [0025-state-machine-resume.md](adr/0025-state-machine-resume.md) (accepted)
 
 ### Problem
 
@@ -131,4 +131,4 @@ Return `undefined` for unknown names, or throw. Push the defaulting decision to 
 
 ## Top Recommendation
 
-**#1 — PrefilterContext bundle.** Fastest win, most precedent. ADR-0007 already solved the identical problem for `ResearchStateMachine` and explicitly deferred PrefilterManager. It's a 20-minute refactor that eliminates fragile positional params and makes the prefilter module consistent with the rest of the codebase. Do this first, then tackle #2 (state machine resume) which touches the same files and benefits from the cleaner constructor.
+**#1 and #2 implemented July 2026.** Remaining: #3 (PrefilterManager.continue() FSM), #4 (PostProcessor cleanup), #5 (ReportStyle validation).
