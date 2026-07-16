@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.26.2](https://github.com/timaliev/pi-deep-research/compare/v0.26.1..v0.26.2) - 2026-07-16
+
+### Bug Fixes
+
+- **(engines)** enforce allowlist at all entry points, not just prompt display - ([27670b2](https://github.com/timaliev/pi-deep-research/commit/27670b2a3e1c9266ee4bf305276b9419ab97c17d)) - Tim Aliev
+
 ## [0.26.1](https://github.com/timaliev/pi-deep-research/compare/v0.26.0..v0.26.1) - 2026-07-16
 
 ### Bug Fixes
