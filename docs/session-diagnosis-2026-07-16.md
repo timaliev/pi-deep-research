@@ -69,6 +69,6 @@ Add: `To update an existing plan (e.g., change report style), you must re-run th
 
 | # | Severity | Fix effort |
 |---|---|---|
-| 1 | High — user cannot use settings.json for reportStyle | 1 line |
-| 2 | Medium — agent miscommunication | 3 lines |
-| 3 | Low — enforcement working, message clarity | 2 lines |
+| 1 | ✅ Fixed — `reportStyle` key in settings.json now works | 1 line |
+| 2 | ✅ Fixed — confirmation output now includes `**Style:**` | 1 line |
+| 3 | ✅ Fixed — error message now guides through the full flow | 2 lines |

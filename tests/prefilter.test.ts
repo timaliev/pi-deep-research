@@ -245,7 +245,7 @@ describe("PrefilterManager", () => {
       // Direct plan_json without withParams() → rejected
       const result = await manager.finalize("state machines", VALID_PLAN);
       assert.equal(result.phase, "error", "must reject direct plan submission");
-      assert.ok(result.error!.includes("preliminary search"), "error must mention preliminary search");
+      assert.ok(result.error!.includes("prefilter flow"), "error must mention prefilter flow");
     });
 
     it("rejects duplicate finalize (idempotency guard)", async () => {
