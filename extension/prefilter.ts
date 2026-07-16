@@ -19,6 +19,25 @@ import { searchWeb } from "./search/web-search.js";
 import type { SearchProviderCredentials } from "./settings-context.js";
 import { PREFILTER_RUN_KEY } from "./session-state.js";
 
+/** Filter engines against the allowlist. If none survive, fall back to defaults. Logs warnings when engines are dropped. */
+function enforceEngineAllowlist(
+  engines: SearchEngine[],
+  enabledEngines: string[] | undefined,
+  logger?: Logger,
+): SearchEngine[] {
+  if (!enabledEngines || enabledEngines.length === 0) return engines;
+  const filtered = engines.filter((e) => enabledEngines.includes(e));
+  const dropped = engines.filter((e) => !enabledEngines.includes(e));
+  if (dropped.length > 0) {
+    logger?.event("engines_filtered", { dropped, allowed: filtered, allowlist: enabledEngines });
+  }
+  if (filtered.length === 0) {
+    logger?.event("engines_all_filtered", { original: engines, allowlist: enabledEngines, fallback: "duckduckgo" });
+    return ["duckduckgo"];
+  }
+  return filtered;
+}
+
 export interface ResearchPlanProfile {
   name: "default" | "fast" | "deep" | "custom";
   breadth?: number;
@@ -36,6 +55,8 @@ export interface ResearchPlan {
   profile: ResearchPlanProfile;
   /** Report generation style: narrative (5-section) or subtopics (LLM discovers themes). */
   reportStyle?: "narrative" | "subtopics";
+  /** Allowed search engines for this run (frozen from settings at plan time). */
+  enabledEngines?: string[];
   /** ADR-0017: metadata about each research question (source, confidence, importance). */
   questionMetadata?: Record<
     string,
@@ -213,6 +234,9 @@ export class PrefilterManager {
     this.cachedEngines = engines;
     this.cachedProfile = profile;
 
+    // Enforce enabledEngines allowlist — agent may propose disabled engines
+    engines = enforceEngineAllowlist(engines, this.enabledEngines, this.logger);
+
     const missingKeys = this.checkApiKeys(engines);
     if (missingKeys.length > 0) {
       const inject = buildApiKeyWarning(missingKeys);
@@ -285,6 +309,10 @@ export class PrefilterManager {
       this.logger?.event("plan_error", { reason: "validation", error: validationError });
       return { phase: "error", runId, error: validationError };
     }
+
+    // Enforce engine allowlist on the plan — freeze at plan time
+    plan.engines = enforceEngineAllowlist(plan.engines, this.enabledEngines, this.logger);
+    plan.enabledEngines = this.enabledEngines;
 
     // Save artifact
     const fs = await import("node:fs/promises");
