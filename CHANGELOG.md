@@ -13,6 +13,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.26.3](https://github.com/timaliev/pi-deep-research/compare/v0.26.2..v0.26.3) - 2026-07-16
+
+### Documentation
+
+- **(skill)** update subtopics description to show tiered section counts (5–20) - ([cfb7f5e](https://github.com/timaliev/pi-deep-research/commit/cfb7f5e46b4f70fd7f358168286126c05b09b245)) - Tim Aliev
+- **(skill)** update subtopics description to show tiered section counts (5–20) - ([5d7df05](https://github.com/timaliev/pi-deep-research/commit/5d7df05977b9e193df645d8b1bf9e548a9f23294)) - Tim Aliev
+
+### Tests
+
+- **(engines)** add allowlist enforcement tests at all three entry points - ([8870952](https://github.com/timaliev/pi-deep-research/commit/88709520882c7ec1082e45f907da97002b4687f6)) - Tim Aliev
+
 ## [0.26.2](https://github.com/timaliev/pi-deep-research/compare/v0.26.1..v0.26.2) - 2026-07-16
 
 ### Bug Fixes
