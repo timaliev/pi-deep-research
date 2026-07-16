@@ -239,17 +239,17 @@ export class PrefilterManager {
     }
 
     const resolved = this.profileResolver.resolve(profile);
-    const inject = buildPlanPrompt(
+    const inject = buildPlanPrompt({
       topic,
       engines,
-      profile.name,
-      resolved.breadth,
-      resolved.depth,
-      resolved.concurrency,
-      this.profileResolver.getPresets(),
+      profileName: profile.name,
+      resolvedBreadth: resolved.breadth,
+      resolvedDepth: resolved.depth,
+      resolvedConcurrency: resolved.concurrency,
+      presets: this.profileResolver.getPresets(),
       searchResults,
       scrapedContent,
-    );
+    });
     return { phase: "awaiting_plan", runId, inject, engines, profile, searchResults, scrapedContent };
   }
 

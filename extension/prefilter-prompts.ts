@@ -52,17 +52,30 @@ export function buildParamsPrompt(
 }
 
 /** Build the second prompt: produce a full Research Plan JSON. */
-export function buildPlanPrompt(
-  topic: string,
-  engines: SearchEngine[],
-  profileName: string,
-  resolvedBreadth: number,
-  resolvedDepth: number,
-  resolvedConcurrency: number,
-  presets: Record<string, { breadth: number; depth: number; concurrency: number }>,
-  searchResults: WebSearchResult[],
-  scrapedContent: ScrapedPage[],
-): string {
+export interface PlanPromptContext {
+  topic: string;
+  engines: SearchEngine[];
+  profileName: string;
+  resolvedBreadth: number;
+  resolvedDepth: number;
+  resolvedConcurrency: number;
+  presets: Record<string, { breadth: number; depth: number; concurrency: number }>;
+  searchResults: WebSearchResult[];
+  scrapedContent: ScrapedPage[];
+}
+
+export function buildPlanPrompt(ctx: PlanPromptContext): string {
+  const {
+    topic,
+    engines,
+    profileName,
+    resolvedBreadth,
+    resolvedDepth,
+    resolvedConcurrency,
+    presets,
+    searchResults,
+    scrapedContent,
+  } = ctx;
   const profileList = Object.entries(presets)
     .map(([name, p]) => `  ${name}: breadth=${p.breadth}, depth=${p.depth}, concurrency=${p.concurrency}`)
     .join("\n");
