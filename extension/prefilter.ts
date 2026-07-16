@@ -115,7 +115,7 @@ export class PrefilterManager {
   private lastSearchResultCount = 0;
   private lastScrapedUrls: string[] = [];
   private finalized = false;
-  private introspectionDone = false;
+  private prefilterPhase: "awaiting_params" | "awaiting_plan" | "introspecting" | "merging" = "awaiting_params";
   private llmTopics?: string;
 
   constructor(ctx: PrefilterContext, sharedRunId?: string) {
@@ -140,31 +140,32 @@ export class PrefilterManager {
   private cachedProfile?: ResearchPlanProfile;
 
   /**
-   * Handle a zero-params call — internally routes to the appropriate step.
+   * Handle a zero-params call — dispatches by prefilter phase.
    * Called by the plan_research tool when no params_json or plan_json are provided.
    */
   async continue(topic?: string, llmResponse?: string): Promise<PrefilterResult> {
-    // Fresh state with topic → behave like start()
-    if (topic && this.lastSearchResultCount === 0 && this.lastScrapedUrls.length === 0) {
+    // Phase: awaiting_params + topic → behave like start()
+    if (topic && this.prefilterPhase === "awaiting_params") {
       return this.start(topic);
     }
 
-    // Cached params from a prior withParams() → route to next step
-    if (this.cachedTopic && this.cachedEngines && this.cachedProfile) {
-      // ADR-0017: introspection → merge flow
-      if (!this.introspectionDone) {
-        this.introspectionDone = true;
-        const inject = buildIntrospectionPrompt(this.cachedTopic);
-        return { phase: "awaiting_plan", runId: this.runId(), inject };
-      }
-      // Introspection complete — run search, then merge
+    // Phase: awaiting_plan → inject introspection prompt (ADR-0017)
+    if (this.prefilterPhase === "awaiting_plan") {
+      this.prefilterPhase = "introspecting";
+      const inject = buildIntrospectionPrompt(this.cachedTopic ?? topic ?? "");
+      return { phase: "awaiting_plan", runId: this.runId(), inject };
+    }
+
+    // Phase: introspecting → run search + merge
+    if (this.prefilterPhase === "introspecting") {
+      this.prefilterPhase = "merging";
       if (llmResponse) {
         this.llmTopics = llmResponse;
       }
       return this.doMergeStep();
     }
 
-    // No topic, no cached state → error
+    // No valid phase → error
     return { phase: "error", runId: this.runId(), error: "No topic provided and no cached prefilter state." };
   }
 
@@ -188,6 +189,7 @@ export class PrefilterManager {
 
   /** Step 1: Ask agent to propose engines + profile. */
   async start(topic: string): Promise<PrefilterResult> {
+    this.prefilterPhase = "awaiting_params";
     const runId = this.runId();
     this.logger?.event("prefilter_started", { topic });
     const inject = buildParamsPrompt(
@@ -202,6 +204,7 @@ export class PrefilterManager {
 
   /** Step 2: Agent chose engines + profile. Prelim search, ask for full plan. */
   async withParams(topic: string, engines: SearchEngine[], profile: ResearchPlanProfile): Promise<PrefilterResult> {
+    this.prefilterPhase = "awaiting_plan";
     const runId = this.runId();
     this.logger?.event("prefilter_params_set", { engines, profile });
 

@@ -128,7 +128,7 @@ export class ResearchStateMachine {
     }
     // Resolve report style once per run
     if (!this.style) {
-      this.style = createReportStyle(plan.reportStyle ?? this.defaultReportStyle ?? "narrative");
+      this.style = createReportStyle(plan.reportStyle ?? this.defaultReportStyle) ?? createReportStyle("narrative")!;
     }
     // Agent response already parsed by orchestrator — phase handlers receive clean text or undefined
     switch (snapshot.phase) {

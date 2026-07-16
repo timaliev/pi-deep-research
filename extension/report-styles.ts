@@ -95,7 +95,14 @@ export interface ReportStyle {
   buildDraftingPrompt: typeof narrativeDrafting;
 }
 
-export function createReportStyle(name: string): ReportStyle {
+export function createReportStyle(name: string): ReportStyle | undefined {
+  if (name === "narrative") {
+    return {
+      buildExtractionPrompt: narrativeExtraction,
+      buildQuestioningPrompt: narrativeQuestioning,
+      buildDraftingPrompt: narrativeDrafting,
+    };
+  }
   if (name === "subtopics") {
     return {
       buildExtractionPrompt: subtopicsExtraction,
@@ -103,9 +110,5 @@ export function createReportStyle(name: string): ReportStyle {
       buildDraftingPrompt: subtopicsDrafting,
     };
   }
-  return {
-    buildExtractionPrompt: narrativeExtraction,
-    buildQuestioningPrompt: narrativeQuestioning,
-    buildDraftingPrompt: narrativeDrafting,
-  };
+  return undefined;
 }

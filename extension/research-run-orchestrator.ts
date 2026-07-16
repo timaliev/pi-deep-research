@@ -109,12 +109,7 @@ export class ResearchRunOrchestrator {
     this.saveState = deps.saveState;
     this.profileResolver = deps.profileResolver;
     this.settings = deps.settings;
-    this.postProcessors = [
-      new AssembleReportProcessor(),
-      new PdfExportProcessor(),
-      new MindMapProcessor(),
-      new ContradictionProcessor(),
-    ];
+    this.postProcessors = [new PdfExportProcessor(), new MindMapProcessor()];
   }
 
   /** Single construction site for ResearchStateMachine. Optional logger covers the only variance between first and subsequent calls. */
@@ -256,13 +251,44 @@ export class ResearchRunOrchestrator {
       return { kind: "done", ...base };
     }
 
+    const profileName =
+      typeof plan.profile === "object" && "name" in plan.profile ? (plan.profile as any).name : undefined;
+
+    // Always run: report assembly (was AssembleReportProcessor)
+    const reportPath = assembleReport({
+      snapshot,
+      topic: plan.topic,
+      reportsDir: this.settings.reportsDir,
+      planArtifactPath,
+      logsDir,
+      profileName,
+      appendSettingsReport: this.settings.settingsReport.inReport ?? false,
+      settings: this.settings,
+    });
+
+    // Always run: contradiction detection (was ContradictionProcessor)
+    let contradictionAnalysis: string | undefined;
+    const contradictions = snapshot.allFindings.filter(
+      (f) => f.text.includes("CONTRADICTION") || f.text.includes("contradiction") || f.text.includes("debatable"),
+    );
+    if (contradictions.length > 0) {
+      contradictionAnalysis = [
+        `## Contradictions & Debatable Facts`,
+        ``,
+        ...contradictions.map((f) => `- ${f.text.substring(0, 300)} [Source: ${f.sourceUrl}]`),
+        ``,
+      ].join("\n");
+    }
+
+    // Run gated PostProcessor pipeline (PDF, MindMap only)
     const ctx: PostProcessContext = {
       snapshot,
       plan,
       reportsDir: this.settings.reportsDir,
       planArtifactPath,
       logsDir,
-      profileName: typeof plan.profile === "object" && "name" in plan.profile ? (plan.profile as any).name : undefined,
+      reportPath,
+      profileName,
       settings: this.settings,
     };
 
@@ -278,33 +304,14 @@ export class ResearchRunOrchestrator {
     return {
       kind: "done",
       ...base,
+      reportPath,
+      contradictionAnalysis,
       ...merged,
     };
   }
 }
 
-// ─── PostProcessor adapters ──────────────────────────────────
-
-class AssembleReportProcessor implements PostProcessor {
-  name = "assemble-report";
-  enabled() {
-    return true;
-  }
-  async process(ctx: PostProcessContext): Promise<PostProcessResult> {
-    const reportPath = assembleReport({
-      snapshot: ctx.snapshot,
-      topic: ctx.plan.topic,
-      reportsDir: ctx.reportsDir,
-      planArtifactPath: ctx.planArtifactPath,
-      logsDir: ctx.logsDir,
-      profileName: ctx.profileName,
-      appendSettingsReport: ctx.settings?.settingsReport.inReport ?? false,
-      settings: ctx.settings,
-    });
-    ctx.reportPath = reportPath;
-    return { reportPath };
-  }
-}
+// ─── PostProcessor adapters (gated only) ────────────────────
 
 class PdfExportProcessor implements PostProcessor {
   name = "pdf-export";
@@ -332,26 +339,5 @@ class MindMapProcessor implements PostProcessor {
       .map((f, i) => `${i + 1}. ${f.text.substring(0, 200)}`)
       .join("\n");
     return { mindMapPrompt: buildMindMapPrompt(ctx.plan.topic, summary) };
-  }
-}
-
-class ContradictionProcessor implements PostProcessor {
-  name = "contradiction";
-  enabled() {
-    return true;
-  }
-  async process(ctx: PostProcessContext): Promise<PostProcessResult> {
-    const contradictions = ctx.snapshot.allFindings.filter(
-      (f) => f.text.includes("CONTRADICTION") || f.text.includes("contradiction") || f.text.includes("debatable"),
-    );
-    if (contradictions.length === 0) return {};
-    return {
-      contradictionAnalysis: [
-        `## Contradictions & Debatable Facts`,
-        ``,
-        ...contradictions.map((f) => `- ${f.text.substring(0, 300)} [Source: ${f.sourceUrl}]`),
-        ``,
-      ].join("\n"),
-    };
   }
 }
