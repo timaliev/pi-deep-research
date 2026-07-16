@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.26.5](https://github.com/timaliev/pi-deep-research/compare/v0.26.4..v0.26.5) - 2026-07-16
+
+### Bug Fixes
+
+- **(settings)** read reportStyle from settings.json using correct key - ([656b589](https://github.com/timaliev/pi-deep-research/commit/656b5893db5202896d718294e907de7b1293431e)) - Tim Aliev
+- address remaining diagnosis findings, update docs - ([6dc6df3](https://github.com/timaliev/pi-deep-research/commit/6dc6df3e4d8bb69e0d2bec55727081a1cf24cd13)) - Tim Aliev
+
 ## [0.26.4](https://github.com/timaliev/pi-deep-research/compare/v0.26.3..v0.26.4) - 2026-07-16
 
 ### Bug Fixes
