@@ -33,7 +33,7 @@ describe("defaultReportStyle setting", () => {
   it("reads from global settings", async () => {
     writeFileSync(
       join(tmpHome, ".pi", "agent", "settings.json"),
-      JSON.stringify({ deepResearch: { defaultReportStyle: "subtopics" } }),
+      JSON.stringify({ deepResearch: { reportStyle: "subtopics" } }),
       "utf-8",
     );
     const { SettingsContext } = await import("../extension/settings-context.js");
@@ -44,12 +44,12 @@ describe("defaultReportStyle setting", () => {
   it("local settings override global", async () => {
     writeFileSync(
       join(tmpHome, ".pi", "agent", "settings.json"),
-      JSON.stringify({ deepResearch: { defaultReportStyle: "subtopics" } }),
+      JSON.stringify({ deepResearch: { reportStyle: "subtopics" } }),
       "utf-8",
     );
     writeFileSync(
       join(tmpCwd, ".pi", "settings.json"),
-      JSON.stringify({ deepResearch: { defaultReportStyle: "narrative" } }),
+      JSON.stringify({ deepResearch: { reportStyle: "narrative" } }),
       "utf-8",
     );
     const { SettingsContext } = await import("../extension/settings-context.js");
@@ -61,12 +61,12 @@ describe("defaultReportStyle setting", () => {
     process.env.DEEP_RESEARCH_REPORT_STYLE = "subtopics";
     writeFileSync(
       join(tmpHome, ".pi", "agent", "settings.json"),
-      JSON.stringify({ deepResearch: { defaultReportStyle: "narrative" } }),
+      JSON.stringify({ deepResearch: { reportStyle: "narrative" } }),
       "utf-8",
     );
     writeFileSync(
       join(tmpCwd, ".pi", "settings.json"),
-      JSON.stringify({ deepResearch: { defaultReportStyle: "narrative" } }),
+      JSON.stringify({ deepResearch: { reportStyle: "narrative" } }),
       "utf-8",
     );
     const { SettingsContext } = await import("../extension/settings-context.js");
