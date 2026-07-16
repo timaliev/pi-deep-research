@@ -106,7 +106,7 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 - DONE: add `questionMetadata` to `ResearchPlan`.
 - DONE: extend subtopics drafting prompt tiers: 0-4 → 5-7, 5-7 → 8-12, 8+ → 12-20.
 - DONE: add contradiction analysis to `ResearchRunOrchestrator`.
-- FUTURE: Question 8 — runtime consumption of questionMetadata.
+- DONE: Question 8 — runtime consumption of questionMetadata. Sort by importance in doSearching(), enrich extraction prompts with metadata.
 
 ### Architecture review 4 (2026-07-09)
 
