@@ -142,3 +142,4 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 ### Pending
 
 - TODO: export_pdf tool computes wrong default output path for relative report_path. Uses `join(reportsDir, reportPath.replace(/.md$/, "") + ".pdf")` which nests the directory when report_path is relative (e.g. `reportsDir/deep-research/reports/foo.pdf`). Fix: extract basename before replacing extension.
+- TODO: prefilter-prompts.ts still says "LLM discovers 5–10 thematic sections" in `buildParamsPrompt` (line 51) and `buildPlanPrompt` (line 90). Already fixed in SKILL.md and report-styles.ts. Fix: update both prompts to show tiered counts (5–7/8–12/12–20).
