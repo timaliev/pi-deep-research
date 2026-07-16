@@ -117,6 +117,7 @@ export function createPlanResearchTool(
 
     const plan = result.plan;
     const planPath = result.planArtifactPath;
+    const style = plan.reportStyle ?? settings.reportStyle ?? "narrative";
 
     // Inline confirmation — skip LLM, ask user directly (idempotent via shared dialog)
     const confirmed = await confirmPlanDialog(ctx, plan, profileResolver, settings);

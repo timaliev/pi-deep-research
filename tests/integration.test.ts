@@ -80,6 +80,8 @@ describe("Integration: full research pipeline", () => {
     assert.ok(r2.inject!.includes("XState"));
 
     // Step 3: finalize → plan saved
+    await manager.continue();
+    await manager.continue("x");
     const r3 = await manager.finalize("state machine libraries", VALID_PLAN_JSON);
     assert.equal(r3.phase, "plan_ready");
     assert.ok(r3.planArtifactPath);
@@ -98,6 +100,8 @@ describe("Integration: full research pipeline", () => {
     });
     await manager.start("state machines");
     await manager.withParams("state machines", ["duckduckgo"], { name: "default" });
+    await manager.continue();
+    await manager.continue("x");
     const planResult = await manager.finalize("state machines", VALID_PLAN_JSON);
     assert.equal(planResult.phase, "plan_ready");
     const plan: ResearchPlan = planResult.plan!;
@@ -181,6 +185,8 @@ describe("Integration: full research pipeline", () => {
     await manager.start("ts state machines");
     const r2 = await manager.withParams("ts state machines", ["duckduckgo"], { name: "fast" });
     assert.equal(r2.phase, "awaiting_plan");
+    await manager.continue();
+    await manager.continue("x");
     const r3 = await manager.finalize("ts state machines", VALID_PLAN_JSON);
     assert.equal(r3.phase, "plan_ready");
     const plan: ResearchPlan = r3.plan!;

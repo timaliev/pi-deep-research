@@ -145,6 +145,8 @@ describe("PrefilterManager — plan-driven params", () => {
       estimatedCost: { searchCalls: 1, scrapeCalls: 1, description: "" },
     });
 
+    await manager.continue();
+    await manager.continue("x");
     const result = await manager.finalize("test", badPlan);
     assert.equal(result.phase, "error");
     assert.ok(result.error!.includes("engines"), "must reject plan missing engines array");
@@ -168,6 +170,8 @@ describe("PrefilterManager — plan-driven params", () => {
       estimatedCost: { searchCalls: 1, scrapeCalls: 1, description: "" },
     });
 
+    await manager.continue();
+    await manager.continue("x");
     const result = await manager.finalize("test", badPlan);
     assert.equal(result.phase, "error");
     assert.ok(result.error!.includes("profile"), "must reject invalid profile name");
@@ -191,6 +195,8 @@ describe("PrefilterManager — plan-driven params", () => {
       estimatedCost: { searchCalls: 1, scrapeCalls: 1, description: "" },
     });
 
+    await manager.continue();
+    await manager.continue("x");
     const result = await manager.finalize("test", badPlan);
     assert.equal(result.phase, "error");
     assert.ok(result.error!.includes("breadth"), "custom must include breadth");
@@ -215,6 +221,8 @@ describe("PrefilterManager — plan-driven params", () => {
       estimatedCost: { searchCalls: 12, scrapeCalls: 8, description: "~12 searches" },
     });
 
+    await manager.continue();
+    await manager.continue("x");
     const result = await manager.finalize("test", validPlan);
     assert.equal(result.phase, "plan_ready");
     assert.ok(result.planArtifactPath);

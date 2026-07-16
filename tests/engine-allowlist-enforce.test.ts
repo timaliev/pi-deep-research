@@ -86,6 +86,8 @@ describe("Engine allowlist enforcement", () => {
       });
 
       await manager.withParams("test", ["duckduckgo", "brave"], { name: "fast" });
+      await manager.continue();
+      await manager.continue("mock");
       const plan = JSON.stringify({
         topic: "test",
         goal: "test",
@@ -112,6 +114,8 @@ describe("Engine allowlist enforcement", () => {
       });
 
       await manager.withParams("test", ["duckduckgo", "tavily"], { name: "fast" });
+      await manager.continue();
+      await manager.continue("mock");
       // Agent only writes duckduckgo in the plan — but both are allowed
       const plan = JSON.stringify({
         topic: "test",
@@ -139,6 +143,8 @@ describe("Engine allowlist enforcement", () => {
       });
 
       await manager.withParams("test", ["brave"], { name: "fast" });
+      await manager.continue();
+      await manager.continue("mock");
       const plan = JSON.stringify({
         topic: "test",
         goal: "test",
