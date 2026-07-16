@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.26.4](https://github.com/timaliev/pi-deep-research/compare/v0.26.3..v0.26.4) - 2026-07-16
+
+### Bug Fixes
+
+- **(prefilter)** enforce full prefilter flow before plan submission - ([1d06c64](https://github.com/timaliev/pi-deep-research/commit/1d06c647a5f67928948cc8f8d765f2f9971a4c7c)) - Tim Aliev
+- accurate plan submission metadata + engine attribution in reports - ([d972b69](https://github.com/timaliev/pi-deep-research/commit/d972b69722d4cd7dc27f2797470e186e954a82d7)) - Tim Aliev
+
 ## [0.26.3](https://github.com/timaliev/pi-deep-research/compare/v0.26.2..v0.26.3) - 2026-07-16
 
 ### Bug Fixes
