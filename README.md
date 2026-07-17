@@ -18,12 +18,12 @@ Inspired by [https://github.com/assafelovic/gpt-researcher](gpt-researcher).
 - [Installation](#installation)
 - [Usage](#usage)
 - [Configuration](#configuration)
+- [Search Engines](#search-engines)
 - [PDF Export](#pdf-export)
 - [Mind Map](#mind-map)
 - [Architecture](#architecture)
 - [File Structure](#file-structure)
 - [Key Concepts](#key-concepts)
-- [Search Engines](#search-engines)
 - [Development](#development)
 - [Related Documents](#related-documents)
 - [Statistics](#statistics)
@@ -317,6 +317,22 @@ The adapter tries instances in order. If one fails (non-200 or network error), i
 - Response must include `{ results: [{ title, url, content }] }`
 - JSON format must be enabled (`search.formats` includes `json` in `settings.yml`)
 
+## Search Engines
+
+Built-in `searchWeb()` function (multi-engine, retry with exponential backoff):
+
+| Engine | API Key | Quality | Notes |
+|---|---|---|---|
+| `duckduckgo` | none | Good | Free, zero-config, always available |
+| `brave` | required | Better | Higher quality results, generous free tier |
+| `searxng` | none | Variable | Public instances with automatic failover |
+| `tavily` | required | Best | AI-optimized, extracts clean content |
+| `yandex` | required | Good | Russian/global coverage |
+
+All search calls — user-facing `deep_web_search` tool and pipeline — use the same function with rate-limit backoff and result deduplication.
+
+See [Environment Variables](#environment-variables) for API key configuration.
+
 ## PDF Export
 
 Reports can be exported to PDF via standalone tool or auto-export after each research run.
@@ -474,22 +490,6 @@ deep-research/
 | **Research Log** | JSONL trace file (`<runId>.log`) — every phase transition, search/scrape call, error, decision |
 | **Soft Limit** | Runtime cap (maxSearchCalls, maxElapsedSeconds) — reduces intensity, skips deeper recursion |
 | **Confirmation Gate** | Agent must present plan + cost estimate, get user approval before `run_research` |
-
-## Search Engines
-
-Built-in `searchWeb()` function (multi-engine, retry with exponential backoff):
-
-| Engine | API Key | Quality | Notes |
-|---|---|---|---|
-| `duckduckgo` | none | Good | Free, zero-config, always available |
-| `brave` | required | Better | Higher quality results, generous free tier |
-| `searxng` | none | Variable | Public instances with automatic failover |
-| `tavily` | required | Best | AI-optimized, extracts clean content |
-| `yandex` | required | Good | Russian/global coverage |
-
-All search calls — user-facing `deep_web_search` tool and pipeline — use the same function with rate-limit backoff and result deduplication.
-
-See [Environment Variables](#environment-variables) for API key configuration.
 
 ## Development
 
