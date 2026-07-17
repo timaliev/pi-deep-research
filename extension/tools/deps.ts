@@ -5,7 +5,6 @@ import type { Scraper } from "../scraper.js";
 import type { searchWeb } from "../search/web-search.js";
 import type { SessionState } from "../session-state.js";
 import type { SearchProviderCredentials, SettingsContext } from "../settings-context.js";
-import { createConfirmPlanTool } from "./confirm-plan.js";
 import { createExportPdfTool } from "./export-pdf.js";
 import { createMindMapTool } from "./mind-map.js";
 import { createPlanResearchTool } from "./plan-research.js";
@@ -45,6 +44,5 @@ export function registerAllTools(pi: ExtensionAPI, deps: ToolDeps): void {
       deps.searchFn,
     ),
   );
-  pi.registerTool(createConfirmPlanTool(deps.session));
   pi.registerTool(createRunResearchTool(pi, deps.orchestrator, deps.settings, deps.session));
 }

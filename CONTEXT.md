@@ -72,7 +72,7 @@ Per-engine search modules under `search/engines/` exporting a standardized `sear
 _Avoid_: search engine, search provider
 
 **Confirmation Gate**:
-The boundary between free operations (prefilter/planning) and paid operations (full research). The agent must present the Research Plan and estimated cost to the user and receive explicit approval, then call `confirm_research` before `run_research`. Enforced programmatically by `run_research` rejecting unconfirmed plans.
+The boundary between free operations (prefilter/planning) and paid operations (full research). During `plan_research` finalization, a TUI dialog shows the plan and cost to the user for explicit approval. Confirmed plans write a session marker; `run_research` checks this marker defensively before executing any paid calls. Non-interactive mode is not supported — `plan_research` returns an error if no TUI is available.
 _Avoid_: approval step, user consent, cost check
 
 **Soft Limit**:

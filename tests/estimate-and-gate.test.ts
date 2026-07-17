@@ -123,7 +123,7 @@ function validateRunResearchGate(
     return {
       allowed: false,
       reason:
-        "Research plan not confirmed by user. Present the plan and cost estimate, ask for explicit approval, then call confirm_research before run_research.",
+        "Research plan not confirmed by user. Complete plan_research first, then call run_research with the plan path.",
     };
   }
   const confirmedPath = confirmation.data?.planArtifactPath as string | undefined;

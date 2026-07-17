@@ -489,7 +489,7 @@ deep-research/
 | **RunId** | Unique timestamp-based identifier (`YYYYMMDD-HHmmss`) shared across all artifacts for one research run: prefilter plan, JSONL log, queue snapshots, and report. Use to find and correlate all files belonging to a single run |
 | **Research Log** | JSONL trace file (`<runId>.log`) — every phase transition, search/scrape call, error, decision |
 | **Soft Limit** | Runtime cap (maxSearchCalls, maxElapsedSeconds) — reduces intensity, skips deeper recursion |
-| **Confirmation Gate** | TUI dialog with Confirm/Change/Cancel. Cost computed from profile parameters. No separate estimate_research_cost call needed (ADR-0027) |
+| **Confirmation Gate** | TUI dialog with Confirm/Change/Cancel fires during plan_research. Cost computed from profile parameters. |
 
 ## Development
 

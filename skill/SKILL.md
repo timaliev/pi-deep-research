@@ -74,7 +74,7 @@ The tool will inject prompts for you to respond to in sequence:
 
 ### Phase 2: Run Research
 
-The TUI confirmation dialog appears automatically. No `estimate_research_cost` or `confirm_research` calls needed.
+The TUI confirmation dialog appears automatically during `plan_research`. The result determines next step:
 
 - **If user confirmed:** call `run_research`:
   ```
@@ -83,7 +83,7 @@ The TUI confirmation dialog appears automatically. No `estimate_research_cost` o
 - **If user changed parameters:** the plan is updated in-place — call `run_research` with the same path.
 - **If user cancelled:** the plan is discarded. Wait for a new topic.
 
-**Non-interactive mode:** The TUI is not available. Present the plan summary to the user, ask for confirmation, then call `confirm_research` before `run_research`.
+Non-interactive mode is not supported — `plan_research` will return an error if no TUI is available.
 
 ### Phase 3: Research Loop
 

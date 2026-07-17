@@ -29,7 +29,7 @@ export function createRunResearchTool(
             content: [
               {
                 type: "text",
-                text: `## Confirmation Required ⚠️\n\nThe research plan must be confirmed by the user before running.\n\n1. Present the plan and cost estimate to the user\n2. Ask for explicit approval\n3. After approval, call confirm_research with the plan path\n4. Then call run_research`,
+                text: `## Confirmation Required ⚠️\n\nThe research plan must be confirmed by the user before running. Complete plan_research first, then call run_research with the plan path.`,
               },
             ],
             details: { error: "plan_not_confirmed" },

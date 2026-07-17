@@ -2,7 +2,6 @@ import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { confirmPlanDialog } from "./confirm-dialog.js";
 import { ProfileResolver } from "./profile-resolver.js";
 import { checkForNewRelease } from "./release-monitor.js";
 import { ResearchRunOrchestrator } from "./research-run-orchestrator.js";
@@ -12,7 +11,6 @@ import { SessionState } from "./session-state.js";
 import { SettingsContext } from "./settings-context.js";
 import { buildSettingsTable, writeSettingsLog } from "./settings-reporter.js";
 import { registerAllTools } from "./tools/deps.js";
-import { readPlanArtifact } from "./tools/shared.js";
 
 const baseDir = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(baseDir, "..");
@@ -65,25 +63,6 @@ export default function (pi: ExtensionAPI) {
       pi.sendUserMessage(`## ℹ️ Deep Research Settings (informational — not a research request)\n\n${table}`, {
         deliverAs: "steer",
       });
-    }
-  });
-
-  // TUI confirmation gate — enforce user approval before research runs (ADR-0019)
-  pi.on("tool_call", async (event: any, ctx: any) => {
-    if (event.toolName !== "confirm_research") return;
-
-    const planPath = event.input?.plan_artifact_path;
-    const artifact = readPlanArtifact(planPath);
-    if (!artifact.ok) {
-      return { block: true, reason: `Cannot read plan: ${artifact.error}` };
-    }
-
-    const dialogResult = await confirmPlanDialog(ctx, artifact.artifact.plan, profileResolver, settings, planPath);
-    if (dialogResult.cancelled) {
-      return { block: true, reason: "Research cancelled by user — plan discarded" };
-    }
-    if (!dialogResult.confirmed) {
-      return { block: true, reason: "Confirmation declined by user" };
     }
   });
 }
