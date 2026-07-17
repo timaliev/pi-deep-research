@@ -25,9 +25,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+- **(readme)** add Usage section with workflow and configuration reference - ([3c6e4c3](https://github.com/timaliev/pi-deep-research/commit/3c6e4c3543ddc995f0942f0d808b0e111151663b)) - Tim Aliev
+- **(readme)** remove duplicate engines sentence - ([bc4aff3](https://github.com/timaliev/pi-deep-research/commit/bc4aff3c98f3d2ec07e6b4968b7939f49bbcbfab)) - Tim Aliev
+- **(readme)** remove duplicate config table, reference Configuration section - ([af22361](https://github.com/timaliev/pi-deep-research/commit/af22361cc8f851b58277ef79d5757cb176b9c0ce)) - Tim Aliev
+- **(readme)** fix stale 5-10 subtopics text, align exhaustive profile concurrency - ([9699dec](https://github.com/timaliev/pi-deep-research/commit/9699dec99017769012f85c57a5113c2a07ff6967)) - Tim Aliev
+- **(readme)** add table of contents - ([fc03e84](https://github.com/timaliev/pi-deep-research/commit/fc03e84e8bae6878955fb69a140528040ad077ed)) - Tim Aliev
+- **(readme)** move Usage after Installation, simplify Custom profiles - ([61846ea](https://github.com/timaliev/pi-deep-research/commit/61846ea9759d15536e4dae13eddd2467b7020cca)) - Tim Aliev
+- **(readme)** move Search Engines between Configuration and PDF Export, fix TOC - ([51beb61](https://github.com/timaliev/pi-deep-research/commit/51beb61e5efaeefda766be95d9c822811aa3ebfe)) - Tim Aliev
+- **(readme)** mention both project-local and global settings.json paths - ([5b4ad27](https://github.com/timaliev/pi-deep-research/commit/5b4ad2781c7a51602630bb5da9843f39f36386f5)) - Tim Aliev
+- **(readme)** replace environment-variables links with Configuration references - ([be34a89](https://github.com/timaliev/pi-deep-research/commit/be34a89794462e5449d35ebcde747291d3a7e60a)) - Tim Aliev
+- **(readme)** add settings debugging item to configuration methods list - ([ba80b38](https://github.com/timaliev/pi-deep-research/commit/ba80b388b7e6a710ab213325776294344794fe32)) - Tim Aliev
+- **(readme)** link settings debugging item to settingsReport section - ([da19940](https://github.com/timaliev/pi-deep-research/commit/da199404170b2297378a71b6bc997f8988b7e6a3)) - Tim Aliev
+- **(readme)** link RunId in settings debugging item - ([42caad7](https://github.com/timaliev/pi-deep-research/commit/42caad7ee0974e9170d8cb59259729f5c3955e07)) - Tim Aliev
 - **(todo)** add export_pdf default path bug - ([2bafd6f](https://github.com/timaliev/pi-deep-research/commit/2bafd6f715cd344311e10f575023c4db5ef4e8ff)) - Tim Aliev
 - **(todo)** add stale subtopics text in prefilter-prompts - ([c39aebb](https://github.com/timaliev/pi-deep-research/commit/c39aebbcdbb52fdb36cf399baade1ab8db32cb11)) - Tim Aliev
 - **(todo)** add prefilter prelim search uses only agent-chosen engines - ([7e6d2db](https://github.com/timaliev/pi-deep-research/commit/7e6d2db3e942c929f88764f106eee3b2e1ab2deb)) - Tim Aliev
+- final documentation update for v0.26.7 - ([20a64cf](https://github.com/timaliev/pi-deep-research/commit/20a64cf96ace448d5e6d1bbf3108c5d088f1687a)) - Tim Aliev
+- add RunId concept to Key Concepts and CONTEXT.md - ([fef8a81](https://github.com/timaliev/pi-deep-research/commit/fef8a817e178b281aeb6d909cfe72017006b732f)) - Tim Aliev
 
 ## [0.26.6](https://github.com/timaliev/pi-deep-research/compare/v0.26.5..v0.26.6) - 2026-07-16
 
