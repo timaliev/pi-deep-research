@@ -106,7 +106,7 @@ Configuration can be done in three ways — use any combination that suits your 
 
 1. **Built-in defaults** — works out of the box with no configuration. DuckDuckGo search is enabled by default, profile defaults to `"default"`, and outputs go to `<cwd>/deep-research/`.
 2. **`settings.json`** — add a `deepResearch` key to `<cwd>/.pi/settings.json` (project-local) or `~/.pi/agent/settings.json` (global) to override profiles, set API keys, or change output directories. Project-local wins over global.
-3. **Environment variables** — set search engine API keys and path overrides as env vars (see [Environment Variables](#environment-variables)). Env vars take highest priority.
+3. **Environment variables** — set search engine API keys and path overrides as env vars (see [Configuration](#configuration) for the full table). Env vars take highest priority.
 
 ### Settings cascade
 
@@ -184,7 +184,7 @@ Also configurable via `DEEP_RESEARCH_REPORT_STYLE` env var. The agent can overri
 
 #### `searchProviders`
 
-API keys for search engines. Alternative to environment variables — see [Environment Variables](#environment-variables). Env vars win over `settings.json` when both are set.
+API keys for search engines. Alternative to environment variables — see [Configuration](#configuration) for the full env var table. Env vars win over `settings.json` when both are set.
 
 ```json
 "searchProviders": {
@@ -331,7 +331,7 @@ Built-in `searchWeb()` function (multi-engine, retry with exponential backoff):
 
 All search calls — user-facing `deep_web_search` tool and pipeline — use the same function with rate-limit backoff and result deduplication.
 
-See [Environment Variables](#environment-variables) for API key configuration.
+See [Configuration](#configuration) for API key setup and env var names.
 
 ## PDF Export
 
