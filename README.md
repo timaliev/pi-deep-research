@@ -360,21 +360,6 @@ User: "Research topic X"
   → Report saved to deep-research/reports/
 ```
 
-### User configuration
-
-| Setting | Location | Example |
-|---|---|---|
-| Default engines | `settings.json` → `deepResearch.enabledEngines` | `["duckduckgo", "tavily"]` |
-| Default profile | `settings.json` → `deepResearch.defaultProfile` | `"deep"` |
-| Default report style | `settings.json` → `deepResearch.reportStyle` | `"subtopics"` |
-| Custom profiles | `settings.json` → `deepResearch.profiles` | `{"exhaustive": {"breadth":10,"depth":5}}` |
-| PDF export | `settings.json` → `deepResearch.pdfExport` | `true` |
-| Mind map | `settings.json` → `deepResearch.mindMap` | `true` |
-| Output directory | `settings.json` → `deepResearch.reportsDir` | `"./my-reports"` |
-| API keys | `settings.json` or env vars | `BRAVE_API_KEY=...` |
-
-All settings can be set via environment variables (see [Configuration](#configuration)). Env vars override `settings.json`.
-
 ### Changing parameters mid-flight
 
 The TUI confirmation dialog (v0.26.7+) allows changing engines, profile, and report style directly — no agent turns needed. Select "Change parameters" at the confirmation screen.
