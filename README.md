@@ -107,7 +107,7 @@ Configuration can be done in three ways — use any combination that suits your 
 1. **Built-in defaults** — works out of the box with no configuration. DuckDuckGo search is enabled by default, profile defaults to `"default"`, and outputs go to `<cwd>/deep-research/`.
 2. **`settings.json`** — add a `deepResearch` key to `<cwd>/.pi/settings.json` (project-local) or `~/.pi/agent/settings.json` (global) to override profiles, set API keys, or change output directories. Project-local wins over global.
 3. **Environment variables** — set search engine API keys and path overrides as env vars (see [Configuration](#configuration) for the full table). Env vars take highest priority.
-4. **Debugging applied settings** — enable `onSessionStart` or `onRunStart` in `deepResearch.settingsReport` (see [settingsReport](#settingsreport) for details). Shows a table of every resolved setting with its source (which file/env var supplied it). Settings are always logged to `<deep-research>/logs/` regardless of this toggle.
+4. **Debugging applied settings** — enable `onSessionStart` or `onRunStart` in `deepResearch.settingsReport` (see [settingsReport](#settingsreport) for details). Shows a table of every resolved setting with its source (which file/env var supplied it). Settings are always logged to `<deep-research>/logs/` (with RunId reference) regardless of this toggle.
 
 ### Settings cascade
 
@@ -488,6 +488,7 @@ deep-research/
 | **Report Style** | `narrative` — fixed 5-section template. `subtopics` — LLM discovers thematic sections (5–7 for ≤4 questions, 8–12 for 5–7, 12–20 for 8+) |
 | **Prefilter** | Three-step: (1) negotiate engines+profile, (2) preliminary search, (3) agent writes plan |
 | **Injection** | Prompt sent into agent conversation via `pi.sendUserMessage()` — the tool never calls the LLM directly |
+| **RunId** | Unique timestamp-based identifier (`YYYYMMDD-HHmmss`) shared across all artifacts for one research run: prefilter plan, JSONL log, queue snapshots, and report. Use to find and correlate all files belonging to a single run |
 | **Research Log** | JSONL trace file (`<runId>.log`) — every phase transition, search/scrape call, error, decision |
 | **Soft Limit** | Runtime cap (maxSearchCalls, maxElapsedSeconds) — reduces intensity, skips deeper recursion |
 | **Confirmation Gate** | Agent must present plan + cost estimate, get user approval before `run_research` |
