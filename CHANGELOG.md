@@ -13,6 +13,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.27.0](https://github.com/timaliev/pi-deep-research/compare/v0.26.6..v0.27.0) - 2026-07-17
+
+### Features
+
+- **(confirm)** multi-step TUI dialog with parameter editing (ADR-0026) - ([f5e927c](https://github.com/timaliev/pi-deep-research/commit/f5e927c68d36540a7549d38e995fa95c26654e14)) - Tim Aliev
+
+### Bug Fixes
+
+- implement 3 TODO items with tests - ([a1db00b](https://github.com/timaliev/pi-deep-research/commit/a1db00b11032f4b623a177b029370d4d847bf9a8)) - Tim Aliev
+
+### Documentation
+
+- **(todo)** add export_pdf default path bug - ([2bafd6f](https://github.com/timaliev/pi-deep-research/commit/2bafd6f715cd344311e10f575023c4db5ef4e8ff)) - Tim Aliev
+- **(todo)** add stale subtopics text in prefilter-prompts - ([c39aebb](https://github.com/timaliev/pi-deep-research/commit/c39aebbcdbb52fdb36cf399baade1ab8db32cb11)) - Tim Aliev
+- **(todo)** add prefilter prelim search uses only agent-chosen engines - ([7e6d2db](https://github.com/timaliev/pi-deep-research/commit/7e6d2db3e942c929f88764f106eee3b2e1ab2deb)) - Tim Aliev
+
 ## [0.26.6](https://github.com/timaliev/pi-deep-research/compare/v0.26.5..v0.26.6) - 2026-07-16
 
 ### Bug Fixes
