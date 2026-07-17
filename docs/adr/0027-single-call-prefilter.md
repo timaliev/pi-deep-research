@@ -70,3 +70,19 @@ Phase 1 guardrail "retry without engines missing API keys" is now unnecessary �
 - **estimate_research_cost removed.** Cost computed by the tool using the same algorithm (`breadth × depth × questions`). No separate tool call needed. The TUI shows computed cost regardless of what the agent wrote in the plan.
 - **PrefilterManager simplified.** The multi-call routing logic (`start`, `withParams`, `continue`, `finalize`) collapses into a single `next()` method with phase dispatch — same pattern as `ResearchStateMachine.next()`.
 - **Breaking change.** Old sessions with saved prefilter state will fail. Acceptable — the old flow was already broken by the enforcement guard.
+
+## Refinement: Self-recovering errors (July 2026)
+
+The tool must never return `phase: "error"` to the agent. All error states are recoverable within the tool — the tool re-injects the appropriate prompt or auto-advances. The agent never makes error-recovery decisions.
+
+| Error state | Recovery |
+|---|---|
+| Invalid JSON from agent | Re-inject plan prompt with syntax guidance. Max 3 retries, then return fallback error |
+| Already finalized | Idempotent — return existing `plan_ready` with saved artifact path |
+| Introspection skipped | Auto-inject introspection prompt, wait for agent response, continue normally |
+| Missing required fields | Re-inject plan prompt with field-specific guidance (e.g., "Missing: goal, scope") |
+| No cached prefilter state | Restart from `start` phase — auto-create new manager |
+
+**getOrCreate restart fix:** When agent calls `plan_research({ topic })` again after an error, `PrefilterSession.getOrCreate` must create a fresh `PrefilterManager` instead of reusing the stale instance. This is detected by checking if the existing manager's phase is beyond `awaiting_params`.
+
+**Impact:** The SKILL.md "fix the issue and call plan_research again" instruction becomes unnecessary — the tool handles recovery internally. Can be removed from the protocol.

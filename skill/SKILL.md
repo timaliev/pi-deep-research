@@ -70,9 +70,7 @@ The tool will inject prompts for you to respond to in sequence:
    - ✏️ Change parameters — edit engines, profile, or style in-place
    - ❌ Cancel — plan discarded
 
-**Guardrail:** Do NOT call `plan_research` again with `params_json`, `plan_json`, or no parameters. The single `{ topic }` call drives the entire pipeline. Just respond to the injections.
-
-**If the tool reports an error:** fix the issue and call `plan_research({ topic })` again to restart.
+**Guardrail:** Do NOT call `plan_research` again with `params_json`, `plan_json`, or no parameters. The single `{ topic }` call drives the entire pipeline. Just respond to the injections. Errors are handled internally — the tool re-injects prompts or auto-advances. No agent action needed.
 
 ### Phase 2: Run Research
 
