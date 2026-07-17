@@ -78,8 +78,11 @@ export default function (pi: ExtensionAPI) {
       return { block: true, reason: `Cannot read plan: ${artifact.error}` };
     }
 
-    const confirmed = await confirmPlanDialog(ctx, artifact.artifact.plan, profileResolver, settings);
-    if (!confirmed) {
+    const dialogResult = await confirmPlanDialog(ctx, artifact.artifact.plan, profileResolver, settings, planPath);
+    if (dialogResult.cancelled) {
+      return { block: true, reason: "Research cancelled by user — plan discarded" };
+    }
+    if (!dialogResult.confirmed) {
       return { block: true, reason: "Confirmation declined by user" };
     }
   });

@@ -13,6 +13,21 @@ A Pi extension and skill that provides autonomous deep web research — planning
 
 Inspired by [https://github.com/assafelovic/gpt-researcher](gpt-researcher).
 
+## Table of Contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Search Engines](#search-engines)
+- [PDF Export](#pdf-export)
+- [Mind Map](#mind-map)
+- [Architecture](#architecture)
+- [File Structure](#file-structure)
+- [Key Concepts](#key-concepts)
+- [Development](#development)
+- [Related Documents](#related-documents)
+- [Statistics](#statistics)
+
 ## Installation
 
 ### Via pi packages (recommended)
@@ -62,13 +77,37 @@ rm ~/.pi/agent/extensions/deep-research     # remove symlink
 rm -rf ~/.pi/agent/git/github.com/timaliev/pi-deep-research  # delete clone
 ```
 
+## Usage
+
+### Typical workflow
+
+```
+User: "Research topic X"
+  → Agent proposes engines + profile
+  → Preliminary search with all enabled engines
+  → Agent creates research plan
+  → TUI confirmation dialog:
+      [✅ Confirm]  [✏️ Change parameters]  [❌ Cancel]
+  → Confirmed → multi-depth research runs
+  → Report saved to deep-research/reports/
+```
+
+### Changing parameters mid-flight
+
+The TUI confirmation dialog (v0.26.7+) allows changing engines, profile, and report style directly — no agent turns needed. Select "Change parameters" at the confirmation screen.
+
+### Custom profiles
+
+Custom research profiles can be defined in `<cwd>/.pi/settings.json` or `~/.pi/agent/settings.json` — see [Configuration](#configuration) for examples. Built-in presets: `default` (4/2/4), `fast` (2/1/2), `deep` (6/3/4).
+
 ## Configuration
 
 Configuration can be done in three ways — use any combination that suits your workflow:
 
 1. **Built-in defaults** — works out of the box with no configuration. DuckDuckGo search is enabled by default, profile defaults to `"default"`, and outputs go to `<cwd>/deep-research/`.
-2. **`settings.json`** — add a `deepResearch` key to `~/.pi/agent/settings.json` to override profiles, set API keys, or change output directories.
-3. **Environment variables** — set search engine API keys and path overrides as env vars (see [Environment Variables](#environment-variables)). Env vars take highest priority.
+2. **`settings.json`** — add a `deepResearch` key to `<cwd>/.pi/settings.json` (project-local) or `~/.pi/agent/settings.json` (global) to override profiles, set API keys, or change output directories. Project-local wins over global.
+3. **Environment variables** — set search engine API keys and path overrides as env vars (see [Configuration](#configuration) for the full table). Env vars take highest priority.
+4. **Debugging applied settings** — enable `onSessionStart` or `onRunStart` in `deepResearch.settingsReport` (see [settingsReport](#settingsreport) for details). Shows a table of every resolved setting with its source (which file/env var supplied it). Settings are always logged to `<deep-research>/logs/` (with [RunId](#key-concepts) reference) regardless of this toggle.
 
 ### Settings cascade
 
@@ -79,7 +118,7 @@ env vars  →  .pi/settings.json  →  ~/.pi/agent/settings.json  →  built-in 
 
 ### Settings in `settings.json`
 
-Add a `deepResearch` key to `~/.pi/agent/settings.json`:
+Add a `deepResearch` key to `<cwd>/.pi/settings.json` (project-local) or `~/.pi/agent/settings.json` (global). Project-local wins over global: both are merged, with local taking priority.
 
 ```json
 {
@@ -120,7 +159,7 @@ Override or extend built-in presets. Partial overrides are merged — missing fi
 
 ```json
 "profiles": {
-  "exhaustive": { "breadth": 10, "depth": 5, "concurrency": 6, "maxSearchCalls": 100 }
+  "exhaustive": { "breadth": 10, "depth": 5, "concurrency": 8, "maxSearchCalls": 100 }
 }
 ```
 
@@ -136,7 +175,7 @@ Which profile name is the default (shown in prompts, used when agent doesn't spe
 
 #### `reportStyle`
 
-Default report generation style. One of `"narrative"` (5-section fixed template) or `"subtopics"` (LLM discovers thematic sections scaled to question count). Defaults to `"narrative"`.
+Default report generation style. One of `"narrative"` (5-section fixed template) or `"subtopics"` (LLM discovers thematic sections: 5–7 for ≤4 questions, 8–12 for 5–7, 12–20 for 8+). Defaults to `"narrative"`.
 
 ```json
 "reportStyle": "subtopics"
@@ -146,7 +185,7 @@ Also configurable via `DEEP_RESEARCH_REPORT_STYLE` env var. The agent can overri
 
 #### `searchProviders`
 
-API keys for search engines. Alternative to environment variables — see [Environment Variables](#environment-variables). Env vars win over `settings.json` when both are set.
+API keys for search engines. Alternative to environment variables — see [Configuration](#configuration) for the full env var table. Env vars win over `settings.json` when both are set.
 
 ```json
 "searchProviders": {
@@ -168,8 +207,6 @@ Whitelist which search engines are available. Comma-separated string in env var,
 ```json
 "enabledEngines": ["duckduckgo", "brave", "tavily"]
 ```
-
-Engines not in the list are excluded from prefilter engine suggestions, even if their API key is configured.
 
 #### `artifactsDir` / `reportsDir`
 
@@ -280,6 +317,22 @@ The adapter tries instances in order. If one fails (non-200 or network error), i
 - Endpoint: `GET /search?q=<query>&format=json&categories=general`
 - Response must include `{ results: [{ title, url, content }] }`
 - JSON format must be enabled (`search.formats` includes `json` in `settings.yml`)
+
+## Search Engines
+
+Built-in `searchWeb()` function (multi-engine, retry with exponential backoff):
+
+| Engine | API Key | Quality | Notes |
+|---|---|---|---|
+| `duckduckgo` | none | Good | Free, zero-config, always available |
+| `brave` | required | Better | Higher quality results, generous free tier |
+| `searxng` | none | Variable | Public instances with automatic failover |
+| `tavily` | required | Best | AI-optimized, extracts clean content |
+| `yandex` | required | Good | Russian/global coverage |
+
+All search calls — user-facing `deep_web_search` tool and pipeline — use the same function with rate-limit backoff and result deduplication.
+
+See [Configuration](#configuration) for API key setup and env var names.
 
 ## PDF Export
 
@@ -418,7 +471,7 @@ tools/
 ├── plan-research.ts           Three-step prefilter tool (manager scoped per plan)
 └── run-research.ts            Research run tool (orchestrator + confirmation gate)
 
-tests/                          Unit + integration tests (tsx runner, 45 files)
+tests/                          Unit + integration tests (tsx runner, 68 files)
 
 deep-research/
 ├── artifacts/                  Research plans (prefilter.json)
@@ -432,35 +485,20 @@ deep-research/
 |---|---|
 | **Research Plan** | JSON artifact: topic, goal, research questions, engines, profile, report style, scope, estimated cost |
 | **Research Profile** | Named preset (default/fast/deep) or custom (breadth/depth/concurrency). Negotiated during prefilter, stored in plan |
-| **Report Style** | `narrative` — fixed 5-section template (Introduction/Findings/Analysis/Recommendations/Sources). `subtopics` — LLM discovers 5–10 thematic sections with subsections, data tables, and quotes |
+| **Report Style** | `narrative` — fixed 5-section template. `subtopics` — LLM discovers thematic sections (5–7 for ≤4 questions, 8–12 for 5–7, 12–20 for 8+) |
 | **Prefilter** | Three-step: (1) negotiate engines+profile, (2) preliminary search, (3) agent writes plan |
 | **Injection** | Prompt sent into agent conversation via `pi.sendUserMessage()` — the tool never calls the LLM directly |
+| **RunId** | Unique timestamp-based identifier (`YYYYMMDD-HHmmss`) shared across all artifacts for one research run: prefilter plan, JSONL log, queue snapshots, and report. Use to find and correlate all files belonging to a single run |
 | **Research Log** | JSONL trace file (`<runId>.log`) — every phase transition, search/scrape call, error, decision |
 | **Soft Limit** | Runtime cap (maxSearchCalls, maxElapsedSeconds) — reduces intensity, skips deeper recursion |
 | **Confirmation Gate** | Agent must present plan + cost estimate, get user approval before `run_research` |
-
-## Search Engines
-
-Built-in `searchWeb()` function (multi-engine, retry with exponential backoff):
-
-| Engine | API Key | Quality | Notes |
-|---|---|---|---|
-| `duckduckgo` | none | Good | Free, zero-config, always available |
-| `brave` | required | Better | Higher quality results, generous free tier |
-| `searxng` | none | Variable | Public instances with automatic failover |
-| `tavily` | required | Best | AI-optimized, extracts clean content |
-| `yandex` | required | Good | Russian/global coverage |
-
-All search calls — user-facing `deep_web_search` tool and pipeline — use the same function with rate-limit backoff and result deduplication.
-
-See [Environment Variables](#environment-variables) for API key configuration.
 
 ## Development
 
 See [development.md](development.md) for the full quality gate checklist.
 
 ```bash
-npm test              # 429 tests across 53 files
+npm test              # 450 tests across 68 files
 npm run format        # auto-format with biome
 npm run lint          # biome lint
 ```
@@ -498,3 +536,19 @@ npm run lint          # biome lint
 | [0022](docs/adr/0022-done-phase-steer-messages.md) | accepted | Remove redundant steer from done phase |
 | [0024](docs/adr/0024-prefilter-context-bundle.md) | accepted | PrefilterContext — bundled constructor for PrefilterManager |
 | [0025](docs/adr/0025-state-machine-resume.md) | accepted | State machine resume — move draft restoration inside the machine |
+| [0026](docs/adr/0026-multi-step-confirmation-dialog.md) | accepted | Multi-step TUI confirmation with parameter editing |
+
+## Statistics
+
+| Metric | Value |
+|---|---|
+| Commits | 508 |
+| Releases | 62 |
+| Contributors | 3 |
+| Total lines | 24,517 |
+| TypeScript modules | 43 |
+| Test files | 68 |
+| Test cases | 450 |
+| ADRs | 26 |
+| Statement coverage | 74.2% |
+| Largest module | settings-context.ts (495 lines) |

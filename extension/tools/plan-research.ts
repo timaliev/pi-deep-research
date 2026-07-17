@@ -120,12 +120,20 @@ export function createPlanResearchTool(
     const style = plan.reportStyle ?? settings.reportStyle ?? "narrative";
 
     // Inline confirmation — skip LLM, ask user directly (idempotent via shared dialog)
-    const confirmed = await confirmPlanDialog(ctx, plan, profileResolver, settings);
-    if (confirmed) {
+    const dialogResult = await confirmPlanDialog(ctx, plan, profileResolver, settings, planPath);
+    if (dialogResult.cancelled) {
+      return {
+        content: [
+          { type: "text", text: `## Plan Cancelled ❌\n\nPlan discarded. Start a new research topic when ready.` },
+        ],
+        details: { phase: "cancelled", plan_artifact_path: planPath },
+      };
+    }
+    if (dialogResult.confirmed) {
       sessionState.saveConfirmation(planPath);
     }
 
-    const confirmationNote = confirmed
+    const confirmationNote = dialogResult.confirmed
       ? `\n\n▶ Research confirmed. Call run_research to begin.`
       : ctx.hasUI
         ? `\n\n⏸ Research not confirmed. Call confirm_research when ready.`
@@ -142,7 +150,7 @@ export function createPlanResearchTool(
         phase: result.phase,
         plan_artifact_path: planPath,
         plan: result.plan,
-        confirmed,
+        confirmed: dialogResult.confirmed,
       },
     };
   }

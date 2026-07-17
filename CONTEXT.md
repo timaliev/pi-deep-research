@@ -20,6 +20,10 @@ _Avoid_: plan document, research brief, query template
 A single execution of the `run_research` state machine from plan to report. Has a unique `runId` (timestamp-based) and produces artifacts: report, telemetry, log. Multiple runs can use the same Research Plan.
 _Avoid_: execution, workflow run, research job
 
+**RunId**:
+A unique timestamp-based identifier (`YYYYMMDD-HHmmss`) shared across all artifacts belonging to one Research Run. Links the prefilter plan (`<runId>-prefilter.json`), search queue snapshots (`queue-<runId>-d<N>.json`), JSONL log (`<runId>.log`), and final report. Use the RunId to find and correlate all files for a single run.
+_Avoid_: run identifier, execution ID, job ID
+
 **Phase**:
 A discrete state inside the `run_research` or `plan_research` state machine. The tool advances through phases (`searching → extracting → questioning → drafting → saving → done`) across multiple invocations, driven by the agent calling the tool repeatedly. Each invocation may advance one or more phases.
 _Avoid_: step, stage, iteration

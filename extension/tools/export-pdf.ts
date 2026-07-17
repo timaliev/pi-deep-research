@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { Type } from "typebox";
 import { convertToPdf } from "../export-pdf.js";
 import type { SettingsContext } from "../settings-context.js";
@@ -17,7 +17,7 @@ export function createExportPdfTool(sendUserMessage: (msg: string, opts: any) =>
       const reportPath = params.report_path as string;
       const outputPath =
         (params.output_path as string | undefined) ??
-        join(settings.reportsDir, reportPath.replace(/\.md$/, "") + ".pdf");
+        join(settings.reportsDir, basename(reportPath).replace(/\.md$/, "") + ".pdf");
 
       const result = await convertToPdf({ reportPath, outputPath });
 
