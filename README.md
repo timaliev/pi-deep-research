@@ -16,10 +16,10 @@ Inspired by [https://github.com/assafelovic/gpt-researcher](gpt-researcher).
 ## Table of Contents
 
 - [Installation](#installation)
+- [Usage](#usage)
 - [Configuration](#configuration)
 - [PDF Export](#pdf-export)
 - [Mind Map](#mind-map)
-- [Usage](#usage)
 - [Architecture](#architecture)
 - [File Structure](#file-structure)
 - [Key Concepts](#key-concepts)
@@ -76,6 +76,29 @@ Removes the package from settings and cleans up the cloned repository.
 rm ~/.pi/agent/extensions/deep-research     # remove symlink
 rm -rf ~/.pi/agent/git/github.com/timaliev/pi-deep-research  # delete clone
 ```
+
+## Usage
+
+### Typical workflow
+
+```
+User: "Research topic X"
+  → Agent proposes engines + profile
+  → Preliminary search with all enabled engines
+  → Agent creates research plan
+  → TUI confirmation dialog:
+      [✅ Confirm]  [✏️ Change parameters]  [❌ Cancel]
+  → Confirmed → multi-depth research runs
+  → Report saved to deep-research/reports/
+```
+
+### Changing parameters mid-flight
+
+The TUI confirmation dialog (v0.26.7+) allows changing engines, profile, and report style directly — no agent turns needed. Select "Change parameters" at the confirmation screen.
+
+### Custom profiles
+
+Custom research profiles can be defined in `~/.pi/agent/settings.json` — see [Configuration](#configuration) for examples. Built-in presets: `default` (4/2/4), `fast` (2/1/2), `deep` (6/3/4).
 
 ## Configuration
 
@@ -359,41 +382,6 @@ Always available — no configuration required. The agent responds with a ` ```m
 ### Auto-generation
 
 Enable `deepResearch.mindMap: true` in settings.json or set `DEEP_RESEARCH_MIND_MAP=true`. After each research run, the agent receives key findings and generates a Mermaid mind map appended to the report as `## Mind Map`.
-
-## Usage
-
-### Typical workflow
-
-```
-User: "Research topic X"
-  → Agent proposes engines + profile
-  → Preliminary search with all enabled engines
-  → Agent creates research plan
-  → TUI confirmation dialog:
-      [✅ Confirm]  [✏️ Change parameters]  [❌ Cancel]
-  → Confirmed → multi-depth research runs
-  → Report saved to deep-research/reports/
-```
-
-### Changing parameters mid-flight
-
-The TUI confirmation dialog (v0.26.7+) allows changing engines, profile, and report style directly — no agent turns needed. Select "Change parameters" at the confirmation screen.
-
-### Custom profiles
-
-Define named profiles in `~/.pi/agent/settings.json`:
-
-```json
-{
-  "deepResearch": {
-    "profiles": {
-      "exhaustive": { "breadth": 10, "depth": 5, "concurrency": 8, "maxSearchCalls": 100 }
-    }
-  }
-}
-```
-
-Built-in presets: `default` (4/2/4), `fast` (2/1/2), `deep` (6/3/4).
 
 ## Architecture
 
