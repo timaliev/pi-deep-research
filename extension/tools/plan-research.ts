@@ -1,7 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { Type } from "typebox";
 import { confirmPlanDialog } from "../confirm-dialog.js";
-import type { ResearchPlanProfile } from "../prefilter.js";
 import { type PrefilterManager, PrefilterSession } from "../prefilter.js";
 import type { ProfileResolver } from "../profile-resolver.js";
 import type { Scraper } from "../scraper.js";
@@ -11,8 +10,56 @@ import { PREFILTER_RUN_KEY } from "../session-state.js";
 import type { SessionState } from "../session-state.js";
 import type { SearchProviderCredentials, SettingsContext } from "../settings-context.js";
 
+/** Extract agent's last text response from session entries, stripping tool calls. */
+function parseAgentResponse(entries: Record<string, unknown>[]): string {
+  const lastAssistant = [...entries]
+    .reverse()
+    .find((e) => (e as { message?: { role?: string } }).message?.role === "assistant");
+  if (!lastAssistant) return "";
+
+  const content = (lastAssistant as { message?: { content?: unknown } }).message?.content;
+  if (typeof content === "string") {
+    return content.replace(/<tool_calls>[\s\S]*?<\/tool_calls>/g, "").trim();
+  }
+  if (Array.isArray(content)) {
+    return content
+      .filter((b: { type?: string; text?: string }) => b.type === "text")
+      .map((b) => b.text ?? "")
+      .join("\n")
+      .replace(/<tool_calls>[\s\S]*?<\/tool_calls>/g, "")
+      .trim();
+  }
+  return "";
+}
+
+/** Extract JSON object from agent response text (handles markdown fences). */
+function extractJson(text: string): Record<string, unknown> | null {
+  if (!text) return null;
+
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const jsonText = fence?.[1]?.trim() ?? text.trim();
+
+  try {
+    return JSON.parse(jsonText) as Record<string, unknown>;
+  } catch {
+    // try to find JSON object anywhere in text
+    const objMatch = text.match(/\{[\s\S]*\}/);
+    if (objMatch) {
+      try {
+        return JSON.parse(objMatch[0]) as Record<string, unknown>;
+      } catch {
+        // fall through
+      }
+    }
+  }
+  return null;
+}
+
 export function createPlanResearchTool(
-  pi: any,
+  pi: {
+    sendUserMessage: (msg: string, opts?: { deliverAs: string }) => void;
+    appendEntry: (key: string, data: unknown) => void;
+  },
   settings: SettingsContext,
   profileResolver: ProfileResolver,
   searchCred: SearchProviderCredentials,
@@ -30,171 +77,165 @@ export function createPlanResearchTool(
     enabledEngines: settings.enabledEngines,
   });
 
-  // ─── Handler methods ──────────────────────────────────────
-
-  async function handleStart(topic: string, manager: PrefilterManager) {
-    const result = await manager.start(topic);
-    if (result.inject) pi.sendUserMessage(result.inject, { deliverAs: "steer" });
-    return {
-      content: [
-        {
-          type: "text",
-          text: `## Research Planning — Phase: ${result.phase}\n\nI've sent you a prompt to choose engines and profile. Respond with JSON, then call plan_research again with params_json.`,
-        },
-      ],
-      details: { phase: result.phase, run_id: result.runId },
-    };
-  }
-
-  async function handleWithParams(topic: string, paramsJson: string, manager: PrefilterManager) {
-    let engines: SearchEngine[];
-    let profile: ResearchPlanProfile;
-    try {
-      const parsed = JSON.parse(paramsJson);
-      engines = parsed.engines ?? ["duckduckgo"];
-      profile = parsed.profile ?? { name: "default" };
-    } catch {
-      return {
-        content: [{ type: "text", text: "Error: params_json must be valid JSON." }],
-        details: { error: "invalid_params_json" },
-      };
-    }
-    const result = await manager.withParams(topic, engines, profile);
-    if (result.inject) pi.sendUserMessage(result.inject, { deliverAs: "steer" });
-    if (result.phase === "awaiting_params") {
-      return {
-        content: [{ type: "text", text: "## API Key Required\n\nSet missing env vars and retry." }],
-        details: { phase: result.phase, run_id: result.runId },
-      };
-    }
-    return {
-      content: [
-        {
-          type: "text",
-          text: `## Research Planning — Phase: ${result.phase}\n\nPreliminary search complete. ${result.searchResults?.length ?? 0} results. I've sent a prompt to create the plan.`,
-        },
-      ],
-      details: { phase: result.phase, run_id: result.runId },
-    };
-  }
-
-  async function handleContinue(entries: any[], manager: PrefilterManager) {
-    // ADR-0017: extract LLM response for introspection flow
-    const lastAssistant = [...entries].reverse().find((e: any) => e.message?.role === "assistant");
-    const llmText =
-      typeof lastAssistant?.message?.content === "string"
-        ? (lastAssistant.message.content as string).replace(/<tool_calls>[\s\S]*?<\/tool_calls>/g, "").trim()
-        : undefined;
-    const result = await manager.continue(undefined, llmText);
-    if (result.inject) pi.sendUserMessage(result.inject, { deliverAs: "steer" });
-    if (result.phase === "error") {
-      return { content: [{ type: "text", text: `Error: ${result.error}` }], details: { error: result.error } };
-    }
-    return {
-      content: [{ type: "text", text: `## Research Planning — Phase: ${result.phase}\n\nContinuing prefilter flow.` }],
-      details: { phase: result.phase, run_id: result.runId },
-    };
-  }
-
-  async function handleFinalize(topic: string | undefined, planJson: string, manager: PrefilterManager, ctx: any) {
-    let resolvedTopic = topic as string;
-    if (!resolvedTopic) {
-      try {
-        resolvedTopic = JSON.parse(planJson).topic || "unknown";
-      } catch {
-        resolvedTopic = "unknown";
-      }
-    }
-    const result = await manager.finalize(resolvedTopic, planJson);
-    session.remove(result.runId);
-
-    if (result.phase !== "plan_ready" || !result.plan || !result.planArtifactPath) {
-      return {
-        content: [{ type: "text", text: `## Plan Error ❌\n\n${result.error}` }],
-        details: { phase: result.phase, error: result.error },
-      };
-    }
-
-    const plan = result.plan;
-    const planPath = result.planArtifactPath;
-    const style = plan.reportStyle ?? settings.reportStyle ?? "narrative";
-
-    // Confirmation requires interactive TUI — no non-interactive fallback
-    if (!ctx.hasUI) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `## Error ❌\n\nResearch plan requires interactive TUI confirmation. Non-interactive mode is not supported.`,
-          },
-        ],
-        details: { phase: "error", error: "non_interactive_not_supported", plan_artifact_path: planPath },
-      };
-    }
-
-    // Inline confirmation — skip LLM, ask user directly (idempotent via shared dialog)
-    const dialogResult = await confirmPlanDialog(ctx, plan, profileResolver, settings, planPath);
-    if (dialogResult.cancelled) {
-      return {
-        content: [
-          { type: "text", text: `## Plan Cancelled ❌\n\nPlan discarded. Start a new research topic when ready.` },
-        ],
-        details: { phase: "cancelled", plan_artifact_path: planPath },
-      };
-    }
-
-    // TUI mode: confirmPlanDialog only returns confirmed or cancelled, never both false
-    sessionState.saveConfirmation(planPath);
-
-    return {
-      content: [
-        {
-          type: "text",
-          text: `## Research Plan Ready ✅\n\nPlan saved to: ${planPath}\n\n**Topic:** ${plan.topic}\n**Engines:** ${plan.engines.join(", ")}\n**Profile:** ${plan.profile.name}\n**Style:** ${style}\n**Questions:** ${plan.researchQuestions.length}\n\n▶ Research confirmed. Call run_research to begin.`,
-        },
-      ],
-      details: {
-        phase: result.phase,
-        plan_artifact_path: planPath,
-        plan: result.plan,
-        confirmed: true,
-      },
-    };
-  }
-
   return {
     name: "plan_research",
     label: "Plan Research",
     description:
-      "Three-step research planning. (1) Call with topic — agent proposes engines+profile. (2) Call with topic and params_json — preliminary search runs. (3) Call with topic and plan_json — save plan artifact.",
+      "Plan a deep research. Call once with topic — tool auto-advances through engine/profile selection, LLM introspection, preliminary web search, and plan creation. Just respond to injected prompts. No params_json or plan_json needed.",
     parameters: Type.Object({
-      topic: Type.Optional(
-        Type.String({ description: "Research topic (optional if plan_json provided, extracted from plan)" }),
-      ),
-      params_json: Type.Optional(Type.String({ description: "JSON with engines and profile (second call)" })),
-      plan_json: Type.Optional(Type.String({ description: "JSON research plan (third call)" })),
+      topic: Type.String({ description: "Research topic" }),
     }),
-    async execute(_toolCallId: string, params: any, _signal: any, _onUpdate: any, ctx: any) {
+    async execute(
+      _toolCallId: string,
+      params: { topic: string },
+      _signal: unknown,
+      _onUpdate: unknown,
+      ctx: { sessionManager: { getEntries: () => Record<string, unknown>[] }; hasUI?: boolean },
+    ) {
       mkdirSync(settings.artifactsDir, { recursive: true });
       const entries = ctx.sessionManager.getEntries();
-      const manager = session.getOrCreate(params.topic ?? "", entries, (runId) =>
+      const manager = session.getOrCreate(params.topic, entries, (runId) =>
         pi.appendEntry(PREFILTER_RUN_KEY, { runId, topic: params.topic }),
       );
 
-      // Router — 4 branches, one per protocol step
-      if (!params.params_json && !params.plan_json && params.topic) {
-        return handleStart(params.topic, manager);
+      const phase = manager.getPhase();
+      const agentText = parseAgentResponse(entries);
+
+      let result: Awaited<ReturnType<PrefilterManager["next"]>>;
+
+      // ── Phase dispatch ──────────────────────────────────
+
+      if (phase === "awaiting_params") {
+        const json = extractJson(agentText);
+        if (json && (json.engines || json.profile)) {
+          // Agent responded with engine/profile choice → advance to params + auto-introspect
+          result = await manager.next({
+            type: "params",
+            engines: (json.engines as SearchEngine[]) ?? ["duckduckgo"],
+            profile: (json.profile as { name: string; breadth?: number; depth?: number; concurrency?: number }) ?? {
+              name: "default",
+            },
+          });
+          if (result.phase === "awaiting_plan") {
+            result = await manager.next({ type: "continue" });
+          }
+        } else {
+          // Fresh start — no agent response yet
+          result = await manager.next({ type: "topic", topic: params.topic });
+        }
+      } else if (phase === "introspecting") {
+        // Agent responded to introspection prompt → trigger merge search
+        result = await manager.next({ type: "continue", llmResponse: agentText || undefined });
+      } else if (phase === "merging") {
+        // Agent responded to merge prompt with plan → finalize
+        const json = extractJson(agentText);
+        if (!json || !json.researchQuestions) {
+          // Self-recovering: re-inject merge prompt (ADR-0027 refinement)
+          result = await manager.next({ type: "continue", llmResponse: agentText || undefined });
+          if (result.inject) pi.sendUserMessage(result.inject, { deliverAs: "steer" });
+          return {
+            content: [
+              {
+                type: "text",
+                text: "## Plan Required\n\nI couldn't find a valid plan with researchQuestions in your response. I've re-sent the merge prompt. Please respond with a complete plan JSON.",
+              },
+            ],
+            details: { phase: result.phase, run_id: result.runId },
+          };
+        }
+        result = await manager.next({ type: "plan", planJson: JSON.stringify(json) });
+      } else {
+        return {
+          content: [{ type: "text", text: `Error: unknown prefilter phase "${phase}".` }],
+          details: { error: "unknown_phase" },
+        };
       }
-      if (params.params_json && !params.plan_json) {
-        return handleWithParams(params.topic, params.params_json, manager);
+
+      // ── Error handling ──────────────────────────────────
+
+      if (result.phase === "error") {
+        // Self-recovering: if introspection was skipped, auto-trigger it (ADR-0027 refinement)
+        if (result.error?.includes("introspection") && phase === "awaiting_params") {
+          result = await manager.next({ type: "continue" });
+        } else {
+          return {
+            content: [{ type: "text", text: `Error: ${result.error}` }],
+            details: { phase: result.phase, error: result.error },
+          };
+        }
       }
-      if (!params.params_json && !params.plan_json && !params.topic) {
-        return handleContinue(entries, manager);
+
+      // ── Injection ───────────────────────────────────────
+
+      if (result.inject) {
+        pi.sendUserMessage(result.inject, { deliverAs: "steer" });
       }
-      if (params.plan_json) {
-        return handleFinalize(params.topic, params.plan_json, manager, ctx);
+
+      // ── Plan ready → TUI confirmation ───────────────────
+
+      if (result.phase === "plan_ready" && result.plan && result.planArtifactPath) {
+        const plan = result.plan;
+        const planPath = result.planArtifactPath;
+        const style = plan.reportStyle ?? settings.reportStyle ?? "narrative";
+
+        if (!ctx.hasUI) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: "## Error ❌\n\nResearch plan requires interactive TUI confirmation. Non-interactive mode is not supported.",
+              },
+            ],
+            details: { phase: "error", error: "non_interactive_not_supported", plan_artifact_path: planPath },
+          };
+        }
+
+        const dialogResult = await confirmPlanDialog(
+          ctx as Parameters<typeof confirmPlanDialog>[0],
+          plan,
+          profileResolver,
+          settings,
+          planPath,
+        );
+        if (dialogResult.cancelled) {
+          return {
+            content: [
+              { type: "text", text: "## Plan Cancelled ❌\n\nPlan discarded. Start a new research topic when ready." },
+            ],
+            details: { phase: "cancelled", plan_artifact_path: planPath },
+          };
+        }
+
+        sessionState.saveConfirmation(planPath);
+        session.remove(result.runId);
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: `## Research Plan Ready ✅\n\nPlan saved to: ${planPath}\n\n**Topic:** ${plan.topic}\n**Engines:** ${plan.engines.join(", ")}\n**Profile:** ${plan.profile.name}\n**Style:** ${style}\n**Questions:** ${plan.researchQuestions.length}\n\n▶ Research confirmed. Call run_research to begin.`,
+            },
+          ],
+          details: {
+            phase: result.phase,
+            plan_artifact_path: planPath,
+            plan: result.plan,
+            confirmed: true,
+          },
+        };
       }
-      return { content: [{ type: "text", text: "Error: unexpected state." }], details: { error: "unexpected_state" } };
+
+      // ── In progress ─────────────────────────────────────
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `## Research Planning — Phase: ${result.phase}\n\n${result.inject ? "I've sent you a prompt. Respond in your next message, then call plan_research again." : "Call plan_research again to continue."}`,
+          },
+        ],
+        details: { phase: result.phase, run_id: result.runId },
+      };
     },
   };
 }
