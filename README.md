@@ -107,6 +107,7 @@ Configuration can be done in three ways — use any combination that suits your 
 1. **Built-in defaults** — works out of the box with no configuration. DuckDuckGo search is enabled by default, profile defaults to `"default"`, and outputs go to `<cwd>/deep-research/`.
 2. **`settings.json`** — add a `deepResearch` key to `<cwd>/.pi/settings.json` (project-local) or `~/.pi/agent/settings.json` (global) to override profiles, set API keys, or change output directories. Project-local wins over global.
 3. **Environment variables** — set search engine API keys and path overrides as env vars (see [Configuration](#configuration) for the full table). Env vars take highest priority.
+4. **Debugging applied settings** — enable `deepResearch.settingsReport.onSessionStart: true` in settings.json or set `DEEP_RESEARCH_SETTINGS_ON_SESSION_START=true`. A table showing every resolved setting value and its source (which file or env var supplied it) is printed at session start. Settings are always logged to `<deep-research>/logs/` regardless of this toggle.
 
 ### Settings cascade
 
