@@ -84,31 +84,17 @@ Environment variables take precedence over settings.json. Example settings.json:
    ```
 6. **Guardrail:** If the result has `phase: "error"`, fix the JSON and retry. If the error says "without running the full prefilter flow", you skipped steps 3-4 — go back and complete them.
 
-### Phase 3: Confirm Cost
+### Phase 3: Confirm Plan
 
-**Guardrail:** Read the plan_research result carefully before proceeding.
+**The TUI dialog appears automatically after plan_research.** No agent calls needed.
 
-- **If the result says "Research confirmed"** (▶ Research confirmed): skip directly to Phase 4. Do NOT call estimate_research_cost or confirm_research.
-- **If the result says "Research not confirmed"** (⏸ Research not confirmed): **STOP here.** Do NOT call any tools. The user declined. Wait for the user to modify the plan parameters or manually call confirm_research.
-- **If neither message appears** (non-interactive mode): use the manual flow below.
+- **If the user picks ✅ Confirm:** the tool returns "Research confirmed." Proceed directly to Phase 4. Do NOT call estimate_research_cost or confirm_research.
+- **If the user picks ✏️ Change parameters:** the TUI enters a multi-step parameter editor (engines, profile, report style). The plan is updated in-place — no LLM involvement. After changes, the user returns to the confirm/cancel dialog.
+- **If the user picks ❌ Cancel:** the plan is discarded. The tool returns "Plan cancelled." Wait for the user to start a new topic.
 
-**Manual flow (non-interactive only):**
+**Standalone confirm_research tool** is available for re-confirmation of previously saved plans. It opens the same TUI dialog.
 
-1. Call `estimate_research_cost`:
-   ```
-   estimate_research_cost({ plan_artifact_path: "<path from plan_research result>" })
-   ```
-2. Present to the user:
-   - Topic and research questions
-   - Chosen engines, profile, and report style
-   - Estimated search/scrape counts
-   - Ask: "Start deep research?"
-3. **Guardrail:** Do NOT call `run_research` until the user explicitly confirms.
-4. After user confirms, call `confirm_research`. The TUI will show a confirmation dialog with plan details — the user must pick "Yes — Start research" in the terminal before the tool executes.
-   ```
-   confirm_research({ plan_artifact_path: "<path from plan_research result>" })
-   ```
-   `run_research` enforces this gate — it will reject unconfirmed plans. In non-interactive mode (print/CI), confirmation is blocked.
+**Non-interactive mode (print/CI):** The TUI is not available. Call `estimate_research_cost` to present the plan to the user, ask for confirmation, then call `confirm_research`.
 
 ### Phase 4: Research Loop
 
