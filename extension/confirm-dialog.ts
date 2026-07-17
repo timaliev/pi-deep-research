@@ -21,8 +21,10 @@ function buildSummary(plan: ResearchPlan, profileResolver: ProfileResolver, sett
     prof.name === "custom"
       ? `custom (breadth=${prof.breadth}, depth=${prof.depth}, concurrency=${prof.concurrency})`
       : `${prof.name} (breadth=${resolvedProf.breadth}, depth=${resolvedProf.depth}, concurrency=${resolvedProf.concurrency})`;
-  const cost = plan.estimatedCost;
-  const costDesc = cost?.description ?? `${cost?.searchCalls ?? "?"} searches, ${cost?.scrapeCalls ?? "?"} scrapes`;
+  // ADR-0027: compute cost from actual profile, not agent-written plan field
+  const searches = resolvedProf.breadth * resolvedProf.depth * plan.researchQuestions.length;
+  const scrapes = Math.ceil(searches * 1.5);
+  const costDesc = `~${searches} searches, ~${scrapes} scrapes`;
 
   return [
     `🔬 Research Plan Confirmation`,

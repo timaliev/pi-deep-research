@@ -1,5 +1,10 @@
 # Project TODO
 
+## Next (ADR-0027: single-call prefilter)
+
+- DONE: add PrefilterManager.next() unified entry point (ADR-0027). Removed estimate_research_cost tool. Updated SKILL.md Phase 3.
+- TODO: make all prefilter errors self-recovering (ADR-0027 refinement) — design documented, implementation pending
+
 ## Remaining (ADR-0013: MCP/local sources)
 
 - TODO: add `Finding.source` field (`"web"` | `"local"` | `"mcp"`) to `Finding` interface.

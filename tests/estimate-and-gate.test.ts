@@ -26,60 +26,7 @@ function mockScraper(pages: Map<string, ScrapedPage>): Scraper {
 
 const MOCK_RESULTS: WebSearchResult[] = [{ title: "A", url: "https://a.com", snippet: "...", engine: "duckduckgo" }];
 
-// ─── Fix 1: scrape estimate formula ──────────────────────────────
-
-describe("estimate_research_cost scrape ratio", () => {
-  it("scrapes estimate is not double searches (real dedup ~1.4x)", () => {
-    // Current: estScrapes = estSearches * 2
-    // Real data (12 searches → 17 scrapes = 1.42x)
-    // New formula must be ≤ 1.5x to avoid scaring users with 288 scrape estimates
-    const plan: ResearchPlan = {
-      topic: "test",
-      goal: "test",
-      researchQuestions: ["q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8"],
-      engines: ["duckduckgo"],
-      profile: { name: "deep" },
-      scope: { include: "", exclude: "" },
-      estimatedCost: { searchCalls: 144, scrapeCalls: 0, description: "" },
-    };
-
-    const resolver = new ProfileResolver({});
-    const profile = resolver.resolve(plan.profile);
-    const estSearches = profile.breadth * profile.depth * plan.researchQuestions.length;
-    // 6 * 3 * 8 = 144
-    assert.equal(estSearches, 144);
-
-    const estScrapes = estimateScrapeCalls(estSearches, profile.breadth, profile.depth);
-    assert.ok(estScrapes < estSearches * 2, `scrapes=${estScrapes} must be < ${estSearches * 2}`);
-    assert.ok(
-      estScrapes <= Math.ceil(estSearches * 1.5),
-      `scrapes=${estScrapes} must be ≤ ${Math.ceil(estSearches * 1.5)}`,
-    );
-  });
-
-  it("low breadth+questions still scales reasonably", () => {
-    const plan: ResearchPlan = {
-      topic: "test",
-      goal: "test",
-      researchQuestions: ["q1", "q2", "q3"],
-      engines: ["duckduckgo"],
-      profile: { name: "fast" },
-      scope: { include: "", exclude: "" },
-      estimatedCost: { searchCalls: 6, scrapeCalls: 0, description: "" },
-    };
-    const resolver2 = new ProfileResolver({});
-    const profile = resolver2.resolve(plan.profile);
-    const estSearches = profile.breadth * profile.depth * plan.researchQuestions.length;
-    // 2 * 1 * 3 = 6
-    assert.equal(estSearches, 6);
-
-    const estScrapes = estimateScrapeCalls(estSearches, profile.breadth, profile.depth);
-    assert.ok(estScrapes > 0);
-    assert.ok(estScrapes <= estSearches * 2);
-  });
-});
-
-// ─── Fix 2: confirmation gate ────────────────────────────────────
+// ─── Confirmation gate ───────────────────────────────────────────
 
 describe("run_research confirmation gate", () => {
   beforeEach(() => {
@@ -161,13 +108,6 @@ describe("run_research confirmation gate", () => {
 
 // ─── Stub implementations (to be moved to extension) ─────────────
 
-function estimateScrapeCalls(estSearches: number, breadth: number, depth: number): number {
-  // Each depth iteration scrapes up to breadth*2 URLs, but heavy dedup across
-  // questions and iterations. Real ratio observed: ~1.4x (12 searches → 17 scrapes).
-  // Formula: ceil(searches * 1.5) as conservative upper bound.
-  return Math.ceil(estSearches * 1.5);
-}
-
 const CONFIRMATION_KEY = "deep-research:plan-confirmed";
 
 function checkConfirmationState(entries: Array<{ customType?: string; data?: Record<string, unknown> }>): boolean {
@@ -183,7 +123,7 @@ function validateRunResearchGate(
     return {
       allowed: false,
       reason:
-        "Research plan not confirmed by user. Present the plan and cost estimate, ask for explicit approval, then call confirm_research before run_research.",
+        "Research plan not confirmed by user. Complete plan_research first, then call run_research with the plan path.",
     };
   }
   const confirmedPath = confirmation.data?.planArtifactPath as string | undefined;
