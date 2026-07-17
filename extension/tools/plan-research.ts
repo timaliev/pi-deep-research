@@ -119,6 +119,19 @@ export function createPlanResearchTool(
     const planPath = result.planArtifactPath;
     const style = plan.reportStyle ?? settings.reportStyle ?? "narrative";
 
+    // Confirmation requires interactive TUI — no non-interactive fallback
+    if (!ctx.hasUI) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `## Error ❌\n\nResearch plan requires interactive TUI confirmation. Non-interactive mode is not supported.`,
+          },
+        ],
+        details: { phase: "error", error: "non_interactive_not_supported", plan_artifact_path: planPath },
+      };
+    }
+
     // Inline confirmation — skip LLM, ask user directly (idempotent via shared dialog)
     const dialogResult = await confirmPlanDialog(ctx, plan, profileResolver, settings, planPath);
     if (dialogResult.cancelled) {
@@ -129,28 +142,22 @@ export function createPlanResearchTool(
         details: { phase: "cancelled", plan_artifact_path: planPath },
       };
     }
-    if (dialogResult.confirmed) {
-      sessionState.saveConfirmation(planPath);
-    }
 
-    const confirmationNote = dialogResult.confirmed
-      ? `\n\n▶ Research confirmed. Call run_research to begin.`
-      : ctx.hasUI
-        ? `\n\n⏸ Research not confirmed. Call confirm_research when ready.`
-        : `\n\nNext: show user and ask for confirmation before calling run_research.`;
+    // TUI mode: confirmPlanDialog only returns confirmed or cancelled, never both false
+    sessionState.saveConfirmation(planPath);
 
     return {
       content: [
         {
           type: "text",
-          text: `## Research Plan Ready ✅\n\nPlan saved to: ${planPath}\n\n**Topic:** ${plan.topic}\n**Engines:** ${plan.engines.join(", ")}\n**Profile:** ${plan.profile.name}\n**Style:** ${style}\n**Questions:** ${plan.researchQuestions.length}${confirmationNote}`,
+          text: `## Research Plan Ready ✅\n\nPlan saved to: ${planPath}\n\n**Topic:** ${plan.topic}\n**Engines:** ${plan.engines.join(", ")}\n**Profile:** ${plan.profile.name}\n**Style:** ${style}\n**Questions:** ${plan.researchQuestions.length}\n\n▶ Research confirmed. Call run_research to begin.`,
         },
       ],
       details: {
         phase: result.phase,
         plan_artifact_path: planPath,
         plan: result.plan,
-        confirmed: dialogResult.confirmed,
+        confirmed: true,
       },
     };
   }
