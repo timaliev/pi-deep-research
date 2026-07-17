@@ -9,7 +9,7 @@
 
 # Deep Research for Pi
 
-A Pi extension and skill that provides autonomous deep web research — planning research questions, searching the web, scraping sources, extracting findings, and synthesizing a structured markdown report — all using the user's current Pi LLM model.
+A [Pi agent](https://pi.dev/) extension and skill that provides autonomous deep web research — planning research questions, searching the web, scraping sources, extracting findings, and synthesizing a structured markdown report — all using the user's current Pi LLM model.
 
 Inspired by [https://github.com/assafelovic/gpt-researcher](gpt-researcher).
 
@@ -537,6 +537,7 @@ npm run lint          # biome lint
 | [0024](docs/adr/0024-prefilter-context-bundle.md) | accepted | PrefilterContext — bundled constructor for PrefilterManager |
 | [0025](docs/adr/0025-state-machine-resume.md) | accepted | State machine resume — move draft restoration inside the machine |
 | [0026](docs/adr/0026-multi-step-confirmation-dialog.md) | accepted | Multi-step TUI confirmation with parameter editing |
+| [0027](docs/adr/0027-single-call-prefilter.md) | proposed | Single-call plan_research state machine |
 
 ## Statistics
 

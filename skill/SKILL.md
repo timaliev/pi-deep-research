@@ -9,7 +9,7 @@ Run a multi-step autonomous web research workflow that produces a structured mar
 
 ## Setup
 
-No setup required. DuckDuckGo is the default search engine (free, no API key). For higher quality results, configure API keys via environment variables or `~/.pi/agent/settings.json`:
+No setup required. DuckDuckGo is the default search engine (free, no API key). For higher quality results, configure API keys via environment variables or `<cwd>/.pi/settings.json` or `~/.pi/agent/settings.json`:
 
 | Engine | Key | Settings path | Free tier |
 |--------|-----|---------------|-----------|
@@ -19,7 +19,7 @@ No setup required. DuckDuckGo is the default search engine (free, no API key). F
 | `yandex` | `YANDEX_OAUTH_TOKEN` + `YANDEX_FOLDER_ID` | `deepResearch.searchProviders.yandex.oauthToken` / `.folderId` | Pay-as-you-go |
 | `searxng` | none | — | Variable (public instances) |
 
-Environment variables take precedence over settings.json. Example settings.json:
+Environment variables take precedence over settings.json. Local settings.json take precedence over global settings.json. Example settings.json:
 
 ```json
 {
@@ -52,7 +52,7 @@ Environment variables take precedence over settings.json. Example settings.json:
    ```
    plan_research({ topic: "<topic>", params_json: '<your params JSON>' })
    ```
-4. **Guardrail:** If the result warns about missing API keys, tell the user to configure the key (env var or settings.json), then retry step 3.
+4. **Guardrail:** If the result warns about missing API keys, tell the user to configure the key (env var or settings.json), then retry step 3 without search engine that have missing API keys.
 
 ### Phase 2: Plan Research
 
