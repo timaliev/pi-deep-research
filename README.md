@@ -169,8 +169,6 @@ Whitelist which search engines are available. Comma-separated string in env var,
 "enabledEngines": ["duckduckgo", "brave", "tavily"]
 ```
 
-Engines not in the list are excluded from prefilter engine suggestions, even if their API key is configured.
-
 #### `artifactsDir` / `reportsDir`
 
 Override default output paths. Defaults resolve to `<cwd>/deep-research/artifacts` and `<cwd>/deep-research/reports`. Use relative paths (resolved against `cwd`) or absolute paths.
