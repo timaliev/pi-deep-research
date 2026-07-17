@@ -347,6 +347,56 @@ Always available — no configuration required. The agent responds with a ` ```m
 
 Enable `deepResearch.mindMap: true` in settings.json or set `DEEP_RESEARCH_MIND_MAP=true`. After each research run, the agent receives key findings and generates a Mermaid mind map appended to the report as `## Mind Map`.
 
+## Usage
+
+### Typical workflow
+
+```
+User: "Research topic X"
+  → Agent proposes engines + profile
+  → Preliminary search with all enabled engines
+  → Agent creates research plan
+  → TUI confirmation dialog:
+      [✅ Confirm]  [✏️ Change parameters]  [❌ Cancel]
+  → Confirmed → multi-depth research runs
+  → Report saved to deep-research/reports/
+```
+
+### User configuration
+
+| Setting | Location | Example |
+|---|---|---|
+| Default engines | `settings.json` → `deepResearch.enabledEngines` | `["duckduckgo", "tavily"]` |
+| Default profile | `settings.json` → `deepResearch.defaultProfile` | `"deep"` |
+| Default report style | `settings.json` → `deepResearch.reportStyle` | `"subtopics"` |
+| Custom profiles | `settings.json` → `deepResearch.profiles` | `{"exhaustive": {"breadth":10,"depth":5}}` |
+| PDF export | `settings.json` → `deepResearch.pdfExport` | `true` |
+| Mind map | `settings.json` → `deepResearch.mindMap` | `true` |
+| Output directory | `settings.json` → `deepResearch.reportsDir` | `"./my-reports"` |
+| API keys | `settings.json` or env vars | `BRAVE_API_KEY=...` |
+
+All settings can be set via environment variables (see [Configuration](#configuration)). Env vars override `settings.json`.
+
+### Changing parameters mid-flight
+
+The TUI confirmation dialog (v0.26.7+) allows changing engines, profile, and report style directly — no agent turns needed. Select "Change parameters" at the confirmation screen.
+
+### Custom profiles
+
+Define named profiles in `~/.pi/agent/settings.json`:
+
+```json
+{
+  "deepResearch": {
+    "profiles": {
+      "exhaustive": { "breadth": 10, "depth": 5, "concurrency": 6, "maxSearchCalls": 100 }
+    }
+  }
+}
+```
+
+Built-in presets: `default` (4/2/4), `fast` (2/1/2), `deep` (6/3/4).
+
 ## Architecture
 
 ```
