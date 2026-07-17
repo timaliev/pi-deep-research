@@ -120,7 +120,7 @@ Override or extend built-in presets. Partial overrides are merged — missing fi
 
 ```json
 "profiles": {
-  "exhaustive": { "breadth": 10, "depth": 5, "concurrency": 6, "maxSearchCalls": 100 }
+  "exhaustive": { "breadth": 10, "depth": 5, "concurrency": 8, "maxSearchCalls": 100 }
 }
 ```
 
@@ -136,7 +136,7 @@ Which profile name is the default (shown in prompts, used when agent doesn't spe
 
 #### `reportStyle`
 
-Default report generation style. One of `"narrative"` (5-section fixed template) or `"subtopics"` (LLM discovers thematic sections scaled to question count). Defaults to `"narrative"`.
+Default report generation style. One of `"narrative"` (5-section fixed template) or `"subtopics"` (LLM discovers thematic sections: 5–7 for ≤4 questions, 8–12 for 5–7, 12–20 for 8+). Defaults to `"narrative"`.
 
 ```json
 "reportStyle": "subtopics"
@@ -372,7 +372,7 @@ Define named profiles in `~/.pi/agent/settings.json`:
 {
   "deepResearch": {
     "profiles": {
-      "exhaustive": { "breadth": 10, "depth": 5, "concurrency": 6, "maxSearchCalls": 100 }
+      "exhaustive": { "breadth": 10, "depth": 5, "concurrency": 8, "maxSearchCalls": 100 }
     }
   }
 }
@@ -465,7 +465,7 @@ deep-research/
 |---|---|
 | **Research Plan** | JSON artifact: topic, goal, research questions, engines, profile, report style, scope, estimated cost |
 | **Research Profile** | Named preset (default/fast/deep) or custom (breadth/depth/concurrency). Negotiated during prefilter, stored in plan |
-| **Report Style** | `narrative` — fixed 5-section template (Introduction/Findings/Analysis/Recommendations/Sources). `subtopics` — LLM discovers 5–10 thematic sections with subsections, data tables, and quotes |
+| **Report Style** | `narrative` — fixed 5-section template. `subtopics` — LLM discovers thematic sections (5–7 for ≤4 questions, 8–12 for 5–7, 12–20 for 8+) |
 | **Prefilter** | Three-step: (1) negotiate engines+profile, (2) preliminary search, (3) agent writes plan |
 | **Injection** | Prompt sent into agent conversation via `pi.sendUserMessage()` — the tool never calls the LLM directly |
 | **Research Log** | JSONL trace file (`<runId>.log`) — every phase transition, search/scrape call, error, decision |
