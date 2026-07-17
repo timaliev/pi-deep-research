@@ -45,6 +45,7 @@ npm run check         # format + lint combined
 ## Git operations
 
 - MUST always follow skill:git-skill to work with Git
+- NEVER work on `develop` branch. ALWAYS make a purpose branch and merge it onto `develop` branch after work on it is done.
 - release MUST follow this steps:
   - merge `develop` branch to `release` branch (strict `release` without any version tags);
   - wait until new PR (made by GitHub workflow) from `release` branch to `master` branch is ready and inform user;

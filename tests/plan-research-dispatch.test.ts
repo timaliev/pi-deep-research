@@ -37,3 +37,21 @@ describe("plan_research dispatch — handler methods", () => {
     );
   });
 });
+
+describe("plan_research non-interactive mode", () => {
+  it("errors when ctx.hasUI is false", () => {
+    assert.ok(src.includes("!ctx.hasUI") || src.includes("!ctx?.hasUI"), "must check ctx.hasUI and error if false");
+    assert.ok(
+      src.includes("interactive") || src.includes("TUI") || src.includes("confirmation"),
+      "error must mention interactive confirmation is required",
+    );
+  });
+
+  it("has no confirm_research fallback message", () => {
+    assert.ok(!src.includes("confirm_research"), "must not reference confirm_research tool");
+  });
+
+  it("has no non-interactive fallback message", () => {
+    assert.ok(!src.includes("show user and ask for confirmation"), "must not have non-interactive fallback text");
+  });
+});

@@ -93,6 +93,13 @@ export interface PrefilterArtifact {
   };
 }
 
+/** Unified input for single-call prefilter state machine (ADR-0027). */
+export type PrefilterInput =
+  | { type: "topic"; topic: string }
+  | { type: "params"; engines: SearchEngine[]; profile: ResearchPlanProfile }
+  | { type: "continue"; llmResponse?: string }
+  | { type: "plan"; planJson: string; topic?: string };
+
 export interface PrefilterResult {
   phase: "awaiting_params" | "awaiting_plan" | "plan_ready" | "error";
   runId: string;
@@ -151,6 +158,24 @@ export class PrefilterManager {
     this.sharedRunId = sharedRunId;
     this.defaultReportStyle = ctx.defaultReportStyle ?? "narrative";
     this.enabledEngines = ctx.enabledEngines;
+  }
+
+  /**
+   * Single entry point for the prefilter pipeline (ADR-0027).
+   * Accepts a typed step and advances through the phases internally.
+   * Replaces the old multi-call protocol (start/withParams/continue/finalize).
+   */
+  async next(input: PrefilterInput): Promise<PrefilterResult> {
+    switch (input.type) {
+      case "topic":
+        return this.start(input.topic);
+      case "params":
+        return this.withParams(this.cachedTopic ?? input.engines.join(","), input.engines, input.profile);
+      case "continue":
+        return this.continue(undefined, input.llmResponse);
+      case "plan":
+        return this.finalize(input.topic ?? this.cachedTopic ?? "", input.planJson);
+    }
   }
 
   private runId(): string {
