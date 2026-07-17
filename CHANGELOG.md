@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.28.1](https://github.com/timaliev/pi-deep-research/compare/v0.28.0..v0.28.1) - 2026-07-17
+
+### Bug Fixes
+
+- **(prefilter)** implement ADR-0027 single-call plan_research state machine - ([2a49287](https://github.com/timaliev/pi-deep-research/commit/2a4928738eea5221c56919690ce7ab22fa14e8b9)) - Tim Aliev
+
 ## [0.28.0](https://github.com/timaliev/pi-deep-research/compare/v0.27.0..v0.28.0) - 2026-07-17
 
 ### Features
