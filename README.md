@@ -98,14 +98,14 @@ The TUI confirmation dialog (v0.26.7+) allows changing engines, profile, and rep
 
 ### Custom profiles
 
-Custom research profiles can be defined in `~/.pi/agent/settings.json` — see [Configuration](#configuration) for examples. Built-in presets: `default` (4/2/4), `fast` (2/1/2), `deep` (6/3/4).
+Custom research profiles can be defined in `<cwd>/.pi/settings.json` or `~/.pi/agent/settings.json` — see [Configuration](#configuration) for examples. Built-in presets: `default` (4/2/4), `fast` (2/1/2), `deep` (6/3/4).
 
 ## Configuration
 
 Configuration can be done in three ways — use any combination that suits your workflow:
 
 1. **Built-in defaults** — works out of the box with no configuration. DuckDuckGo search is enabled by default, profile defaults to `"default"`, and outputs go to `<cwd>/deep-research/`.
-2. **`settings.json`** — add a `deepResearch` key to `~/.pi/agent/settings.json` to override profiles, set API keys, or change output directories.
+2. **`settings.json`** — add a `deepResearch` key to `<cwd>/.pi/settings.json` (project-local) or `~/.pi/agent/settings.json` (global) to override profiles, set API keys, or change output directories. Project-local wins over global.
 3. **Environment variables** — set search engine API keys and path overrides as env vars (see [Environment Variables](#environment-variables)). Env vars take highest priority.
 
 ### Settings cascade
@@ -117,7 +117,7 @@ env vars  →  .pi/settings.json  →  ~/.pi/agent/settings.json  →  built-in 
 
 ### Settings in `settings.json`
 
-Add a `deepResearch` key to `~/.pi/agent/settings.json`:
+Add a `deepResearch` key to `<cwd>/.pi/settings.json` (project-local) or `~/.pi/agent/settings.json` (global). Project-local wins over global: both are merged, with local taking priority.
 
 ```json
 {
