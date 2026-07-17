@@ -88,13 +88,13 @@ Environment variables take precedence over settings.json. Local settings.json ta
 
 **The TUI dialog appears automatically after plan_research.** No agent calls needed.
 
-- **If the user picks ✅ Confirm:** the tool returns "Research confirmed." Proceed directly to Phase 4. Do NOT call estimate_research_cost or confirm_research.
+- **If the user picks ✅ Confirm:** the tool returns "Research confirmed." Proceed directly to Phase 4.
 - **If the user picks ✏️ Change parameters:** the TUI enters a multi-step parameter editor (engines, profile, report style). The plan is updated in-place — no LLM involvement. After changes, the user returns to the confirm/cancel dialog.
 - **If the user picks ❌ Cancel:** the plan is discarded. The tool returns "Plan cancelled." Wait for the user to start a new topic.
 
 **Standalone confirm_research tool** is available for re-confirmation of previously saved plans. It opens the same TUI dialog.
 
-**Non-interactive mode (print/CI):** The TUI is not available. Call `estimate_research_cost` to present the plan to the user, ask for confirmation, then call `confirm_research`.
+**Non-interactive mode (print/CI):** The TUI is not available. Present the plan summary from the tool output to the user, ask for confirmation, then call `confirm_research`.
 
 ### Phase 4: Research Loop
 

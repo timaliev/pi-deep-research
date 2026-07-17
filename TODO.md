@@ -2,7 +2,7 @@
 
 ## Next (ADR-0027: single-call prefilter)
 
-- TODO: replace multi-call plan_research with single-call state machine — same pattern as run_research. Remove estimate_research_cost tool.
+- DONE: add PrefilterManager.next() unified entry point (ADR-0027). Removed estimate_research_cost tool. Updated SKILL.md Phase 3.
 
 ## Remaining (ADR-0013: MCP/local sources)
 

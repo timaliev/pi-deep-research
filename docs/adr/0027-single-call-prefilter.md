@@ -1,7 +1,7 @@
 # ADR-0027: Single-call plan_research state machine
 
 **Date:** 2026-07-17
-**Status:** proposed
+**Status:** accepted
 
 ## Context
 
