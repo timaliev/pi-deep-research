@@ -13,6 +13,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.28.0](https://github.com/timaliev/pi-deep-research/compare/v0.27.0..v0.28.0) - 2026-07-17
+
+### Features
+
+- **(cost)** compute research cost from profile, not agent-written plan field (ADR-0027) - ([4cfdc6c](https://github.com/timaliev/pi-deep-research/commit/4cfdc6c477d69850b206cfcaf9019408c78e6c1a)) - Tim Aliev
+- **(prefilter)** implement ADR-0027 single-call state machine - ([0492a42](https://github.com/timaliev/pi-deep-research/commit/0492a42e2655ae5c6fe2173dae1ea7e90a5cbe0d)) - Tim Aliev
+
+### Bug Fixes
+
+- **(prefilter)** remove confirm_research tool and non-interactive fallback - ([966422d](https://github.com/timaliev/pi-deep-research/commit/966422dc51117df92c1a082a8e205f7616a47540)) - Tim Aliev
+
+### Documentation
+
+- **(adr-0027)** specify tool-computed cost replacing estimate_research_cost - ([6c889f9](https://github.com/timaliev/pi-deep-research/commit/6c889f9b10753512df5ac85c3974efddd40dc20c)) - Tim Aliev
+- **(adr-0027)** add self-recovering errors refinement, update skill - ([525a4aa](https://github.com/timaliev/pi-deep-research/commit/525a4aa32b5601f148d57c46de6e0623bcfcc5c7)) - Tim Aliev
+- **(context)** update Confirmation Gate definition for inline TUI flow - ([6e7023c](https://github.com/timaliev/pi-deep-research/commit/6e7023ca633179377ec265c5109babc202c0377c)) - Tim Aliev
+- **(todo)** add self-recovering prefilter errors + restart fix - ([894497e](https://github.com/timaliev/pi-deep-research/commit/894497e80ebe5c55d10eeb4ab4a0298b4a8ea4ea)) - Tim Aliev
+- add ADR-0027 single-call plan_research state machine - ([fd35976](https://github.com/timaliev/pi-deep-research/commit/fd35976ca1ef0a829493d745a4477479238ee731)) - Tim Aliev
+- rewrite SKILL.md for ADR-0027 single-call prefilter protocol - ([00884cd](https://github.com/timaliev/pi-deep-research/commit/00884cd80bc08afdef9f4491fb42013d0be34103)) - Tim Aliev
+
 ## [0.27.0](https://github.com/timaliev/pi-deep-research/compare/v0.26.6..v0.27.0) - 2026-07-17
 
 ### Features
