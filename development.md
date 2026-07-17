@@ -50,3 +50,9 @@ npm run check         # format + lint combined
   - wait until new PR (made by GitHub workflow) from `release` branch to `master` branch is ready and inform user;
   - wait until user confirms this PR and it is merged to `master` branch;
   - wait until new release is created by GitHub workflow.
+- AFTER release is created and changes backmerged to `develop` branch (by means of GitHub workflows) return to `develop` branch and fetch all branches from origin:
+
+```bash
+git fetch origin release:release
+git fetch origin master:master
+```

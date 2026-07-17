@@ -498,3 +498,4 @@ npm run lint          # biome lint
 | [0022](docs/adr/0022-done-phase-steer-messages.md) | accepted | Remove redundant steer from done phase |
 | [0024](docs/adr/0024-prefilter-context-bundle.md) | accepted | PrefilterContext — bundled constructor for PrefilterManager |
 | [0025](docs/adr/0025-state-machine-resume.md) | accepted | State machine resume — move draft restoration inside the machine |
+| [0026](docs/adr/0026-multi-step-confirmation-dialog.md) | accepted | Multi-step TUI confirmation with parameter editing |
