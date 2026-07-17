@@ -26,6 +26,12 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 
 ### Remaining (ADR-0013: MCP/local sources)
 
+- DONE: export_pdf tool computes wrong default output path for relative report_path. Fixed: added `basename()` before extension replacement.
+- DONE: prefilter-prompts.ts still says "LLM discovers 5–10 thematic sections". Fixed: both prompts now show tiered counts.
+- DONE: preliminary search uses only agent-chosen engines. Fixed: withParams/doMergeStep use enabledEngines.
+
+### Remaining from ADR-0013 (MCP/local sources)
+
 - TODO: add `Finding.source` field (`"web"` | `"local"` | `"mcp"`) to `Finding` interface.
 - TODO: add optional `sources?: { local?: { paths: string[] }, mcp?: string[] }` to `ResearchPlan` interface.
 - TODO: implement enriched search in `doSearching()` — `searchingEnriched` flag, inject MCP/local prompt after web search, capture raw agent response text, pass to extraction as unstructured context.
@@ -141,6 +147,6 @@ Note to agent: after each item is implemented and tested change `TODO:` into `DO
 
 ### Pending
 
-- TODO: export_pdf tool computes wrong default output path for relative report_path. Uses `join(reportsDir, reportPath.replace(/.md$/, "") + ".pdf")` which nests the directory when report_path is relative (e.g. `reportsDir/deep-research/reports/foo.pdf`). Fix: extract basename before replacing extension.
-- TODO: prefilter-prompts.ts still says "LLM discovers 5–10 thematic sections" in `buildParamsPrompt` (line 51) and `buildPlanPrompt` (line 90). Already fixed in SKILL.md and report-styles.ts. Fix: update both prompts to show tiered counts (5–7/8–12/12–20).
-- TODO: preliminary search in prefilter uses only agent-chosen engines, not all enabled engines. `withParams()` line 250 uses `engines` param (agent's choice). `doMergeStep()` line 201 uses only `cachedEngines[0]`. Both should prefer `this.enabledEngines` to maximize search coverage and avoid single-engine failures (e.g., DDG rate-limiting → 0 results → bad plan).
+- DONE: export_pdf tool computes wrong default output path for relative report_path. Fixed: added `basename()` before extension replacement.
+- DONE: prefilter-prompts.ts still says "LLM discovers 5–10 thematic sections" in `buildParamsPrompt` and `buildPlanPrompt`. Fixed: both now show tiered counts (5–7/8–12/12–20).
+- DONE: preliminary search uses only agent-chosen engines, not all enabled engines. Fixed: `withParams()` and `doMergeStep()` now prefer `this.enabledEngines`, falling back to agent's choice.

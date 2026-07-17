@@ -198,11 +198,14 @@ export class PrefilterManager {
       return { phase: "error", runId: this.runId(), error: "No cached params for merge step." };
     }
     const searchQuery = buildSearchQuery(this.cachedTopic);
-    const searchResults = await this.searchFn(
-      searchQuery,
-      5,
-      this.cachedEngines.length > 0 ? this.cachedEngines[0] : "duckduckgo",
-    );
+    // Use all enabled engines, fall back to cached if none configured
+    const mergeEngines =
+      this.enabledEngines && this.enabledEngines.length > 0
+        ? (this.enabledEngines as SearchEngine[])
+        : this.cachedEngines.length > 0
+          ? this.cachedEngines
+          : ["duckduckgo"];
+    const searchResults = await this.searchFn(searchQuery, 5, mergeEngines);
     this.lastSearchResultCount = searchResults.length;
     const inject = buildMergePrompt(this.cachedTopic, this.llmTopics ?? "", searchResults);
     return { phase: "awaiting_plan", runId: this.runId(), inject, searchResults };
@@ -247,7 +250,11 @@ export class PrefilterManager {
     }
 
     const searchQuery = buildSearchQuery(topic);
-    const searchResults = await this.searchFn(searchQuery, 3, engines, {
+    // Use all enabled engines for preliminary search, not just agent-chosen engines.
+    // Fall back to agent's choice if no enabledEngines configured.
+    const searchEngines =
+      this.enabledEngines && this.enabledEngines.length > 0 ? (this.enabledEngines as SearchEngine[]) : engines;
+    const searchResults = await this.searchFn(searchQuery, 3, searchEngines, {
       logger: this.logger,
       credentials: this.searchCred,
     });

@@ -48,7 +48,7 @@ export function buildParamsPrompt(
   const narrativeLabel = style === "narrative" ? " (default)" : "";
   const subtopicsLabel = style === "subtopics" ? " (default)" : "";
 
-  return `## Research Parameters\n\nTopic: ${topic}\n\nChoose search engines, profile, and report style. Reply with JSON:\n\`\`\`json\n{"engines":["duckduckgo"],"profile":{"name":"${defaultProfileName}"},"reportStyle":"${style}"}\n\`\`\`\n\nEngine availability:\n${engineStatus}\n\nAvailable profiles (default: **${defaultProfileName}**):\n${presetsList}\n  custom: specify breadth, depth, concurrency\n\nReport styles:\n  narrative${narrativeLabel} — fixed 5-section template (Introduction/Findings/Analysis/Recommendations/Sources)\n  subtopics${subtopicsLabel} — LLM discovers 5–10 thematic sections from findings\n\nYou may change the profile or report style later during plan creation.`;
+  return `## Research Parameters\n\nTopic: ${topic}\n\nChoose search engines, profile, and report style. Reply with JSON:\n\`\`\`json\n{"engines":["duckduckgo"],"profile":{"name":"${defaultProfileName}"},"reportStyle":"${style}"}\n\`\`\`\n\nEngine availability:\n${engineStatus}\n\nAvailable profiles (default: **${defaultProfileName}**):\n${presetsList}\n  custom: specify breadth, depth, concurrency\n\nReport styles:\n  narrative${narrativeLabel} — fixed 5-section template (Introduction/Findings/Analysis/Recommendations/Sources)\n  subtopics${subtopicsLabel} — LLM discovers thematic sections (5–7 for ≤4 questions, 8–12 for 5–7, 12–20 for 8+)\n\nYou may change the profile or report style later during plan creation.`;
 }
 
 /** Build the second prompt: produce a full Research Plan JSON. */
@@ -87,7 +87,7 @@ export function buildPlanPrompt(ctx: PlanPromptContext): string {
     for (const sp of scrapedContent) p += `**${sp.title}** (${sp.url})\n\n${sp.content.substring(0, 800)}\n\n---\n`;
   }
   p += `\n### Instructions\n\nProduce research plan JSON:
-\`\`\`json\n{"topic":"${topic}","goal":"...","researchQuestions":["Q1"],"engines":${JSON.stringify(engines)},"profile":{"name":"${profileName}"},"scope":{"include":"...","exclude":"..."},"estimatedCost":{"searchCalls":12,"scrapeCalls":8,"description":"~12 searches"}}\n\`\`\`\n\nSet reportStyle to "narrative" (fixed 5-section) or "subtopics" (LLM discovers thematic sections). Output ONLY JSON.`;
+\`\`\`json\n{"topic":"${topic}","goal":"...","researchQuestions":["Q1"],"engines":${JSON.stringify(engines)},"profile":{"name":"${profileName}"},"scope":{"include":"...","exclude":"..."},"estimatedCost":{"searchCalls":12,"scrapeCalls":8,"description":"~12 searches"}}\n\`\`\`\n\nSet reportStyle to "narrative" (fixed 5-section) or "subtopics" (LLM discovers thematic sections: 5–7 for ≤4 questions, 8–12 for 5–7, 12–20 for 8+). Output ONLY JSON.`;
   return p;
 }
 
