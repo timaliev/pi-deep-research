@@ -418,7 +418,7 @@ tools/
 ├── plan-research.ts           Three-step prefilter tool (manager scoped per plan)
 └── run-research.ts            Research run tool (orchestrator + confirmation gate)
 
-tests/                          Unit + integration tests (tsx runner, 45 files)
+tests/                          Unit + integration tests (tsx runner, 68 files)
 
 deep-research/
 ├── artifacts/                  Research plans (prefilter.json)
@@ -460,7 +460,7 @@ See [Environment Variables](#environment-variables) for API key configuration.
 See [development.md](development.md) for the full quality gate checklist.
 
 ```bash
-npm test              # 429 tests across 53 files
+npm test              # 450 tests across 68 files
 npm run format        # auto-format with biome
 npm run lint          # biome lint
 ```
@@ -499,3 +499,18 @@ npm run lint          # biome lint
 | [0024](docs/adr/0024-prefilter-context-bundle.md) | accepted | PrefilterContext — bundled constructor for PrefilterManager |
 | [0025](docs/adr/0025-state-machine-resume.md) | accepted | State machine resume — move draft restoration inside the machine |
 | [0026](docs/adr/0026-multi-step-confirmation-dialog.md) | accepted | Multi-step TUI confirmation with parameter editing |
+
+## Statistics
+
+| Metric | Value |
+|---|---|
+| Commits | 508 |
+| Releases | 62 |
+| Contributors | 3 |
+| Total lines | 24,517 |
+| TypeScript modules | 43 |
+| Test files | 68 |
+| Test cases | 450 |
+| ADRs | 26 |
+| Statement coverage | 74.2% |
+| Largest module | settings-context.ts (495 lines) |
