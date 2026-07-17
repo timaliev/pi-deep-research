@@ -34,69 +34,60 @@ Environment variables take precedence over settings.json. Local settings.json ta
 
 ## Protocol
 
-### Phase 1: Negotiate Parameters
+### Phase 1: Plan Research
 
-1. Call `plan_research` with the user's topic:
-   ```
-   plan_research({ topic: "<user's research topic>" })
-   ```
-2. The tool responds with a prompt that includes **which API keys are currently available** (from env vars or settings.json). DuckDuckGo is always available. Propose only engines that have keys configured. Reply with JSON:
-   ```json
-   {"engines": ["duckduckgo"], "profile": {"name": "default"}, "reportStyle": "narrative"}
-   ```
-   **Engines:** `duckduckgo` (always available), `brave`, `tavily`, `yandex`, `searxng`.
-   **Profiles:** `default` (4/2/4 breadth/depth/concurrency), `fast` (2/1/2), `deep` (6/3/4), `custom` (specify numbers).
-   **Report styles:** `narrative` (fixed 5-section template: Introduction/Findings/Analysis/Recommendations/Sources) or `subtopics` (LLM discovers thematic sections: 5–7 for ≤4 questions, 8–12 for 5–7, 12–20 for 8+).
+Call `plan_research` once with the topic. The tool runs the entire prefilter pipeline automatically — no further `plan_research` calls needed. Respond to each injection prompt in your response text.
 
-3. Call `plan_research` again with the params:
-   ```
-   plan_research({ topic: "<topic>", params_json: '<your params JSON>' })
-   ```
-4. **Guardrail:** If the result warns about missing API keys, tell the user to configure the key (env var or settings.json), then retry step 3 without search engine that have missing API keys.
+```
+plan_research({ topic: "<user's research topic>" })
+```
 
-### Phase 2: Plan Research
+The tool will inject prompts for you to respond to in sequence:
 
-1. The tool runs a preliminary search with your chosen engines and sends you a prompt with results.
-2. **Guardrail:** The tool now requires the full prefilter flow. You must complete ALL steps below — direct plan_json submission without the prior steps will be rejected with an error.
-3. Call `plan_research` with no parameters to start LLM introspection. The tool will ask you to propose topics from your internal knowledge. Respond with structured markdown listing topics with confidence/importance ratings.
-   ```
-   plan_research()
-   ```
-4. Call `plan_research` again with no parameters. The tool will merge your topics with web search results and ask you to produce the final plan. Analyze the merged results and produce a JSON research plan:
+1. **Engine/profile selection** — tool shows available engines and profiles. Respond with JSON: `{"engines": ["duckduckgo"], "profile": {"name": "default"}, "reportStyle": "narrative"}`.
+   - **Engines:** `duckduckgo` (always available), `brave`, `tavily`, `yandex`, `searxng`. Only engines with configured API keys are shown as available.
+   - **Profiles:** `default` (4/2/4 breadth/depth/concurrency), `fast` (2/1/2), `deep` (6/3/4), `custom` (specify numbers).
+   - **Report styles:** `narrative` (fixed 5-section) or `subtopics` (5–7/8–12/12–20 topics depending on question count).
+
+2. **LLM introspection** — tool asks you to propose topics from your internal knowledge. Respond with structured markdown listing topics with confidence/importance ratings.
+
+3. **Merge & plan creation** — tool merges your topics with web search results and asks you to produce the final plan JSON:
    ```json
    {
-     "topic": "The research topic",
-     "goal": "What this research aims to achieve",
-     "researchQuestions": ["Question 1", "Question 2", "Question 3"],
+     "topic": "...",
+     "goal": "...",
+     "researchQuestions": ["Q1"],
      "engines": ["duckduckgo"],
      "profile": {"name": "default"},
      "reportStyle": "narrative",
-     "scope": {"include": "What to include", "exclude": "What to exclude"},
-     "estimatedCost": {"searchCalls": 12, "scrapeCalls": 8, "description": "~12 searches, ~8 scrapes"}
+     "scope": {"include": "...", "exclude": "..."},
+     "estimatedCost": {"searchCalls": 12, "scrapeCalls": 8, "description": "~12 searches"}
    }
    ```
-   For custom profiles, include `breadth`, `depth`, `concurrency`: `{"name": "custom", "breadth": 5, "depth": 2}`.
-   **Report styles:** `"narrative"` (fixed 5-section: Introduction/Findings/Analysis/Recommendations/Sources) or `"subtopics"` (LLM discovers thematic sections: 5–7 for ≤4 questions, 8–12 for 5–7, 12–20 for 8+).
 
-5. Call `plan_research` again with your plan. `topic` is optional when `plan_json` is provided (extracted from the plan):
-   ```
-   plan_research({ plan_json: "<your JSON>" })
-   ```
-6. **Guardrail:** If the result has `phase: "error"`, fix the JSON and retry. If the error says "without running the full prefilter flow", you skipped steps 3-4 — go back and complete them.
+4. **Confirmation** — tool validates the plan, saves it, and shows a TUI dialog:
+   - ✅ Confirm — research proceeds to Phase 2
+   - ✏️ Change parameters — edit engines, profile, or style in-place
+   - ❌ Cancel — plan discarded
 
-### Phase 3: Confirm Plan
+**Guardrail:** Do NOT call `plan_research` again with `params_json`, `plan_json`, or no parameters. The single `{ topic }` call drives the entire pipeline. Just respond to the injections.
 
-**The TUI dialog appears automatically after plan_research.** No agent calls needed.
+**If the tool reports an error:** fix the issue and call `plan_research({ topic })` again to restart.
 
-- **If the user picks ✅ Confirm:** the tool returns "Research confirmed." Proceed directly to Phase 4.
-- **If the user picks ✏️ Change parameters:** the TUI enters a multi-step parameter editor (engines, profile, report style). The plan is updated in-place — no LLM involvement. After changes, the user returns to the confirm/cancel dialog.
-- **If the user picks ❌ Cancel:** the plan is discarded. The tool returns "Plan cancelled." Wait for the user to start a new topic.
+### Phase 2: Run Research
 
-**Standalone confirm_research tool** is available for re-confirmation of previously saved plans. It opens the same TUI dialog.
+The TUI confirmation dialog appears automatically. No `estimate_research_cost` or `confirm_research` calls needed.
 
-**Non-interactive mode (print/CI):** The TUI is not available. Present the plan summary from the tool output to the user, ask for confirmation, then call `confirm_research`.
+- **If user confirmed:** call `run_research`:
+  ```
+  run_research({ plan_artifact_path: "<path from plan_research result>" })
+  ```
+- **If user changed parameters:** the plan is updated in-place — call `run_research` with the same path.
+- **If user cancelled:** the plan is discarded. Wait for a new topic.
 
-### Phase 4: Research Loop
+**Non-interactive mode:** The TUI is not available. Present the plan summary to the user, ask for confirmation, then call `confirm_research` before `run_research`.
+
+### Phase 3: Research Loop
 
 1. After confirmation, call `run_research`:
    ```
@@ -114,7 +105,7 @@ Environment variables take precedence over settings.json. Local settings.json ta
    - **Drafting:** This is the only phase where you write text before calling the tool. Write the **complete** report as your response text. When finished, call `run_research()` (no parameters) **in the same response** — the tool reads your text and saves it.
 4. Stop when `phase` is `"done"`. The tool auto-saves the report.
 
-### Phase 5: Deliver
+### Phase 4: Deliver
 
 1. The report is auto-saved by `run_research` and the path is printed in the completion message.
 2. To re-save or deliver the report, call `save_report` with the report path (not the full content — use `report_path` for large reports):

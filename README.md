@@ -407,15 +407,13 @@ user says "research topic X"
         │
         ▼
 ┌─────────────────────────────────┐
-│  plan_research (3-step)         │
-│  1. negotiate engines + profile │
-│     + report style              │
-│  2. preliminary search          │
-│  3. agent produces plan JSON    │
-│     (incl. reportStyle)         │
+│  plan_research (single call)    │
+│  Auto-advances through phases:  │
+│  negotiate → search →           │
+│  introspect → merge → confirm   │
 │  → saves prefilter.json         │
 └──────────────┬──────────────────┘
-               │ user confirms
+               │ TUI confirmation
                ▼
 ┌─────────────────────────────────┐
 │  run_research (state machine)   │
@@ -438,7 +436,7 @@ user says "research topic X"
 ```
 extension/
 ├── index.ts                    Extension entry — registers tools
-├── prefilter.ts                Three-step research planning
+├── prefilter.ts                Single-call prefilter state machine (ADR-0027)
 ├── state-machine.ts            Research run state machine
 ├── scraper.ts                  Web page scraper
 ├── export-pdf.ts               PDF conversion (pandoc + fallback)
@@ -468,7 +466,7 @@ extension/
 
 tools/
 ├── save-report.ts             Save report tool (path resolution, telemetry)
-├── plan-research.ts           Three-step prefilter tool (manager scoped per plan)
+├── plan-research.ts           Single-call prefilter tool
 └── run-research.ts            Research run tool (orchestrator + confirmation gate)
 
 tests/                          Unit + integration tests (tsx runner, 68 files)
@@ -486,12 +484,12 @@ deep-research/
 | **Research Plan** | JSON artifact: topic, goal, research questions, engines, profile, report style, scope, estimated cost |
 | **Research Profile** | Named preset (default/fast/deep) or custom (breadth/depth/concurrency). Negotiated during prefilter, stored in plan |
 | **Report Style** | `narrative` — fixed 5-section template. `subtopics` — LLM discovers thematic sections (5–7 for ≤4 questions, 8–12 for 5–7, 12–20 for 8+) |
-| **Prefilter** | Three-step: (1) negotiate engines+profile, (2) preliminary search, (3) agent writes plan |
+| **Prefilter** | Single-call state machine: auto-advances through engine/profile negotiation, preliminary search, LLM introspection, merge, and plan creation (ADR-0027) |
 | **Injection** | Prompt sent into agent conversation via `pi.sendUserMessage()` — the tool never calls the LLM directly |
 | **RunId** | Unique timestamp-based identifier (`YYYYMMDD-HHmmss`) shared across all artifacts for one research run: prefilter plan, JSONL log, queue snapshots, and report. Use to find and correlate all files belonging to a single run |
 | **Research Log** | JSONL trace file (`<runId>.log`) — every phase transition, search/scrape call, error, decision |
 | **Soft Limit** | Runtime cap (maxSearchCalls, maxElapsedSeconds) — reduces intensity, skips deeper recursion |
-| **Confirmation Gate** | Agent must present plan + cost estimate, get user approval before `run_research` |
+| **Confirmation Gate** | TUI dialog with Confirm/Change/Cancel. Cost computed from profile parameters. No separate estimate_research_cost call needed (ADR-0027) |
 
 ## Development
 
@@ -537,7 +535,7 @@ npm run lint          # biome lint
 | [0024](docs/adr/0024-prefilter-context-bundle.md) | accepted | PrefilterContext — bundled constructor for PrefilterManager |
 | [0025](docs/adr/0025-state-machine-resume.md) | accepted | State machine resume — move draft restoration inside the machine |
 | [0026](docs/adr/0026-multi-step-confirmation-dialog.md) | accepted | Multi-step TUI confirmation with parameter editing |
-| [0027](docs/adr/0027-single-call-prefilter.md) | proposed | Single-call plan_research state machine |
+| [0027](docs/adr/0027-single-call-prefilter.md) | accepted | Single-call plan_research state machine |
 
 ## Statistics
 
