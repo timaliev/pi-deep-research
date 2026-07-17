@@ -13,6 +13,21 @@ A Pi extension and skill that provides autonomous deep web research — planning
 
 Inspired by [https://github.com/assafelovic/gpt-researcher](gpt-researcher).
 
+## Table of Contents
+
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [PDF Export](#pdf-export)
+- [Mind Map](#mind-map)
+- [Usage](#usage)
+- [Architecture](#architecture)
+- [File Structure](#file-structure)
+- [Key Concepts](#key-concepts)
+- [Search Engines](#search-engines)
+- [Development](#development)
+- [Related Documents](#related-documents)
+- [Statistics](#statistics)
+
 ## Installation
 
 ### Via pi packages (recommended)
