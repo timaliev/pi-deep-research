@@ -178,6 +178,11 @@ export class PrefilterManager {
     }
   }
 
+  /** Expose internal phase for tool state tracking (ADR-0027). */
+  getPhase(): string | undefined {
+    return this.prefilterPhase || undefined;
+  }
+
   private runId(): string {
     return this.sharedRunId ?? generateRunId();
   }

@@ -43,7 +43,6 @@ describe("ADR-0027 — Unified PrefilterManager.next()", () => {
       profileResolver: new ProfileResolver({}),
     });
 
-    // New API: single call with topic starts the pipeline
     const result = await manager.next({ type: "topic", topic: "test" });
     assert.equal(result.phase, "awaiting_params");
     assert.ok(result.inject!.includes("engines"), "must ask for engines");
@@ -120,7 +119,6 @@ describe("ADR-0027 — Unified PrefilterManager.next()", () => {
 
     await manager.next({ type: "topic", topic: "test" });
     await manager.next({ type: "params", engines: ["duckduckgo"], profile: { name: "default" } });
-    // Skip continue() calls → should reject
     const plan = JSON.stringify({
       topic: "test",
       goal: "g",
@@ -164,5 +162,71 @@ describe("ADR-0027 — Unified PrefilterManager.next()", () => {
 
     assert.equal(result.phase, "plan_ready");
     assert.ok(result.planArtifactPath, "must have artifact path");
+  });
+
+  // ─── getPhase() — expose internal phase for tool state tracking ─────────
+
+  it("getPhase returns awaiting_params for fresh manager", async () => {
+    const { PrefilterManager } = await import("../extension/prefilter.js");
+    const { ProfileResolver } = await import("../extension/profile-resolver.js");
+
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(),
+      scraper: mockScraper(),
+      artifactsDir: tmpDir,
+      profileResolver: new ProfileResolver({}),
+    });
+
+    assert.equal(manager.getPhase(), "awaiting_params", "fresh manager starts in awaiting_params");
+  });
+
+  it("getPhase returns awaiting_params after topic call", async () => {
+    const { PrefilterManager } = await import("../extension/prefilter.js");
+    const { ProfileResolver } = await import("../extension/profile-resolver.js");
+
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(),
+      scraper: mockScraper(),
+      artifactsDir: tmpDir,
+      profileResolver: new ProfileResolver({}),
+    });
+
+    await manager.next({ type: "topic", topic: "test" });
+    assert.equal(manager.getPhase(), "awaiting_params");
+  });
+
+  it("getPhase returns introspecting after continue call", async () => {
+    const { PrefilterManager } = await import("../extension/prefilter.js");
+    const { ProfileResolver } = await import("../extension/profile-resolver.js");
+
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(),
+      scraper: mockScraper(),
+      artifactsDir: tmpDir,
+      profileResolver: new ProfileResolver({}),
+    });
+
+    await manager.next({ type: "topic", topic: "test" });
+    await manager.next({ type: "params", engines: ["duckduckgo"], profile: { name: "default" } });
+    await manager.next({ type: "continue" });
+    assert.equal(manager.getPhase(), "introspecting");
+  });
+
+  it("getPhase returns merging after second continue with llmResponse", async () => {
+    const { PrefilterManager } = await import("../extension/prefilter.js");
+    const { ProfileResolver } = await import("../extension/profile-resolver.js");
+
+    const manager = new PrefilterManager({
+      searchFn: mockSearchFn(),
+      scraper: mockScraper(),
+      artifactsDir: tmpDir,
+      profileResolver: new ProfileResolver({}),
+    });
+
+    await manager.next({ type: "topic", topic: "test" });
+    await manager.next({ type: "params", engines: ["duckduckgo"], profile: { name: "default" } });
+    await manager.next({ type: "continue" });
+    await manager.next({ type: "continue", llmResponse: "some topics" });
+    assert.equal(manager.getPhase(), "merging");
   });
 });
