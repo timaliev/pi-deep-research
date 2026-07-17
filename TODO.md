@@ -3,6 +3,8 @@
 ## Next (ADR-0027: single-call prefilter)
 
 - DONE: add PrefilterManager.next() unified entry point (ADR-0027). Removed estimate_research_cost tool. Updated SKILL.md Phase 3.
+- TODO: make all prefilter errors self-recovering — never return phase:"error" to agent. Invalid JSON → re-inject parse prompt. Missing fields → re-inject with specific guidance. Skipped introspection → auto-inject introspection now. Already finalized → return existing plan_ready. No cached state → restart from start phase. All recovery within tool, zero agent decisions.
+- TODO: fix getOrCreate to allow restart on error — currently reuses stale manager from session entry. New call with same topic after error must create fresh PrefilterManager.
 
 ## Remaining (ADR-0013: MCP/local sources)
 
