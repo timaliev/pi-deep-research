@@ -9,7 +9,7 @@ export function callPiJson(
   model: string,
   cwd: string,
   signal?: AbortSignal,
-  timeoutMs = 60_000,
+  timeoutMs = 120_000,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const proc = spawn("pi", ["--mode", "json", "-p", "--no-session", "--model", model], {

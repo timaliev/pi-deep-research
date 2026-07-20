@@ -1,5 +1,8 @@
 import { mkdirSync } from "node:fs";
+import { join } from "node:path";
 import { Type } from "typebox";
+import { generateRunId } from "../ids.js";
+import { JsonlLogger } from "../logger.js";
 import { confirmPlanDialog } from "../confirm-dialog.js";
 import { buildIntrospectionPrompt, buildMergePrompt, buildSearchQuery } from "../prefilter-prompts.js";
 import type { ProfileResolver } from "../profile-resolver.js";
@@ -35,7 +38,7 @@ export function createPlanResearchTool(
       _toolCallId: string,
       params: { topic?: string },
       signal: AbortSignal | undefined,
-      _onUpdate: unknown,
+      onUpdate: (update: { content: { type: string; text: string }[] }) => void,
       ctx: {
         hasUI?: boolean;
         cwd: string;
@@ -52,12 +55,23 @@ export function createPlanResearchTool(
 
       mkdirSync(settings.artifactsDir, { recursive: true });
 
+      // ── 0. Setup logging ──────────────────────────────
+      const runId = generateRunId();
+      const logsDir = join(settings.artifactsDir, "..", "logs");
+      mkdirSync(logsDir, { recursive: true });
+      const logger = new JsonlLogger(runId, join(logsDir, `${runId}-prefilter.log`));
+      logger.event("prefilter_started", { topic });
+
+      const progress = (msg: string) => onUpdate({ content: [{ type: "text", text: msg }] });
+
       // ── 1. Resolve engines/profile from settings ────────
       const engines: SearchEngine[] =
         settings.enabledEngines.length > 0 ? (settings.enabledEngines as SearchEngine[]) : ["duckduckgo"];
       const profileName = settings.defaultProfile;
 
       // ── 2. Subprocess: introspection ────────────────────
+      progress(`🔍 Researching: ${topic}`);
+      logger.event("prefilter_introspection_start");
       const modelSpec = settings.prefilterModel ?? (ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "");
       if (!modelSpec) {
         return {
@@ -69,7 +83,9 @@ export function createPlanResearchTool(
       const introPrompt = buildIntrospectionPrompt(topic);
       let llmTopics = "";
       try {
-        llmTopics = await callPiJson(introPrompt, modelSpec, ctx.cwd, signal);
+        llmTopics = await callPiJson(introPrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs);
+        logger.event("prefilter_introspection_done", { length: llmTopics.length });
+        progress("📚 Introspection complete — merging with web results...");
       } catch (err) {
         return {
           content: [
@@ -83,21 +99,27 @@ export function createPlanResearchTool(
       }
 
       // ── 3. Merge search ─────────────────────────────────
+      progress("🌐 Searching web for relevant sources...");
       const searchQuery = buildSearchQuery(topic);
       let mergeResults: Awaited<ReturnType<typeof searchFn>> = [];
       try {
         mergeResults = await searchFn(searchQuery, 5, engines, {
           credentials: searchCred,
         });
+        logger.event("prefilter_search_done", { resultCount: mergeResults.length });
       } catch {
         // continue with empty results
       }
 
       // ── 4. Subprocess: plan creation ────────────────────
+      progress("📝 Creating research plan...");
+      logger.event("prefilter_plan_creation_start");
       const mergePrompt = buildMergePrompt(topic, llmTopics, mergeResults);
       let planJson: string;
       try {
-        planJson = await callPiJson(mergePrompt, modelSpec, ctx.cwd, signal);
+        planJson = await callPiJson(mergePrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs);
+        logger.event("prefilter_plan_creation_done", { length: planJson.length });
+        progress("✅ Plan created — validating...");
       } catch (err) {
         return {
           content: [
@@ -120,6 +142,7 @@ export function createPlanResearchTool(
       });
 
       if (!saveResult.ok) {
+        logger.event("prefilter_validation_failed", { error: saveResult.error });
         return {
           content: [{ type: "text", text: `Plan validation failed: ${saveResult.error}` }],
           details: { phase: "error", error: saveResult.error },
@@ -129,6 +152,13 @@ export function createPlanResearchTool(
       const plan = saveResult.plan;
       const planPath = saveResult.planArtifactPath;
       const style = plan.reportStyle ?? settings.reportStyle ?? "narrative";
+
+      logger.event("prefilter_plan_saved", {
+        planPath,
+        questions: plan.researchQuestions.length,
+        engines: plan.engines,
+      });
+      progress(`📋 Plan ready: ${plan.researchQuestions.length} questions — waiting for confirmation...`);
 
       // ── 6. TUI confirmation ─────────────────────────────
 
@@ -152,6 +182,7 @@ export function createPlanResearchTool(
         planPath,
       );
       if (dialogResult.cancelled) {
+        logger.event("prefilter_cancelled", { planPath });
         return {
           content: [
             { type: "text", text: "## Plan Cancelled ❌\n\nPlan discarded. Start a new research topic when ready." },
@@ -161,6 +192,7 @@ export function createPlanResearchTool(
       }
 
       sessionState.saveConfirmation(planPath);
+      logger.event("prefilter_confirmed", { planPath });
 
       return {
         content: [

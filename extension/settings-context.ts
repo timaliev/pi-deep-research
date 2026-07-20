@@ -21,6 +21,7 @@ const ENV = {
   settingsOnRunStart: "DEEP_RESEARCH_SETTINGS_ON_RUN_START",
   settingsInReport: "DEEP_RESEARCH_SETTINGS_IN_REPORT",
   prefilterModel: "DEEP_RESEARCH_PREFILTER_MODEL",
+  prefilterTimeoutMs: "DEEP_RESEARCH_PREFILTER_TIMEOUT_MS",
 } as const;
 
 // ─── Built-in defaults ─────────────────────────────────────────
@@ -77,6 +78,7 @@ export interface SettingsContextData {
   enabledEngines: string[];
   settingsReport: SettingsReportConfig;
   prefilterModel: string | undefined;
+  prefilterTimeoutMs: number;
 }
 
 export interface InitParams {
@@ -99,6 +101,7 @@ export class SettingsContext implements SettingsContextData {
   enabledEngines!: string[];
   settingsReport!: SettingsReportConfig;
   prefilterModel: string | undefined;
+  prefilterTimeoutMs!: number;
 
   // ─── Provenance fields (parallel to value fields) ─────────
   reportsDirSource!: SourceTag;
@@ -112,6 +115,7 @@ export class SettingsContext implements SettingsContextData {
   settingsReportOnRunStartSource!: SourceTag;
   settingsReportInReportSource!: SourceTag;
   prefilterModelSource!: SourceTag;
+  prefilterTimeoutMsSource!: SourceTag;
   credentialSources!: Record<string, Record<string, SourceTag>>;
 
   private homeAgentDir: string;
@@ -216,6 +220,17 @@ export class SettingsContext implements SettingsContextData {
       ENV.prefilterModel,
       localDr.prefilterModel,
       globalDr.prefilterModel,
+      localPath,
+      globalPath,
+      homeDir,
+    );
+
+    // ─── prefilterTimeoutMs (optional — defaults to 120000) ─
+    [this.prefilterTimeoutMs, this.prefilterTimeoutMsSource] = resolveNumber(
+      ENV.prefilterTimeoutMs,
+      localDr.prefilterTimeoutMs,
+      globalDr.prefilterTimeoutMs,
+      120_000,
       localPath,
       globalPath,
       homeDir,
@@ -353,6 +368,7 @@ export class SettingsContext implements SettingsContextData {
         source: this.settingsReportInReportSource,
       },
       { key: "prefilterModel", value: this.prefilterModel ?? "(active model)", source: this.prefilterModelSource },
+      { key: "prefilterTimeoutMs", value: String(this.prefilterTimeoutMs), source: this.prefilterTimeoutMsSource },
     ];
 
     // Credentials with masked values
@@ -405,6 +421,26 @@ function resolveOptionalString(
   if (typeof localVal === "string" && localVal.length > 0) return [localVal, sourceFile(localPath, homeDir)];
   if (typeof globalVal === "string" && globalVal.length > 0) return [globalVal, sourceFile(globalPath, homeDir)];
   return [undefined, sourceDefault()];
+}
+
+/** Resolve number with provenance. */
+function resolveNumber(
+  envKey: string,
+  localVal: unknown,
+  globalVal: unknown,
+  defaultVal: number,
+  localPath: string,
+  globalPath: string,
+  homeDir: string,
+): [number, SourceTag] {
+  const env = envString(envKey);
+  if (env !== undefined) {
+    const n = parseInt(env, 10);
+    if (!isNaN(n) && n > 0) return [n, sourceEnv(envKey)];
+  }
+  if (typeof localVal === "number" && localVal > 0) return [localVal, sourceFile(localPath, homeDir)];
+  if (typeof globalVal === "number" && globalVal > 0) return [globalVal, sourceFile(globalPath, homeDir)];
+  return [defaultVal, sourceDefault()];
 }
 
 /** Resolve boolean with provenance. */
