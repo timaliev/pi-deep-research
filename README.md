@@ -422,9 +422,9 @@ user says "research topic X"
         ▼
 ┌─────────────────────────────────┐
 │  plan_research (single call)    │
-│  Auto-advances through phases:  │
-│  negotiate → search →           │
-│  introspect → merge → confirm   │
+│  Resolves engines/profile,      │
+│  runs subprocess for LLM steps, │
+│  shows TUI for confirmation     │
 │  → saves prefilter.json         │
 └──────────────┬──────────────────┘
                │ TUI confirmation
@@ -450,7 +450,7 @@ user says "research topic X"
 ```
 extension/
 ├── index.ts                    Extension entry — registers tools
-├── prefilter.ts                Single-call prefilter state machine (ADR-0027)
+├── prefilter.ts                Prefilter types + PrefiterManager (ADR-0027)
 ├── state-machine.ts            Research run state machine
 ├── scraper.ts                  Web page scraper
 ├── export-pdf.ts               PDF conversion (pandoc + fallback)
@@ -461,11 +461,14 @@ extension/
 ├── settings-context.ts         Unified settings + SearchProviderCredentials + provenance
 ├── settings-reporter.ts        Settings table/log builder + report section appender
 ├── session-state.ts            Unified persistence seam
-├── settings-context.ts         Settings cascade (env → project → user → defaults)
+├── validate-and-save.ts        Plan validation + artifact saving (ADR-0028)
 ├── report-assembly.ts          Final report assembly with telemetry
 ├── report-styles.ts            Report style templates (narrative, subtopics)
-├── release-monitor.ts         GitHub release check (ADR-0018)
+├── release-monitor.ts          GitHub release check (ADR-0018)
 ├── research-run-orchestrator.ts Pre/post-run hooks (plan confirmation, mind map, PDF)
+├── confirm-dialog.ts           Multi-step TUI confirmation dialog (ADR-0026)
+├── mind-map-injector.ts        Mind map prompt builder
+├── prefilter-prompts.ts        Prompt templates for LLM introspection + merge
 ├── search-queue.ts             Controlled concurrency queue
 └── search/
     ├── web-search.ts           Multi-engine search (dispatch + retry/backoff)
@@ -475,15 +478,14 @@ extension/
         ├── brave.ts            Brave Search API adapter
         ├── searxng.ts          SearXNG public instances
         ├── tavily.ts           Tavily Search API
-        ├── yandex.ts          Yandex Search API
-        └── duckduckgo.ts      DuckDuckGo (free, zero-config)
+        └── yandex.ts           Yandex Search API
 
 tools/
-├── save-report.ts             Save report tool (path resolution, telemetry)
-├── plan-research.ts           Single-call prefilter tool
-└── run-research.ts            Research run tool (orchestrator + confirmation gate)
+├── deps.ts                     Tool registration + dependency injection
+├── plan-research.ts            Single-call prefilter tool (ADR-0028)
+└── run-research.ts             Research run tool (orchestrator + confirmation gate)
 
-tests/                          Unit + integration tests (tsx runner, 68 files)
+tests/                          Unit + integration tests (tsx runner, 490 tests)
 
 deep-research/
 ├── artifacts/                  Research plans (prefilter.json)
@@ -498,7 +500,8 @@ deep-research/
 | **Research Plan** | JSON artifact: topic, goal, research questions, engines, profile, report style, scope, estimated cost |
 | **Research Profile** | Named preset (default/fast/deep) or custom (breadth/depth/concurrency). Negotiated during prefilter, stored in plan |
 | **Report Style** | `narrative` — fixed 5-section template. `subtopics` — LLM discovers thematic sections (5–7 for ≤4 questions, 8–12 for 5–7, 12–20 for 8+) |
-| **Prefilter** | Single-call state machine: auto-advances through engine/profile negotiation, preliminary search, LLM introspection, merge, and plan creation (ADR-0027) |
+| **Prefilter** | Planning phase: tool resolves engines/profile from settings, spawns subprocess for LLM introspection and plan creation, validates + saves plan artifact, shows TUI confirmation. Single `plan_research({ topic })` call. (ADR-0028) |
+| **Subprocess** | `pi --json` child process spawned by `plan_research` for LLM steps (introspection + plan creation). Pattern from official Pi subagent extension. Returns structured output via JSONL stdout. |
 | **Injection** | Prompt sent into agent conversation via `pi.sendUserMessage()` — the tool never calls the LLM directly |
 | **RunId** | Unique timestamp-based identifier (`YYYYMMDD-HHmmss`) shared across all artifacts for one research run: prefilter plan, JSONL log, queue snapshots, and report. Use to find and correlate all files belonging to a single run |
 | **Research Log** | JSONL trace file (`<runId>.log`) — every phase transition, search/scrape call, error, decision |
@@ -524,7 +527,7 @@ npm run lint          # biome lint
 
 | ADR | Status | Topic |
 |---|---|---|
-| [0001](docs/adr/0001-state-machine-orchestration.md) | accepted | State machine phases + agent injection prompts |
+| [0001](docs/adr/0001-state-machine-orchestration.md) | partially superseded | State machine phases + agent injection prompts (run_research only) |
 | [0002](docs/adr/0002-pluggable-search-backends.md) | superseded | Pluggable backends → unified multi-engine |
 | [0003](docs/adr/0003-plan-driven-parameters.md) | accepted | Engines/profile negotiated in prefilter |
 | [0004](docs/adr/0004-profile-resolution-from-settings.md) | accepted | Profile resolution from user settings |
@@ -549,8 +552,8 @@ npm run lint          # biome lint
 | [0024](docs/adr/0024-prefilter-context-bundle.md) | accepted | PrefilterContext — bundled constructor for PrefilterManager |
 | [0025](docs/adr/0025-state-machine-resume.md) | accepted | State machine resume — move draft restoration inside the machine |
 | [0026](docs/adr/0026-multi-step-confirmation-dialog.md) | accepted | Multi-step TUI confirmation with parameter editing |
-| [0027](docs/adr/0027-single-call-prefilter.md) | accepted | Single-call plan_research state machine |
-| [0028](docs/adr/0028-direct-llm-prefilter.md) | proposed | Subprocess prefilter with direct LLM calls |
+| [0027](docs/adr/0027-single-call-prefilter.md) | superseded by 0028 | Single-call plan_research state machine |
+| [0028](docs/adr/0028-direct-llm-prefilter.md) | accepted | Subprocess prefilter with direct LLM calls |
 
 ## Statistics
 
