@@ -581,3 +581,4 @@ npm run lint          # biome lint
 | ADRs | 26 |
 | Statement coverage | 74.2% |
 | Largest module | settings-context.ts (495 lines) |
+
