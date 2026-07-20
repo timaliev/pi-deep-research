@@ -9,7 +9,7 @@ import { describe, it } from "node:test";
 
 describe("ADR-0017 — questionMetadata", () => {
   it("ResearchPlan has optional questionMetadata field", () => {
-    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "prefilter.ts"), "utf-8");
+    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "types.ts"), "utf-8");
     assert.ok(src.includes("questionMetadata"), "ResearchPlan must have questionMetadata");
   });
 });

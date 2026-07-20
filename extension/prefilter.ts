@@ -17,6 +17,24 @@ import { WebScraper } from "./scraper.js";
 import type { SearchEngine, searchWeb as SearchWebFn, WebSearchResult } from "./search/web-search.js";
 import { searchWeb } from "./search/web-search.js";
 import type { SearchProviderCredentials } from "./settings-context.js";
+import type {
+  PrefilterArtifact,
+  PrefilterInput,
+  PrefilterContext,
+  PrefilterResult,
+  ResearchPlan,
+  ResearchPlanProfile,
+} from "./types.js";
+
+// ── Type re-exports (canonical source: ./types.ts) ──────
+export type {
+  ResearchPlanProfile,
+  ResearchPlan,
+  PrefilterArtifact,
+  PrefilterInput,
+  PrefilterResult,
+  PrefilterContext,
+} from "./types.js";
 
 /** Filter engines against the allowlist. If none survive, fall back to defaults. Logs warnings when engines are dropped. */
 function enforceEngineAllowlist(
@@ -35,93 +53,6 @@ function enforceEngineAllowlist(
     return ["duckduckgo"];
   }
   return filtered;
-}
-
-export interface ResearchPlanProfile {
-  name: "default" | "fast" | "deep" | "custom";
-  breadth?: number;
-  depth?: number;
-  concurrency?: number;
-}
-
-export interface ResearchPlan {
-  topic: string;
-  goal: string;
-  researchQuestions: string[];
-  /** Search engines for this run. */
-  engines: SearchEngine[];
-  /** Profile controlling depth/breadth. */
-  profile: ResearchPlanProfile;
-  /** Report generation style: narrative (5-section) or subtopics (LLM discovers themes). */
-  reportStyle?: "narrative" | "subtopics";
-  /** Allowed search engines for this run (frozen from settings at plan time). */
-  enabledEngines?: string[];
-  /** ADR-0017: metadata about each research question (source, confidence, importance). */
-  questionMetadata?: Record<
-    string,
-    {
-      source: "web" | "internal" | "both";
-      confidence: "low" | "medium" | "high";
-      importance: "critical" | "important" | "supplementary";
-      contradictionOf?: string;
-      debatableFact?: string;
-    }
-  >;
-  scope: {
-    include: string;
-    exclude: string;
-  };
-  estimatedCost: {
-    searchCalls: number;
-    scrapeCalls: number;
-    description: string;
-  };
-}
-
-export interface PrefilterArtifact {
-  version: 1;
-  runId: string;
-  createdAt: string; // ISO 8601
-  inputTopic: string;
-  plan: ResearchPlan;
-  preliminarySearch: {
-    query: string;
-    resultsCount?: number;
-    scrapedUrls?: string[];
-    note?: string;
-  };
-}
-
-/** Unified input for single-call prefilter state machine (ADR-0027). */
-export type PrefilterInput =
-  | { type: "topic"; topic: string }
-  | { type: "params"; engines: SearchEngine[]; profile: ResearchPlanProfile }
-  | { type: "continue"; llmResponse?: string }
-  | { type: "plan"; planJson: string; topic?: string };
-
-export interface PrefilterResult {
-  phase: "awaiting_params" | "awaiting_plan" | "plan_ready" | "error";
-  runId: string;
-  planArtifactPath?: string;
-  searchResults?: WebSearchResult[];
-  scrapedContent?: ScrapedPage[];
-  engines?: SearchEngine[];
-  profile?: ResearchPlanProfile;
-  plan?: ResearchPlan;
-  inject?: string;
-  error?: string;
-}
-
-/** Bundled dependencies for PrefilterManager and PrefilterSession (ADR-0024). */
-export interface PrefilterContext {
-  searchFn: typeof SearchWebFn;
-  scraper: Scraper;
-  artifactsDir: string;
-  logger?: Logger;
-  profileResolver?: ProfileResolver;
-  searchCred?: SearchProviderCredentials;
-  defaultReportStyle?: "narrative" | "subtopics";
-  enabledEngines?: string[];
 }
 
 /**
