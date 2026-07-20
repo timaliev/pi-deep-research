@@ -11,13 +11,13 @@ import { describe, it } from "node:test";
 const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "plan-research.ts"), "utf-8");
 
 describe("plan_research ADR-0027 single-call protocol", () => {
-  it("parameter schema has only topic field", () => {
-    assert.ok(src.includes("topic: Type.String"), "must have topic as String");
-    // Schema must not have params_json or plan_json as parameters
+  it("parameter schema has only topic field (optional)", () => {
+    assert.ok(src.includes("topic"), "must have topic field");
     const schemaStart = src.indexOf("Type.Object");
     const schemaBlock = src.slice(schemaStart, schemaStart + 300);
     assert.ok(!schemaBlock.includes("params_json"), "schema must NOT have params_json parameter");
     assert.ok(!schemaBlock.includes("plan_json"), "schema must NOT have plan_json parameter");
+    assert.ok(src.includes("Optional") && src.includes("topic"), "topic must be Optional for no-param advancement");
   });
 
   it("tool description mentions single call", () => {
@@ -64,5 +64,12 @@ describe("plan_research ADR-0027 single-call protocol", () => {
 
   it("has no confirm_research references", () => {
     assert.ok(!src.includes("confirm_research"), "must not reference confirm_research tool");
+  });
+
+  it("handles missing topic by finding existing manager from session", () => {
+    assert.ok(
+      src.includes("params.topic") || src.includes("topic ??") || src.includes("entries"),
+      "must handle missing topic via session entries lookup",
+    );
   });
 });

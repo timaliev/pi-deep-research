@@ -83,18 +83,23 @@ export function createPlanResearchTool(
     description:
       "Plan a deep research. Call once with topic — tool auto-advances through engine/profile selection, LLM introspection, preliminary web search, and plan creation. Just respond to injected prompts. No params_json or plan_json needed.",
     parameters: Type.Object({
-      topic: Type.String({ description: "Research topic" }),
+      topic: Type.Optional(
+        Type.String({ description: "Research topic (required on first call, omit on subsequent calls)" }),
+      ),
     }),
     async execute(
       _toolCallId: string,
-      params: { topic: string },
+      params: { topic?: string },
       _signal: unknown,
       _onUpdate: unknown,
       ctx: { sessionManager: { getEntries: () => Record<string, unknown>[] }; hasUI?: boolean },
     ) {
       mkdirSync(settings.artifactsDir, { recursive: true });
       const entries = ctx.sessionManager.getEntries();
-      const manager = session.getOrCreate(params.topic, entries, (runId) =>
+
+      // Find existing manager from session entries when topic not provided
+      const resolvedTopic = params.topic ?? "";
+      const manager = session.getOrCreate(resolvedTopic, entries, (runId) =>
         pi.appendEntry(PREFILTER_RUN_KEY, { runId, topic: params.topic }),
       );
 
@@ -121,6 +126,14 @@ export function createPlanResearchTool(
           }
         } else {
           // Fresh start — no agent response yet
+          if (!params.topic) {
+            return {
+              content: [
+                { type: "text", text: "Error: topic is required on first call. Use plan_research({ topic: '...' })." },
+              ],
+              details: { error: "topic_required" },
+            };
+          }
           result = await manager.next({ type: "topic", topic: params.topic });
         }
       } else if (phase === "introspecting") {
