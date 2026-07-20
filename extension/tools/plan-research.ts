@@ -1,5 +1,4 @@
 import { mkdirSync } from "node:fs";
-import { spawn } from "node:child_process";
 import { Type } from "typebox";
 import { confirmPlanDialog } from "../confirm-dialog.js";
 import { buildIntrospectionPrompt, buildMergePrompt, buildSearchQuery } from "../prefilter-prompts.js";
@@ -9,80 +8,8 @@ import type { SearchEngine, searchWeb as SearchWebFn } from "../search/web-searc
 import { searchWeb } from "../search/web-search.js";
 import type { SessionState } from "../session-state.js";
 import type { SearchProviderCredentials, SettingsContext } from "../settings-context.js";
+import { callPiJson } from "../subprocess-runner.js";
 import { validateAndSavePlan } from "../validate-and-save.js";
-
-/**
- * Call a pi subprocess in JSON mode with a single prompt. Returns the final
- * assistant text output. Pattern from official pi subagent extension.
- */
-function callPiJson(
-  prompt: string,
-  model: string,
-  cwd: string,
-  signal?: AbortSignal,
-  timeoutMs = 60_000,
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const proc = spawn("pi", ["--mode", "json", "-p", "--no-session", "--model", model], {
-      cwd,
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-
-    const timer = setTimeout(() => {
-      proc.kill("SIGTERM");
-      reject(new Error("Subprocess timed out"));
-    }, timeoutMs);
-
-    if (signal) {
-      const onAbort = () => {
-        proc.kill("SIGTERM");
-        reject(new Error("Aborted"));
-      };
-      if (signal.aborted) onAbort();
-      else signal.addEventListener("abort", onAbort, { once: true });
-    }
-
-    let buffer = "";
-    let output = "";
-
-    proc.stdout.on("data", (data: Buffer) => {
-      buffer += data.toString();
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        try {
-          const event = JSON.parse(line);
-          if (event.type === "message_end" && event.message?.role === "assistant") {
-            for (const part of event.message.content ?? []) {
-              if (part.type === "text") output += part.text;
-            }
-          }
-        } catch {
-          // skip unparseable lines
-        }
-      }
-    });
-
-    proc.on("close", (code) => {
-      clearTimeout(timer);
-      if (code === 0) {
-        resolve(output.trim());
-      } else {
-        reject(new Error(`Subprocess exited with code ${code}`));
-      }
-    });
-
-    proc.on("error", (err) => {
-      clearTimeout(timer);
-      reject(err);
-    });
-
-    proc.stdin.write(`${prompt}\n`);
-    proc.stdin.end();
-  });
-}
 
 export function createPlanResearchTool(
   _pi: {
