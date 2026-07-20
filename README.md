@@ -128,6 +128,7 @@ Add a `deepResearch` key to `<cwd>/.pi/settings.json` (project-local) or `~/.pi/
       "exhaustive": { "breadth": 10, "depth": 5, "concurrency": 8, "maxSearchCalls": 100 }
     },
     "defaultProfile": "deep",
+    "prefilterModel": "anthropic/claude-haiku-4-5",
     "artifactsDir": "./deep-research/artifacts",
     "reportsDir": "./deep-research/reports"
   }
@@ -172,6 +173,18 @@ Which profile name is the default (shown in prompts, used when agent doesn't spe
 ```json
 "defaultProfile": "deep"
 ```
+
+#### `prefilterModel`
+
+Model to use for prefilter LLM steps (introspection + plan creation). Format: `provider/id` (e.g. `"anthropic/claude-haiku-4-5"`). If unset, falls back to the active Pi session model. Use a cheaper/faster model since prefilter only needs structured JSON output.
+
+```json
+"prefilterModel": "anthropic/claude-haiku-4-5"
+```
+
+| Env var | Type | Default |
+|---------|------|---------|
+| `DEEP_RESEARCH_PREFILTER_MODEL` | `string` | (active model) |
 
 #### `reportStyle`
 
@@ -282,6 +295,7 @@ All settings can be configured via environment variables. Env vars take priority
 | `DEEP_RESEARCH_SETTINGS_ON_RUN_START` | `false` | Show settings table at plan_research step 1 (`true`) |
 | `DEEP_RESEARCH_SETTINGS_IN_REPORT` | `false` | Append settings section to report (`true`) |
 | `DEEP_RESEARCH_ENABLED_ENGINES` | `duckduckgo,searxng` | Comma-separated list of allowed search engines |
+| `DEEP_RESEARCH_PREFILTER_MODEL` | (active model) | Model to use for prefilter LLM steps (provider/id). Falls back to active session model if unset |
 
 #### Search Engine API Keys
 
@@ -536,6 +550,7 @@ npm run lint          # biome lint
 | [0025](docs/adr/0025-state-machine-resume.md) | accepted | State machine resume — move draft restoration inside the machine |
 | [0026](docs/adr/0026-multi-step-confirmation-dialog.md) | accepted | Multi-step TUI confirmation with parameter editing |
 | [0027](docs/adr/0027-single-call-prefilter.md) | accepted | Single-call plan_research state machine |
+| [0028](docs/adr/0028-direct-llm-prefilter.md) | proposed | Subprocess prefilter with direct LLM calls |
 
 ## Statistics
 

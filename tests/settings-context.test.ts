@@ -9,6 +9,7 @@ const ENV_KEYS = {
   reportsDir: "DEEP_RESEARCH_REPORTS_DIR",
   artifactsDir: "DEEP_RESEARCH_ARTIFACTS_DIR",
   defaultProfile: "DEEP_RESEARCH_DEFAULT_PROFILE",
+  prefilterModel: "DEEP_RESEARCH_PREFILTER_MODEL",
 };
 
 // We'll test against the real implementation
@@ -245,5 +246,80 @@ describe("SettingsContext — unified settings cascade", () => {
 
     assert.equal(ctx.defaultProfile, "default");
     assert.ok(ctx.profiles.default.breadth === 4);
+  });
+
+  // ─── prefilterModel: env → local → global → undefined ──────
+  it("prefilterModel resolves from env var", async () => {
+    process.env[ENV_KEYS.prefilterModel] = "anthropic/claude-haiku-4-5";
+
+    const { SettingsContext } = await import("../extension/settings-context.js");
+    const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
+
+    assert.equal(ctx.prefilterModel, "anthropic/claude-haiku-4-5");
+    assert.ok(ctx.prefilterModelSource.includes("env"), "source must be env");
+  });
+
+  it("prefilterModel resolves from local settings", async () => {
+    writeFileSync(
+      join(tmpCwd, ".pi", "settings.json"),
+      JSON.stringify({ deepResearch: { prefilterModel: "openai/gpt-5-mini" } }),
+    );
+
+    const { SettingsContext } = await import("../extension/settings-context.js");
+    const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
+
+    assert.equal(ctx.prefilterModel, "openai/gpt-5-mini");
+    assert.ok(ctx.prefilterModelSource.includes("file"), "source must be file");
+  });
+
+  it("prefilterModel resolves from global settings", async () => {
+    writeFileSync(
+      join(tmpHome, ".pi", "agent", "settings.json"),
+      JSON.stringify({ deepResearch: { prefilterModel: "anthropic/claude-sonnet-4-5" } }),
+    );
+
+    const { SettingsContext } = await import("../extension/settings-context.js");
+    const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
+
+    assert.equal(ctx.prefilterModel, "anthropic/claude-sonnet-4-5");
+    assert.ok(ctx.prefilterModelSource.includes("file"), "source must be file");
+  });
+
+  it("prefilterModel: env overrides local", async () => {
+    process.env[ENV_KEYS.prefilterModel] = "openai/gpt-5-nano";
+    writeFileSync(
+      join(tmpCwd, ".pi", "settings.json"),
+      JSON.stringify({ deepResearch: { prefilterModel: "local/model" } }),
+    );
+
+    const { SettingsContext } = await import("../extension/settings-context.js");
+    const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
+
+    assert.equal(ctx.prefilterModel, "openai/gpt-5-nano");
+    assert.ok(ctx.prefilterModelSource.includes("env"), "source must be env");
+  });
+
+  it("prefilterModel: local overrides global", async () => {
+    writeFileSync(
+      join(tmpHome, ".pi", "agent", "settings.json"),
+      JSON.stringify({ deepResearch: { prefilterModel: "global/model" } }),
+    );
+    writeFileSync(
+      join(tmpCwd, ".pi", "settings.json"),
+      JSON.stringify({ deepResearch: { prefilterModel: "local/model" } }),
+    );
+
+    const { SettingsContext } = await import("../extension/settings-context.js");
+    const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
+
+    assert.equal(ctx.prefilterModel, "local/model");
+  });
+
+  it("prefilterModel is undefined when not configured", async () => {
+    const { SettingsContext } = await import("../extension/settings-context.js");
+    const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
+
+    assert.equal(ctx.prefilterModel, undefined);
+    assert.ok(ctx.prefilterModelSource.includes("default"), "source must be default");
   });
 });

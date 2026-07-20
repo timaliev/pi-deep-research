@@ -36,41 +36,20 @@ Environment variables take precedence over settings.json. Local settings.json ta
 
 ### Phase 1: Plan Research
 
-Call `plan_research` once with the topic. The tool runs the entire prefilter pipeline automatically — no further `plan_research` calls needed. Respond to each injection prompt in your response text.
+Call `plan_research` once with the topic. The tool handles everything internally — engines and profile are resolved from your settings, web search and LLM reasoning (introspection + plan creation) run automatically in subprocesses, and the result is a TUI confirmation dialog. No injections, no further calls needed.
 
 ```
 plan_research({ topic: "<user's research topic>" })
 ```
 
-The tool will inject prompts for you to respond to in sequence:
+The tool blocks for 15-30 seconds while working, then shows a TUI confirmation:
+- ✅ Confirm — research proceeds to Phase 2
+- ✏️ Change parameters — edit engines, profile, or style in-place
+- ❌ Cancel — plan discarded
 
-1. **Engine/profile selection** — tool shows available engines and profiles. Respond with JSON: `{"engines": ["duckduckgo"], "profile": {"name": "default"}, "reportStyle": "narrative"}`.
-   - **Engines:** `duckduckgo` (always available), `brave`, `tavily`, `yandex`, `searxng`. Only engines with configured API keys are shown as available.
-   - **Profiles:** `default` (4/2/4 breadth/depth/concurrency), `fast` (2/1/2), `deep` (6/3/4), `custom` (specify numbers).
-   - **Report styles:** `narrative` (fixed 5-section) or `subtopics` (5–7/8–12/12–20 topics depending on question count).
+Engines and profile are controlled via `settings.json` (see [Configuration](#configuration) in README). Use the TUI to override them per-research.
 
-2. **LLM introspection** — tool asks you to propose topics from your internal knowledge. Respond with structured markdown listing topics with confidence/importance ratings.
-
-3. **Merge & plan creation** — tool merges your topics with web search results and asks you to produce the final plan JSON:
-   ```json
-   {
-     "topic": "...",
-     "goal": "...",
-     "researchQuestions": ["Q1"],
-     "engines": ["duckduckgo"],
-     "profile": {"name": "default"},
-     "reportStyle": "narrative",
-     "scope": {"include": "...", "exclude": "..."},
-     "estimatedCost": {"searchCalls": 12, "scrapeCalls": 8, "description": "~12 searches"}
-   }
-   ```
-
-4. **Confirmation** — tool validates the plan, saves it, and shows a TUI dialog:
-   - ✅ Confirm — research proceeds to Phase 2
-   - ✏️ Change parameters — edit engines, profile, or style in-place
-   - ❌ Cancel — plan discarded
-
-**Guardrail:** Do NOT call `plan_research` again with `params_json`, `plan_json`, or no parameters. The single `{ topic }` call drives the entire pipeline. Just respond to the injections. Errors are handled internally — the tool re-injects prompts or auto-advances. No agent action needed.
+**Guardrail:** Call `plan_research` exactly once. No further calls, no params_json, no plan_json, no injections to respond to.
 
 ### Phase 2: Run Research
 
