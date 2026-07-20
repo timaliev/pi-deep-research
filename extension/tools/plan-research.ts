@@ -2,7 +2,6 @@ import { mkdirSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { Type } from "typebox";
 import { confirmPlanDialog } from "../confirm-dialog.js";
-import { type PrefilterManager, PrefilterSession } from "../prefilter.js";
 import { buildIntrospectionPrompt, buildMergePrompt, buildSearchQuery } from "../prefilter-prompts.js";
 import type { ProfileResolver } from "../profile-resolver.js";
 import type { Scraper } from "../scraper.js";
@@ -10,6 +9,7 @@ import type { SearchEngine, searchWeb as SearchWebFn } from "../search/web-searc
 import { searchWeb } from "../search/web-search.js";
 import type { SessionState } from "../session-state.js";
 import type { SearchProviderCredentials, SettingsContext } from "../settings-context.js";
+import { validateAndSavePlan } from "../validate-and-save.js";
 
 /**
  * Call a pi subprocess in JSON mode with a single prompt. Returns the final
@@ -85,7 +85,7 @@ function callPiJson(
 }
 
 export function createPlanResearchTool(
-  pi: {
+  _pi: {
     sendUserMessage: (msg: string, opts?: { deliverAs: string }) => void;
     appendEntry: (key: string, data: unknown) => void;
   },
@@ -96,16 +96,6 @@ export function createPlanResearchTool(
   scraper: Scraper,
   searchFn: typeof SearchWebFn = searchWeb,
 ) {
-  const session = new PrefilterSession({
-    artifactsDir: settings.artifactsDir,
-    profileResolver,
-    searchCred,
-    searchFn,
-    scraper,
-    defaultReportStyle: settings.reportStyle,
-    enabledEngines: settings.enabledEngines,
-  });
-
   return {
     name: "plan_research",
     label: "Plan Research",
@@ -120,11 +110,9 @@ export function createPlanResearchTool(
       signal: AbortSignal | undefined,
       _onUpdate: unknown,
       ctx: {
-        sessionManager: { getEntries: () => Record<string, unknown>[] };
         hasUI?: boolean;
         cwd: string;
         model?: { provider: string; id: string };
-        modelRegistry?: { find: (provider: string, id: string) => unknown };
       },
     ) {
       const topic = params.topic;
@@ -192,33 +180,27 @@ export function createPlanResearchTool(
         };
       }
 
-      // ── 5. Validate + save via PrefilterManager ──────────
-      const manager = new PrefilterManager({
-        searchFn,
-        scraper,
+      // ── 5. Validate + save ─────────────────────────────
+      const saveResult = await validateAndSavePlan({
+        planJson,
+        topic,
+        engines,
+        profileName,
         artifactsDir: settings.artifactsDir,
-        profileResolver,
-        searchCred,
-        defaultReportStyle: settings.reportStyle,
         enabledEngines: settings.enabledEngines,
+        profileNames: profileResolver.listNames(),
+        reportStyle: settings.reportStyle,
       });
 
-      await manager.next({ type: "topic", topic });
-      await manager.next({ type: "params", engines, profile: { name: profileName } });
-      await manager.next({ type: "continue" });
-      await manager.next({ type: "continue", llmResponse: llmTopics });
-
-      const finalResult = await manager.next({ type: "plan", planJson });
-
-      if (finalResult.phase !== "plan_ready" || !finalResult.plan || !finalResult.planArtifactPath) {
+      if (!saveResult.ok) {
         return {
-          content: [{ type: "text", text: `Plan validation failed: ${finalResult.error ?? "unknown error"}` }],
-          details: { phase: finalResult.phase, error: finalResult.error },
+          content: [{ type: "text", text: `Plan validation failed: ${saveResult.error}` }],
+          details: { phase: "error", error: saveResult.error },
         };
       }
 
-      const plan = finalResult.plan;
-      const planPath = finalResult.planArtifactPath;
+      const plan = saveResult.plan;
+      const planPath = saveResult.planArtifactPath;
       const style = plan.reportStyle ?? settings.reportStyle ?? "narrative";
 
       // ── 6. TUI confirmation ─────────────────────────────
@@ -252,7 +234,6 @@ export function createPlanResearchTool(
       }
 
       sessionState.saveConfirmation(planPath);
-      session.remove(finalResult.runId);
 
       return {
         content: [
@@ -262,9 +243,9 @@ export function createPlanResearchTool(
           },
         ],
         details: {
-          phase: finalResult.phase,
+          phase: "plan_ready",
           plan_artifact_path: planPath,
-          plan: finalResult.plan,
+          plan: saveResult.plan,
           confirmed: true,
         },
       };
