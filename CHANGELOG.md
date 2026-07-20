@@ -13,6 +13,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.29.0](https://github.com/timaliev/pi-deep-research/compare/v0.28.1..v0.29.0) - 2026-07-20
+
+### Features
+
+- **(settings)** add prefilterModel setting with full cascade - ([139acb3](https://github.com/timaliev/pi-deep-research/commit/139acb33ab17dc27ece4442f581efa4507b4a5c3)) - Tim Aliev
+
+### Bug Fixes
+
+- **(prefilter)** make topic optional for plan_research auto-advance calls - ([e9d3f5e](https://github.com/timaliev/pi-deep-research/commit/e9d3f5e6b50b78fa83a9e7899194e38d576aba70)) - Tim Aliev
+- **(prefilter)** implement ADR-0028 subprocess prefilter pipeline - ([95a3d35](https://github.com/timaliev/pi-deep-research/commit/95a3d35d3fd5beb4c98cf7d59efd0b47b51b5472)) - Tim Aliev
+- **(prefilter)** remove unused preliminary search, fix step numbering - ([8e27fc6](https://github.com/timaliev/pi-deep-research/commit/8e27fc69e283b7f271d77dd52b5ed9a30f556403)) - Tim Aliev
+- **(prefilter)** remove dead code — PrefilterSession, pi, ctx fields - ([319d0c5](https://github.com/timaliev/pi-deep-research/commit/319d0c5c79dca075c56a7a12244abe33aa447bd2)) - Tim Aliev
+- **(prefilter)** collapse PrefilterManager into validateAndSavePlan, delete PrefilterSession - ([aacc511](https://github.com/timaliev/pi-deep-research/commit/aacc5113b41f5bf869fed477b837ec18691d4aa7)) - Tim Aliev
+- **(prefilter)** delete PrefiterManager — zero production callers after ADR-0028 - ([6ffcd20](https://github.com/timaliev/pi-deep-research/commit/6ffcd2024c36b519926a3ee058941df1f94d41ae)) - Tim Aliev
+- **(state-machine)** un-export 4 dead symbols - ([44f7522](https://github.com/timaliev/pi-deep-research/commit/44f7522cd725a8364b5a4218e7dfe3616694f0e6)) - Tim Aliev
+- **(tools)** inline thin tool wrappers into deps.ts, delete 6 files - ([07154d7](https://github.com/timaliev/pi-deep-research/commit/07154d70eb45298b405a863e0d613b4fc58431c2)) - Tim Aliev
+
+### Refactoring
+
+- **(subprocess)** extract callPiJson into subprocess-runner.ts - ([054d6e7](https://github.com/timaliev/pi-deep-research/commit/054d6e76b1db2fb1ede0fbff8495818e15e0c39c)) - Tim Aliev
+- **(types)** extract shared types to types.ts, re-export from prefilter.ts - ([35aadf8](https://github.com/timaliev/pi-deep-research/commit/35aadf88463f7b710ce29f3a8f16484270e8f6a6)) - Tim Aliev
+
+### Documentation
+
+- **(adr)** add ADR-0028 subprocess prefilter design - ([5939883](https://github.com/timaliev/pi-deep-research/commit/5939883e7e1223cc8c8d7e45329ecf46edeed156)) - Tim Aliev
+- update README for ADR-0028 subprocess architecture - ([79b4bdf](https://github.com/timaliev/pi-deep-research/commit/79b4bdf4626e7c006ee4bd5c2df2e313af23fc38)) - Tim Aliev
+- highlight prefilterModel in intro and architecture diagram - ([f1dab0f](https://github.com/timaliev/pi-deep-research/commit/f1dab0f4057766d01d2bd5a34a8bfb864b7df612)) - Tim Aliev
+
 ## [0.28.1](https://github.com/timaliev/pi-deep-research/compare/v0.28.0..v0.28.1) - 2026-07-17
 
 ### Bug Fixes
