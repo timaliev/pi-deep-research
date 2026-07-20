@@ -186,6 +186,16 @@ Model to use for prefilter LLM steps (introspection + plan creation). Format: `p
 |---------|------|---------|
 | `DEEP_RESEARCH_PREFILTER_MODEL` | `string` | (active model) |
 
+Also configure timeout via `prefilterTimeoutMs` (default 120000 = 2min):
+
+```json
+"prefilterTimeoutMs": 180000
+```
+
+| Env var | Type | Default |
+|---------|------|---------|
+| `DEEP_RESEARCH_PREFILTER_TIMEOUT_MS` | `number` | `120000` |
+
 #### `reportStyle`
 
 Default report generation style. One of `"narrative"` (5-section fixed template) or `"subtopics"` (LLM discovers thematic sections: 5–7 for ≤4 questions, 8–12 for 5–7, 12–20 for 8+). Defaults to `"narrative"`.
@@ -296,6 +306,7 @@ All settings can be configured via environment variables. Env vars take priority
 | `DEEP_RESEARCH_SETTINGS_IN_REPORT` | `false` | Append settings section to report (`true`) |
 | `DEEP_RESEARCH_ENABLED_ENGINES` | `duckduckgo,searxng` | Comma-separated list of allowed search engines |
 | `DEEP_RESEARCH_PREFILTER_MODEL` | (active model) | Model to use for prefilter LLM steps (provider/id). Falls back to active session model if unset |
+| `DEEP_RESEARCH_PREFILTER_TIMEOUT_MS` | `120000` | Timeout in ms for each prefilter subprocess call |
 
 #### Search Engine API Keys
 
@@ -570,3 +581,4 @@ npm run lint          # biome lint
 | ADRs | 26 |
 | Statement coverage | 74.2% |
 | Largest module | settings-context.ts (495 lines) |
+

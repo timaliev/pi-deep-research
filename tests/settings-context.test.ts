@@ -10,6 +10,7 @@ const ENV_KEYS = {
   artifactsDir: "DEEP_RESEARCH_ARTIFACTS_DIR",
   defaultProfile: "DEEP_RESEARCH_DEFAULT_PROFILE",
   prefilterModel: "DEEP_RESEARCH_PREFILTER_MODEL",
+  prefilterTimeoutMs: "DEEP_RESEARCH_PREFILTER_TIMEOUT_MS",
 };
 
 // We'll test against the real implementation
@@ -321,5 +322,37 @@ describe("SettingsContext — unified settings cascade", () => {
 
     assert.equal(ctx.prefilterModel, undefined);
     assert.ok(ctx.prefilterModelSource.includes("default"), "source must be default");
+  });
+
+  // ─── prefilterTimeoutMs ───────────────────────────────
+  it("prefilterTimeoutMs defaults to 120000", async () => {
+    const { SettingsContext } = await import("../extension/settings-context.js");
+    const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
+
+    assert.equal(ctx.prefilterTimeoutMs, 120_000);
+    assert.ok(ctx.prefilterTimeoutMsSource.includes("default"), "source must be default");
+  });
+
+  it("prefilterTimeoutMs resolves from env", async () => {
+    process.env.DEEP_RESEARCH_PREFILTER_TIMEOUT_MS = "180000";
+
+    const { SettingsContext } = await import("../extension/settings-context.js");
+    const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
+
+    assert.equal(ctx.prefilterTimeoutMs, 180_000);
+    assert.ok(ctx.prefilterTimeoutMsSource.includes("env"), "source must be env");
+  });
+
+  it("prefilterTimeoutMs resolves from settings.json", async () => {
+    writeFileSync(
+      join(tmpCwd, ".pi", "settings.json"),
+      JSON.stringify({ deepResearch: { prefilterTimeoutMs: 90000 } }),
+    );
+
+    const { SettingsContext } = await import("../extension/settings-context.js");
+    const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
+
+    assert.equal(ctx.prefilterTimeoutMs, 90_000);
+    assert.ok(ctx.prefilterTimeoutMsSource.includes("file"), "source must be file");
   });
 });
