@@ -52,8 +52,8 @@ describe("plan_research ADR-0028 subprocess prefilter", () => {
     );
   });
 
-  it("uses PrefilterManager for validation and saving", () => {
-    assert.ok(src.includes("PrefilterManager") || src.includes("finalize"), "must use PrefilterManager");
+  it("uses validateAndSavePlan for validation and saving", () => {
+    assert.ok(src.includes("validateAndSavePlan"), "must use validateAndSavePlan");
   });
 
   it("keeps TUI confirmation via confirmPlanDialog", () => {

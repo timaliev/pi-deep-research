@@ -17,7 +17,6 @@ import { WebScraper } from "./scraper.js";
 import type { SearchEngine, searchWeb as SearchWebFn, WebSearchResult } from "./search/web-search.js";
 import { searchWeb } from "./search/web-search.js";
 import type { SearchProviderCredentials } from "./settings-context.js";
-import { PREFILTER_RUN_KEY } from "./session-state.js";
 
 /** Filter engines against the allowlist. If none survive, fall back to defaults. Logs warnings when engines are dropped. */
 function enforceEngineAllowlist(
@@ -458,40 +457,5 @@ export class PrefilterManager {
       if (!hasToken || !hasFolder) missing.push("YANDEX_OAUTH_TOKEN, YANDEX_FOLDER_ID");
     }
     return missing;
-  }
-}
-
-/** Manages PrefilterManager lifecycle across tool invocations. */
-export class PrefilterSession {
-  private managers = new Map<string, PrefilterManager>();
-
-  constructor(private readonly ctx: PrefilterContext) {}
-
-  /** Get existing manager or create a new one. Session entry lookup handled internally. */
-  getOrCreate(
-    topic: string,
-    sessionEntries: Array<{ customType?: string; data?: unknown }>,
-    persist: (runId: string) => void,
-  ): PrefilterManager {
-    const prefilterEntry = [...sessionEntries].reverse().find((e: any) => e.customType === PREFILTER_RUN_KEY);
-    const existingRunId = prefilterEntry?.data?.runId as string | undefined;
-
-    if (existingRunId && this.managers.has(existingRunId)) {
-      return this.managers.get(existingRunId)!;
-    }
-
-    // New prefilter session — clear stale managers
-    this.managers.clear();
-    const runId = generateRunId();
-    const logsDir = join(this.ctx.artifactsDir, "..", "logs");
-    const logger = new JsonlLogger(runId, join(logsDir, `${runId}-prefilter.log`));
-    const manager = new PrefilterManager({ ...this.ctx, logger }, runId);
-    this.managers.set(runId, manager);
-    persist(runId);
-    return manager;
-  }
-
-  remove(runId: string): void {
-    this.managers.delete(runId);
   }
 }
