@@ -5,7 +5,7 @@ import { confirmPlanDialog } from "../confirm-dialog.js";
 import { type PrefilterManager, PrefilterSession } from "../prefilter.js";
 import { buildIntrospectionPrompt, buildMergePrompt, buildSearchQuery } from "../prefilter-prompts.js";
 import type { ProfileResolver } from "../profile-resolver.js";
-import type { ScrapedPage, Scraper } from "../scraper.js";
+import type { Scraper } from "../scraper.js";
 import type { SearchEngine, searchWeb as SearchWebFn } from "../search/web-search.js";
 import { searchWeb } from "../search/web-search.js";
 import type { SessionState } from "../session-state.js";
@@ -142,28 +142,7 @@ export function createPlanResearchTool(
         settings.enabledEngines.length > 0 ? (settings.enabledEngines as SearchEngine[]) : ["duckduckgo"];
       const profileName = settings.defaultProfile;
 
-      // ── 2. Preliminary web search ───────────────────────
-      const searchQuery = buildSearchQuery(topic);
-      let searchResults: Awaited<ReturnType<typeof searchFn>> = [];
-      try {
-        searchResults = await searchFn(searchQuery, 3, engines, {
-          credentials: searchCred,
-        });
-      } catch {
-        // continue with empty results
-      }
-
-      const scrapedContent: ScrapedPage[] = [];
-      for (const result of searchResults.slice(0, 2)) {
-        try {
-          const page = await scraper.scrape(result.url);
-          scrapedContent.push(page);
-        } catch {
-          // skip failed scrapes
-        }
-      }
-
-      // ── 3. Subprocess: introspection ────────────────────
+      // ── 2. Subprocess: introspection ────────────────────
       const modelSpec = settings.prefilterModel ?? (ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "");
       if (!modelSpec) {
         return {
@@ -188,7 +167,8 @@ export function createPlanResearchTool(
         };
       }
 
-      // ── 4. Merge search ─────────────────────────────────
+      // ── 3. Merge search ─────────────────────────────────
+      const searchQuery = buildSearchQuery(topic);
       let mergeResults: Awaited<ReturnType<typeof searchFn>> = [];
       try {
         mergeResults = await searchFn(searchQuery, 5, engines, {
@@ -198,7 +178,7 @@ export function createPlanResearchTool(
         // continue with empty results
       }
 
-      // ── 5. Subprocess: plan creation ────────────────────
+      // ── 4. Subprocess: plan creation ────────────────────
       const mergePrompt = buildMergePrompt(topic, llmTopics, mergeResults);
       let planJson: string;
       try {
@@ -212,7 +192,7 @@ export function createPlanResearchTool(
         };
       }
 
-      // ── 6. Validate + save via PrefilterManager ──────────
+      // ── 5. Validate + save via PrefilterManager ──────────
       const manager = new PrefilterManager({
         searchFn,
         scraper,
@@ -241,7 +221,7 @@ export function createPlanResearchTool(
       const planPath = finalResult.planArtifactPath;
       const style = plan.reportStyle ?? settings.reportStyle ?? "narrative";
 
-      // ── 7. TUI confirmation ─────────────────────────────
+      // ── 6. TUI confirmation ─────────────────────────────
 
       if (!ctx.hasUI) {
         return {
