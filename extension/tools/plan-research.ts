@@ -164,7 +164,7 @@ export function createPlanResearchTool(
       }
 
       // ── 3. Subprocess: introspection ────────────────────
-      const modelSpec = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "";
+      const modelSpec = settings.prefilterModel ?? (ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "");
       if (!modelSpec) {
         return {
           content: [{ type: "text", text: "Error: no active model available." }],
