@@ -200,7 +200,7 @@ describe("export_pdf tool", () => {
 
 /** Read index.ts source for static analysis. */
 function readIndexTs(): string {
-  return readFs(join(import.meta.dirname ?? ".", "..", "extension", "tools", "export-pdf.ts"), "utf-8");
+  return readFs(join(import.meta.dirname ?? ".", "..", "extension", "tools", "deps.ts"), "utf-8");
 }
 
 /** Read run-research.ts source for static analysis. */

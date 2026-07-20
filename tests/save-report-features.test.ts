@@ -7,7 +7,7 @@ import { describe, it } from "node:test";
 // ─── Feature 1: save_report writes to reportsDir ────────────────
 describe("save_report → reportsDir", () => {
   it("save_report tool receives reportsDir param", async () => {
-    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools/save-report.ts"), "utf-8");
+    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools/deps.ts"), "utf-8");
     // save_report handler must use reportsDir
     assert.ok(src.includes("reportsDir"), "save_report must reference reportsDir");
   });
@@ -112,7 +112,7 @@ describe("telemetry appended to report", () => {
   });
 
   it("save_report does NOT reference storedTelemetry (removed dead code)", async () => {
-    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools/save-report.ts"), "utf-8");
+    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools/deps.ts"), "utf-8");
     assert.ok(!src.includes("storedTelemetry"), "save_report must not reference storedTelemetry");
   });
 
@@ -163,7 +163,7 @@ describe("telemetry appended to report", () => {
 // ─── Feature 4: save_report accepts report_path for large files ─
 describe("save_report — report_path param", () => {
   it("accepts report_path parameter in TypeBox schema", async () => {
-    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "save-report.ts"), "utf-8");
+    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "deps.ts"), "utf-8");
     // report_path must be a TypeBox Optional(String) parameter in Type.Object schema
     // Look for: report_path: Type.Optional(Type.String( anywhere in the parameters block
     const hasParam = /report_path:\s*Type\.\w+/.test(src);
