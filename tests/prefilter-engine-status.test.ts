@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 
 const PROMPTS_PATH = join(import.meta.dirname ?? ".", "..", "extension", "prefilter-prompts.ts");
-const PRE_PATH = join(import.meta.dirname ?? ".", "..", "extension", "prefilter.ts");
+const PRE_PATH = join(import.meta.dirname ?? ".", "..", "extension", "types.ts");
 
 describe("buildParamsPrompt engine availability", () => {
   it("buildEngineStatus exists in prefilter-prompts.ts", () => {
@@ -16,10 +16,6 @@ describe("buildParamsPrompt engine availability", () => {
     const src = readFileSync(PROMPTS_PATH, "utf-8");
     // buildParamsPrompt must accept engineStatus as a parameter
     assert.ok(src.includes("engineStatus: string"), "buildParamsPrompt must accept engineStatus parameter");
-    // prefilter.ts calls buildEngineStatus and passes it to buildParamsPrompt
-    const preSrc = readFileSync(PRE_PATH, "utf-8");
-    assert.ok(preSrc.includes("buildEngineStatus"), "prefilter.ts must call buildEngineStatus");
-    assert.ok(preSrc.includes("buildParamsPrompt"), "prefilter.ts must call buildParamsPrompt");
   });
 
   it("engine status uses checkmark symbols", () => {

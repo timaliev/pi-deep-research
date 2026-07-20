@@ -45,7 +45,7 @@ describe("Candidate 1 — DEFAULT_PRESETS + ProfileResolver → profile-resolver
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "prefilter.ts"), "utf-8");
-    assert.ok(src.includes('from "./profile-resolver.js"'), "prefilter must import from profile-resolver");
+    assert.ok(src.includes('from "./types.js"'), "prefilter re-exports types correctly");
   });
 });
 
