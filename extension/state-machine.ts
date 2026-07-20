@@ -51,7 +51,7 @@ export interface ResearchSnapshot {
   pendingQuestions?: string[];
 }
 
-export interface ResearchStateResult {
+interface ResearchStateResult {
   phase: "searching" | "extracting" | "questioning" | "drafting" | "saving" | "done";
   snapshot: ResearchSnapshot;
   inject?: string;
@@ -64,7 +64,7 @@ export interface ResearchStateResult {
  * Searches and scrapes run concurrently, limited by profile.concurrency.
  * Soft limits (maxSearchCalls, maxElapsedSeconds) reduce intensity and stop depth recursion.
  */
-export interface ResearchContext {
+interface ResearchContext {
   searchFn: typeof SearchWebFn;
   scraper: Scraper;
   profileResolver: ProfileResolver;
@@ -352,14 +352,14 @@ export class ResearchStateMachine {
 }
 
 /** Pure function: decide next phase after extraction. Returns "questioning" or "drafting". */
-export function phaseRouter(snapshot: ResearchSnapshot): "questioning" | "drafting" {
+function phaseRouter(snapshot: ResearchSnapshot): "questioning" | "drafting" {
   const shouldDeepen = !snapshot.softLimitTriggered && snapshot.currentDepth < snapshot.totalDepth;
   return shouldDeepen ? "questioning" : "drafting";
 }
 
 /** Extract plain text from agent response (handles string and content blocks array).
  *  Strips <tool_calls>...</tool_calls> XML blocks from string input. */
-export function extractTextContent(agentResponse?: unknown): string {
+function extractTextContent(agentResponse?: unknown): string {
   if (!agentResponse) return "";
   if (typeof agentResponse === "string") {
     return agentResponse.replace(/<tool_calls>[\s\S]*?<\/tool_calls>/g, "").trim();

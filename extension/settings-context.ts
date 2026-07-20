@@ -20,6 +20,7 @@ const ENV = {
   settingsOnSessionStart: "DEEP_RESEARCH_SETTINGS_ON_SESSION_START",
   settingsOnRunStart: "DEEP_RESEARCH_SETTINGS_ON_RUN_START",
   settingsInReport: "DEEP_RESEARCH_SETTINGS_IN_REPORT",
+  prefilterModel: "DEEP_RESEARCH_PREFILTER_MODEL",
 } as const;
 
 // ─── Built-in defaults ─────────────────────────────────────────
@@ -75,6 +76,7 @@ export interface SettingsContextData {
   reportStyle: "narrative" | "subtopics";
   enabledEngines: string[];
   settingsReport: SettingsReportConfig;
+  prefilterModel: string | undefined;
 }
 
 export interface InitParams {
@@ -96,6 +98,7 @@ export class SettingsContext implements SettingsContextData {
   reportStyle!: "narrative" | "subtopics";
   enabledEngines!: string[];
   settingsReport!: SettingsReportConfig;
+  prefilterModel: string | undefined;
 
   // ─── Provenance fields (parallel to value fields) ─────────
   reportsDirSource!: SourceTag;
@@ -108,6 +111,7 @@ export class SettingsContext implements SettingsContextData {
   settingsReportOnSessionStartSource!: SourceTag;
   settingsReportOnRunStartSource!: SourceTag;
   settingsReportInReportSource!: SourceTag;
+  prefilterModelSource!: SourceTag;
   credentialSources!: Record<string, Record<string, SourceTag>>;
 
   private homeAgentDir: string;
@@ -202,6 +206,16 @@ export class SettingsContext implements SettingsContextData {
       envString(ENV.enabledEngines),
       localDr.enabledEngines as string[] | undefined,
       globalDr.enabledEngines as string[] | undefined,
+      localPath,
+      globalPath,
+      homeDir,
+    );
+
+    // ─── prefilterModel (optional — falls back to active model at runtime) ─
+    [this.prefilterModel, this.prefilterModelSource] = resolveOptionalString(
+      ENV.prefilterModel,
+      localDr.prefilterModel,
+      globalDr.prefilterModel,
       localPath,
       globalPath,
       homeDir,
@@ -338,6 +352,7 @@ export class SettingsContext implements SettingsContextData {
         value: this.settingsReport.inReport,
         source: this.settingsReportInReportSource,
       },
+      { key: "prefilterModel", value: this.prefilterModel ?? "(active model)", source: this.prefilterModelSource },
     ];
 
     // Credentials with masked values
@@ -374,6 +389,22 @@ function resolveString(
   if (typeof localVal === "string" && localVal.length > 0) return [localVal, sourceFile(localPath, homeDir)];
   if (typeof globalVal === "string" && globalVal.length > 0) return [globalVal, sourceFile(globalPath, homeDir)];
   return [defaultVal, sourceDefault()];
+}
+
+/** Resolve optional string — returns undefined if not configured at any level. */
+function resolveOptionalString(
+  envKey: string,
+  localVal: unknown,
+  globalVal: unknown,
+  localPath: string,
+  globalPath: string,
+  homeDir: string,
+): [string | undefined, SourceTag] {
+  const env = envString(envKey);
+  if (env !== undefined) return [env, sourceEnv(envKey)];
+  if (typeof localVal === "string" && localVal.length > 0) return [localVal, sourceFile(localPath, homeDir)];
+  if (typeof globalVal === "string" && globalVal.length > 0) return [globalVal, sourceFile(globalPath, homeDir)];
+  return [undefined, sourceDefault()];
 }
 
 /** Resolve boolean with provenance. */
