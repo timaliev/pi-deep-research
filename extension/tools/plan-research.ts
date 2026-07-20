@@ -2,7 +2,7 @@ import { mkdirSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { Type } from "typebox";
 import { confirmPlanDialog } from "../confirm-dialog.js";
-import { type PrefilterManager, PrefilterSession } from "../prefilter.js";
+import { type PrefilterManager } from "../prefilter.js";
 import { buildIntrospectionPrompt, buildMergePrompt, buildSearchQuery } from "../prefilter-prompts.js";
 import type { ProfileResolver } from "../profile-resolver.js";
 import type { Scraper } from "../scraper.js";
@@ -85,7 +85,7 @@ function callPiJson(
 }
 
 export function createPlanResearchTool(
-  pi: {
+  _pi: {
     sendUserMessage: (msg: string, opts?: { deliverAs: string }) => void;
     appendEntry: (key: string, data: unknown) => void;
   },
@@ -96,16 +96,6 @@ export function createPlanResearchTool(
   scraper: Scraper,
   searchFn: typeof SearchWebFn = searchWeb,
 ) {
-  const session = new PrefilterSession({
-    artifactsDir: settings.artifactsDir,
-    profileResolver,
-    searchCred,
-    searchFn,
-    scraper,
-    defaultReportStyle: settings.reportStyle,
-    enabledEngines: settings.enabledEngines,
-  });
-
   return {
     name: "plan_research",
     label: "Plan Research",
@@ -120,11 +110,9 @@ export function createPlanResearchTool(
       signal: AbortSignal | undefined,
       _onUpdate: unknown,
       ctx: {
-        sessionManager: { getEntries: () => Record<string, unknown>[] };
         hasUI?: boolean;
         cwd: string;
         model?: { provider: string; id: string };
-        modelRegistry?: { find: (provider: string, id: string) => unknown };
       },
     ) {
       const topic = params.topic;
@@ -252,7 +240,6 @@ export function createPlanResearchTool(
       }
 
       sessionState.saveConfirmation(planPath);
-      session.remove(finalResult.runId);
 
       return {
         content: [
