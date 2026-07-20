@@ -13,6 +13,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.29.1](https://github.com/timaliev/pi-deep-research/compare/v0.29.0..v0.29.1) - 2026-07-20
+
+### Bug Fixes
+
+- **(prefilter)** add prefilterTimeoutMs setting + progress reporting + logging - ([c909711](https://github.com/timaliev/pi-deep-research/commit/c90971155b797b53c6d3184c2213c8142f4a72ae)) - Tim Aliev
+
+### Documentation
+
+- bump for v0.29.1 release - ([cc0ce5a](https://github.com/timaliev/pi-deep-research/commit/cc0ce5aa707bf3ad45455634b54bd42a47c9f6d8)) - Tim Aliev
+
 ## [0.29.0](https://github.com/timaliev/pi-deep-research/compare/v0.28.1..v0.29.0) - 2026-07-20
 
 ### Features
