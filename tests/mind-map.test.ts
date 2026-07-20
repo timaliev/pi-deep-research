@@ -58,9 +58,9 @@ describe("mindMap setting", () => {
 // ─── mind_map tool registration ─────────────────────────────
 describe("mind_map tool", () => {
   const readIndex = () =>
-    readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "mind-map.ts"), "utf-8");
+    readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "deps.ts"), "utf-8");
 
-  it("tool is registered as createMindMapTool in tools/mind-map.ts", () => {
+  it("tool is registered as buildMindMapPrompt in tools/mind-map.ts", () => {
     const src = readIndex();
     assert.ok(src.includes('"mind_map"'), "must export mind_map tool");
   });

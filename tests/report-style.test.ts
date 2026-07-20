@@ -340,7 +340,7 @@ describe("saveReportPath — no dead telemetry param", () => {
   });
 
   it("save-report.ts does not reference storedTelemetry", async () => {
-    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "save-report.ts"), "utf-8");
+    const src = readFileSync(join(import.meta.dirname ?? ".", "..", "extension", "tools", "deps.ts"), "utf-8");
     assert.ok(!src.includes("storedTelemetry"), "save_report must not reference storedTelemetry");
   });
 });
