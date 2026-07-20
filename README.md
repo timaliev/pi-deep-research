@@ -9,7 +9,7 @@
 
 # Deep Research for Pi
 
-A [Pi agent](https://pi.dev/) extension and skill that provides autonomous deep web research — planning research questions, searching the web, scraping sources, extracting findings, and synthesizing a structured markdown report — all using the user's current Pi LLM model.
+A [Pi agent](https://pi.dev/) extension and skill that provides autonomous deep web research — planning research questions, searching the web, scraping sources, extracting findings, and synthesizing a structured markdown report — all using the user's current Pi LLM model. Prefilter (planning) can use a cheaper/faster model via the `prefilterModel` setting.
 
 Inspired by [https://github.com/assafelovic/gpt-researcher](gpt-researcher).
 
@@ -423,9 +423,10 @@ user says "research topic X"
 ┌─────────────────────────────────┐
 │  plan_research (single call)    │
 │  Resolves engines/profile,      │
-│  runs subprocess for LLM steps, │
+│  spawns pi subprocess for LLM,  │
 │  shows TUI for confirmation     │
 │  → saves prefilter.json         │
+│  (uses prefilterModel if set)   │
 └──────────────┬──────────────────┘
                │ TUI confirmation
                ▼
