@@ -1,4 +1,5 @@
 import { writeFileSync } from "node:fs";
+import { hostname, release } from "node:os";
 import { join } from "node:path";
 import type { SettingsContext } from "./settings-context.js";
 
@@ -18,6 +19,8 @@ export function buildSettingsTable(ctx: SettingsContext): string {
   table += "|---|---|\n";
   table += `| Node.js | ${sys.nodeVersion} |\n`;
   table += `| Platform | ${sys.platform} (${sys.arch}) |\n`;
+  table += `| OS | ${sys.osRelease} |\n`;
+  table += `| Host | ${sys.hostname} |\n`;
   table += `| CWD | ${sys.cwd} |\n`;
 
   // Profiles table (no source column)
@@ -110,11 +113,20 @@ export function writeSettingsLog(
 }
 
 /** Collect system-level information for the settings report. */
-function getSystemInfo(): { nodeVersion: string; platform: string; arch: string; cwd: string } {
+function getSystemInfo(): {
+  nodeVersion: string;
+  platform: string;
+  arch: string;
+  cwd: string;
+  hostname: string;
+  osRelease: string;
+} {
   return {
     nodeVersion: process.version,
     platform: process.platform,
     arch: process.arch,
     cwd: process.cwd(),
+    hostname: hostname(),
+    osRelease: release(),
   };
 }

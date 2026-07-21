@@ -3,6 +3,22 @@
 **Date:** 2026-07-18
 **Status:** accepted ✓ (implemented 2026-07-18)
 
+## Implementation Notes (July 2026)
+
+Implemented via `tools/plan-research.ts` with `subprocess-runner.ts`:
+
+- **Subprocess**: `pi --mode json -p --no-session --no-extensions --model <model>`
+- **Two calls**: introspection (buildIntrospectionPrompt) → merge/plan (buildMergePrompt)
+- **Retry**: introspection retries once on failure; plan creation retries once with stricter prompt on JSON parse failure
+- **JSON extraction**: `validateAndSavePlan` handles markdown fences, bare JSON, embedded JSON
+- **Cost computation**: `injectEstimatedCost()` computes `breadth × depth × questions` per ADR-0027
+- **Scraping**: Top N pages scraped (configurable) and passed to merge prompt with actual settings values
+- **Settings**: `prefilterModel` (fast model), `prefilterTimeoutMs` (120s default), `prefilterScrapeCount` (3), `prefilterScrapeChars` (2000)
+- **Logging**: `logLevel: "verbose"` captures prompts, raw output, timing per stage
+- **Progress**: `onUpdate` reports stage progress with timing to the user
+- **Extensions disabled**: `--no-extensions` prevents deep-research loading recursively
+- **Unified runId**: same runId across prefilter log, plan artifact, research log
+
 ## Context
 
 Three failed iterations of `plan_research`:
@@ -150,14 +166,14 @@ Pi SDK has no `complete()`/`stream()` method on `ExtensionContext`. Only `ctx.mo
 - **Process overhead**: Spawning `pi` twice adds ~1-2 seconds per research. Acceptable.
 - **Testability**: Mock `spawn` to test subprocess handling. Test prompt-output parsing without real LLM.
 
-## Implementation steps
+## Implementation steps (completed)
 
 1. **Resolve engines/profile** from settings + defaults (no LLM)
-2. **Preliminary search** — same as today
-3. **Spawn subprocess for introspection** — capture LLM topics
-4. **Merge search** — same as today
-5. **Spawn subprocess for plan creation** — capture plan JSON
-6. **Validate + save artifact**
-7. **TUI confirmation**
+2. **Spawn subprocess for introspection** — capture LLM topics, retry once on failure
+3. **Merge search** — sync web search + scrape top pages
+4. **Spawn subprocess for plan creation** — prompt includes schema template with real settings, retry on JSON failure
+5. **Inject estimatedCost** — tool computes from profile params
+6. **validateAndSavePlan** — JSON extraction (fences, bare, embedded) + validation + artifact save
+7. **TUI confirmation** — unchanged confirmPlanDialog
 
-Remove: `parseAgentResponse`, `extractJson`, phase dispatch, injections for prefilter.
+Removed: `parseAgentResponse`, `extractJson`, phase dispatch, injections for prefilter, sessionManager.getEntries, params_json/plan_json parameters.
