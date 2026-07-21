@@ -15,7 +15,9 @@ const REPO = "timaliev/pi-deep-research";
 
 let lastCheck = 0;
 
-export async function checkForNewRelease(sendUserMessage: (msg: string, opts: any) => void): Promise<void> {
+export async function checkForNewRelease(
+  sendUserMessage: (msg: string, opts: Record<string, unknown>) => void,
+): Promise<void> {
   const now = Date.now();
   if (now - lastCheck < COOLDOWN_MS) return;
   lastCheck = now;

@@ -264,7 +264,7 @@ async function searchAllEngines(
         content: [{ type: "text", text: `${engine}: ${results.length} results` }],
         details: { phase: "done", engine, count: results.length },
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       errors.push(`${engine}: ${err.message}`);
       logger?.event("search_failed", {
         query,

@@ -63,7 +63,7 @@ export async function convertToPdf(params: ConvertToPdfParams): Promise<ConvertT
         outputPath,
         method: "pandoc",
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       return {
         kind: "error",
         outputPath,

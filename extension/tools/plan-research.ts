@@ -1,9 +1,9 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { Type } from "typebox";
+import { confirmPlanDialog } from "../confirm-dialog.js";
 import { generateRunId } from "../ids.js";
 import { JsonlLogger } from "../logger.js";
-import { confirmPlanDialog } from "../confirm-dialog.js";
 import { buildIntrospectionPrompt, buildMergePrompt, buildSearchQuery } from "../prefilter-prompts.js";
 import type { ProfileResolver } from "../profile-resolver.js";
 import type { Scraper } from "../scraper.js";
@@ -63,6 +63,10 @@ export function createPlanResearchTool(
       logger.event("prefilter_started", { topic });
 
       const progress = (msg: string) => onUpdate({ content: [{ type: "text", text: msg }] });
+      const isVerbose = settings.logLevel === "verbose";
+      const vlog = (type: string, data: Record<string, unknown>) => {
+        if (isVerbose) logger.event(type, data);
+      };
 
       // ── 1. Resolve engines/profile from settings ────────
       const engines: SearchEngine[] =
@@ -72,6 +76,7 @@ export function createPlanResearchTool(
       // ── 2. Subprocess: introspection ────────────────────
       progress(`🔍 Researching: ${topic}`);
       logger.event("prefilter_introspection_start");
+
       const modelSpec = settings.prefilterModel ?? (ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "");
       if (!modelSpec) {
         return {
@@ -81,10 +86,16 @@ export function createPlanResearchTool(
       }
 
       const introPrompt = buildIntrospectionPrompt(topic);
+      vlog("prefilter_model", { model: modelSpec, timeoutMs: settings.prefilterTimeoutMs });
+      vlog("prefilter_introspection_prompt", { length: introPrompt.length });
+
       let llmTopics = "";
       try {
-        llmTopics = await callPiJson(introPrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs);
+        llmTopics = await callPiJson(introPrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs, (chunk) => {
+          if (settings.logLevel === "verbose") progress(`📖 ${chunk.slice(-80)}`);
+        });
         logger.event("prefilter_introspection_done", { length: llmTopics.length });
+        vlog("prefilter_introspection_result", { topics: llmTopics.substring(0, 500) });
         progress("📚 Introspection complete — merging with web results...");
       } catch (err) {
         return {
@@ -101,6 +112,7 @@ export function createPlanResearchTool(
       // ── 3. Merge search ─────────────────────────────────
       progress("🌐 Searching web for relevant sources...");
       const searchQuery = buildSearchQuery(topic);
+      vlog("prefilter_search_query", { query: searchQuery, engines, maxResults: 5 });
       let mergeResults: Awaited<ReturnType<typeof searchFn>> = [];
       try {
         mergeResults = await searchFn(searchQuery, 5, engines, {
@@ -117,7 +129,9 @@ export function createPlanResearchTool(
       const mergePrompt = buildMergePrompt(topic, llmTopics, mergeResults);
       let planJson: string;
       try {
-        planJson = await callPiJson(mergePrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs);
+        planJson = await callPiJson(mergePrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs, (chunk) => {
+          if (settings.logLevel === "verbose") progress(`📝 ${chunk.slice(-80)}`);
+        });
         logger.event("prefilter_plan_creation_done", { length: planJson.length });
         progress("✅ Plan created — validating...");
       } catch (err) {

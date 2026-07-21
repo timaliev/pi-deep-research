@@ -34,7 +34,7 @@ export async function searchSearXNG(
     }
 
     const data = JSON.parse(body);
-    return (data.results ?? []).slice(0, maxResults).map((r: any) => ({
+    return (data.results ?? []).slice(0, maxResults).map((r: Record<string, unknown>) => ({
       title: r.title ?? "",
       url: r.url ?? "",
       snippet: r.content ?? r.snippet ?? "",

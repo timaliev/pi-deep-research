@@ -1,8 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { ALL_ENGINES, ENGINE_META } from "./search/engines.js";
 import { DEFAULT_PRESETS, mergeProfiles } from "./profile-resolver.js";
+import { ALL_ENGINES, ENGINE_META } from "./search/engines.js";
 import { SearchProviderCredentials } from "./search-credentials.js";
 import type { ResearchProfile } from "./state-machine.js";
 
@@ -22,6 +22,7 @@ const ENV = {
   settingsInReport: "DEEP_RESEARCH_SETTINGS_IN_REPORT",
   prefilterModel: "DEEP_RESEARCH_PREFILTER_MODEL",
   prefilterTimeoutMs: "DEEP_RESEARCH_PREFILTER_TIMEOUT_MS",
+  logLevel: "DEEP_RESEARCH_LOG_LEVEL",
 } as const;
 
 // ─── Built-in defaults ─────────────────────────────────────────
@@ -31,6 +32,7 @@ const BUILTIN = {
   reportStyle: "narrative" as "narrative" | "subtopics",
   enabledEngines: ALL_ENGINES.filter((name) => ENGINE_META[name].free),
   settingsReport: { onSessionStart: false, onRunStart: false, inReport: false },
+  logLevel: "normal" as "off" | "normal" | "verbose",
 };
 
 // ─── Provenance helpers ────────────────────────────────────────
@@ -79,6 +81,7 @@ export interface SettingsContextData {
   settingsReport: SettingsReportConfig;
   prefilterModel: string | undefined;
   prefilterTimeoutMs: number;
+  logLevel: "off" | "normal" | "verbose";
 }
 
 export interface InitParams {
@@ -102,6 +105,7 @@ export class SettingsContext implements SettingsContextData {
   settingsReport!: SettingsReportConfig;
   prefilterModel: string | undefined;
   prefilterTimeoutMs!: number;
+  logLevel!: "off" | "normal" | "verbose";
 
   // ─── Provenance fields (parallel to value fields) ─────────
   reportsDirSource!: SourceTag;
@@ -116,6 +120,7 @@ export class SettingsContext implements SettingsContextData {
   settingsReportInReportSource!: SourceTag;
   prefilterModelSource!: SourceTag;
   prefilterTimeoutMsSource!: SourceTag;
+  logLevelSource!: SourceTag;
   credentialSources!: Record<string, Record<string, SourceTag>>;
 
   private homeAgentDir: string;
@@ -235,6 +240,17 @@ export class SettingsContext implements SettingsContextData {
       globalPath,
       homeDir,
     );
+
+    // ─── logLevel ────────────────────────────────────────
+    [this.logLevel, this.logLevelSource] = resolveString(
+      ENV.logLevel,
+      localDr.logLevel,
+      globalDr.logLevel,
+      BUILTIN.logLevel,
+      localPath,
+      globalPath,
+      homeDir,
+    ) as ["off" | "normal" | "verbose", SourceTag];
 
     // ─── settingsReport group ──────────────────────────────
     const localSr = localDr.settingsReport as Record<string, unknown> | undefined;
@@ -369,6 +385,7 @@ export class SettingsContext implements SettingsContextData {
       },
       { key: "prefilterModel", value: this.prefilterModel ?? "(active model)", source: this.prefilterModelSource },
       { key: "prefilterTimeoutMs", value: String(this.prefilterTimeoutMs), source: this.prefilterTimeoutMsSource },
+      { key: "logLevel", value: this.logLevel, source: this.logLevelSource },
     ];
 
     // Credentials with masked values

@@ -43,7 +43,7 @@ function parseDdgHtml(body: string, maxResults: number): WebSearchResult[] {
   const links: Array<{ href: string; title: string }> = [];
   const snippets: string[] = [];
 
-  let linkMatch;
+  let linkMatch: RegExpExecArray | null;
   while ((linkMatch = linkRegex.exec(body)) !== null) {
     links.push({
       href: linkMatch[1],
@@ -51,7 +51,7 @@ function parseDdgHtml(body: string, maxResults: number): WebSearchResult[] {
     });
   }
 
-  let snipMatch;
+  let snipMatch: RegExpExecArray | null;
   while ((snipMatch = snippetRegex.exec(body)) !== null) {
     snippets.push(decodeHtmlEntities(snipMatch[1].replace(/<[^>]*>/g, "").trim()));
   }
