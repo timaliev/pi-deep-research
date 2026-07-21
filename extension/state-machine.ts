@@ -74,6 +74,7 @@ interface ResearchContext {
   logger?: Logger;
   /** Default report style when plan has no reportStyle. Falls back to "narrative". */
   defaultReportStyle?: "narrative" | "subtopics";
+  logLevel?: "off" | "normal" | "verbose";
 }
 
 export class ResearchStateMachine {
@@ -245,6 +246,9 @@ export class ResearchStateMachine {
       inject = `### Question Metadata\n\nResearch questions with expected provenance and confidence. Use this to weight findings appropriately.\n\n${metaContext}\n\n---\n\n${inject}`;
     }
     this.logger?.event("phase_changed", { from: "searching", to: "extracting", depth: nextDepth });
+    if (this.logLevel === "verbose") {
+      this.logger?.event("verbose_questions", { depth: nextDepth, questions: activeQuestions });
+    }
     this.logger?.event("inject_sent", { type: "extraction", length: inject.length, depth: nextDepth });
     return { phase: "extracting", snapshot: nextSnapshot, inject };
   }
