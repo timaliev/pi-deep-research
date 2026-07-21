@@ -34,6 +34,11 @@ export function callPiJson(
 
     let buffer = "";
     let output = "";
+    let stderr = "";
+
+    proc.stderr.on("data", (data: Buffer) => {
+      stderr += data.toString();
+    });
 
     proc.stdout.on("data", (data: Buffer) => {
       buffer += data.toString();
@@ -63,7 +68,7 @@ export function callPiJson(
     proc.on("close", (code) => {
       clearTimeout(timer);
       if (code === 0) resolve(output.trim());
-      else reject(new Error(`Subprocess exited with code ${code}`));
+      else reject(new Error(`Subprocess exited with code ${code}: ${stderr.trim() || "no stderr output"}`));
     });
 
     proc.on("error", (err) => {
