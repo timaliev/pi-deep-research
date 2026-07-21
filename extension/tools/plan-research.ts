@@ -119,7 +119,8 @@ export function createPlanResearchTool(
         });
         logger.event("prefilter_introspection_done", { length: llmTopics.length, durationMs: Date.now() - introStart });
         vlog("prefilter_introspection_result", { topics: llmTopics.substring(0, 500) });
-        progress("📚 Introspection complete — merging with web results...");
+        const introSecs = ((Date.now() - introStart) / 1000).toFixed(1);
+        progress(`📚 Introspection complete (${introSecs}s) — merging with web results...`);
       } catch (err) {
         logger.event("prefilter_introspection_failed", { error: err instanceof Error ? err.message : String(err) });
         // Retry once on failure
@@ -176,6 +177,7 @@ export function createPlanResearchTool(
       // ── 4. Subprocess: plan creation ────────────────────
       progress("📝 Creating research plan...");
       logger.event("prefilter_plan_creation_start");
+      const planStart = Date.now();
       const mergePrompt = buildMergePrompt(
         topic,
         llmTopics,
@@ -190,7 +192,7 @@ export function createPlanResearchTool(
         planJson = await callPiJson(mergePrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs, (chunk) => {
           if (settings.logLevel === "verbose") progress(`📝 ${chunk.slice(-80)}`);
         });
-        logger.event("prefilter_plan_creation_done", { length: planJson.length });
+        logger.event("prefilter_plan_creation_done", { length: planJson.length, durationMs: Date.now() - planStart });
         vlog("prefilter_plan_raw", { planJson });
 
         // Inject computed estimatedCost (ADR-0027 — tool computes, not LLM)
