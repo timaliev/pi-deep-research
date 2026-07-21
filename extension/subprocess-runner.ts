@@ -13,7 +13,7 @@ export function callPiJson(
   onChunk?: (text: string) => void,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
-    const proc = spawn("pi", ["--mode", "json", "-p", "--no-session", "--model", model], {
+    const proc = spawn("pi", ["--mode", "json", "-p", "--no-session", "--no-extensions", "--model", model], {
       cwd,
       stdio: ["pipe", "pipe", "pipe"],
     });

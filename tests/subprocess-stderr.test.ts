@@ -16,4 +16,11 @@ describe("subprocess-runner stderr capture", () => {
       "error message must include stderr content",
     );
   });
+
+  it("passes --no-extensions to disable extension discovery", () => {
+    assert.ok(
+      src.includes("--no-extensions") || src.includes("-ne"),
+      "must disable extensions in subprocess to prevent recursion",
+    );
+  });
 });
