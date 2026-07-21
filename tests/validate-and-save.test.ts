@@ -167,4 +167,44 @@ describe("validateAndSavePlan", () => {
     const result = await validateAndSavePlan(input);
     assert.ok(result.ok);
   });
+
+  // ─── JSON extraction from LLM output ──────────────────
+  it("extracts plan from markdown json fence", async () => {
+    const { validateAndSavePlan } = await import("../extension/validate-and-save.js");
+    const plan = makePlan();
+    const wrappedJson = "```json\n" + JSON.stringify(plan) + "\n```";
+    const input = makeInput(plan);
+    input.planJson = wrappedJson;
+    const result = await validateAndSavePlan(input);
+    assert.ok(result.ok, `expected ok, got: ${(result as { error: string }).error}`);
+  });
+
+  it("extracts plan from bare JSON", async () => {
+    const { validateAndSavePlan } = await import("../extension/validate-and-save.js");
+    const plan = makePlan();
+    const input = makeInput(plan);
+    const result = await validateAndSavePlan(input);
+    assert.ok(result.ok);
+  });
+
+  it("extracts JSON object embedded in text with explanation", async () => {
+    const { validateAndSavePlan } = await import("../extension/validate-and-save.js");
+    const plan = makePlan();
+    const wrappedJson =
+      "Here is the research plan:\n\n" + JSON.stringify(plan) + "\n\nLet me know if you need changes.";
+    const input = makeInput(plan);
+    input.planJson = wrappedJson;
+    const result = await validateAndSavePlan(input);
+    assert.ok(result.ok, `expected ok, got: ${(result as { error: string }).error}`);
+  });
+
+  it("rejects output without any JSON object", async () => {
+    const { validateAndSavePlan } = await import("../extension/validate-and-save.js");
+    const plan = makePlan();
+    const input = makeInput(plan);
+    input.planJson = "I cannot create a plan because the topic is too broad.";
+    const result = await validateAndSavePlan(input);
+    assert.ok(!result.ok);
+    assert.ok((result as { error: string }).error.includes("JSON"));
+  });
 });
