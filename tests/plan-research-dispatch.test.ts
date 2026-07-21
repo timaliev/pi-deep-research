@@ -75,3 +75,7 @@ it("retries plan creation on JSON parse failure", () => {
     "must retry plan creation on JSON parse failure",
   );
 });
+
+it("logs total prefilter duration", () => {
+  assert.ok(src.includes("prefilter_done") || src.includes("totalDurationMs"), "must log total prefilter duration");
+});
