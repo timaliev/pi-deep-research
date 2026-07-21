@@ -218,4 +218,14 @@ describe("validateAndSavePlan", () => {
     if (!result.ok) return;
     assert.ok(result.planArtifactPath.includes("test-run-id-123"), "artifact path must use provided runId");
   });
+
+  it("generates runId when not provided", async () => {
+    const { validateAndSavePlan } = await import("../extension/validate-and-save.js");
+    const plan = makePlan();
+    const input = makeInput(plan, { artifactsDir: tmpDir });
+    const result = await validateAndSavePlan(input);
+    assert.ok(result.ok);
+    if (!result.ok) return;
+    assert.ok(result.planArtifactPath.includes("-prefilter.json"), "must generate runId when not provided");
+  });
 });
