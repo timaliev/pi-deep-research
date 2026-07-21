@@ -1,7 +1,7 @@
 # ADR-0028: Subprocess prefilter — supersedes ADR-0001 for plan_research
 
 **Date:** 2026-07-18
-**Status:** proposed
+**Status:** accepted ✓ (implemented 2026-07-18)
 
 ## Context
 
