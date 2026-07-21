@@ -123,17 +123,29 @@ export function createPlanResearchTool(
         // continue with empty results
       }
 
+      // Scrape top results for full content
+      const scrapedContent: { url: string; title: string; content: string }[] = [];
+      for (const result of mergeResults.slice(0, settings.prefilterScrapeCount)) {
+        try {
+          const page = await scraper.scrape(result.url);
+          page.content = page.content.substring(0, settings.prefilterScrapeChars);
+          scrapedContent.push(page);
+        } catch {
+          // skip failed scrapes
+        }
+      }
+
       // ── 4. Subprocess: plan creation ────────────────────
       progress("📝 Creating research plan...");
       logger.event("prefilter_plan_creation_start");
-      const mergePrompt = buildMergePrompt(topic, llmTopics, mergeResults);
+      const mergePrompt = buildMergePrompt(topic, llmTopics, mergeResults, scrapedContent);
       let planJson: string;
       try {
         planJson = await callPiJson(mergePrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs, (chunk) => {
           if (settings.logLevel === "verbose") progress(`📝 ${chunk.slice(-80)}`);
         });
         logger.event("prefilter_plan_creation_done", { length: planJson.length });
-        vlog("prefilter_plan_raw", { planJson: planJson.substring(0, 2000) });
+        vlog("prefilter_plan_raw", { planJson });
         progress("✅ Plan created — validating...");
       } catch (err) {
         return {
@@ -154,6 +166,7 @@ export function createPlanResearchTool(
         enabledEngines: settings.enabledEngines,
         profileNames: profileResolver.listNames(),
         reportStyle: settings.reportStyle,
+        runId,
       });
 
       // ── 5a. Retry on JSON parse failure ────────────────
@@ -164,7 +177,7 @@ export function createPlanResearchTool(
         try {
           planJson = await callPiJson(retryPrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs);
           logger.event("prefilter_plan_retry_done", { length: planJson.length });
-          vlog("prefilter_plan_retry_raw", { planJson: planJson.substring(0, 2000) });
+          vlog("prefilter_plan_retry_raw", { planJson });
           saveResult = await validateAndSavePlan({
             planJson,
             topic,
@@ -174,6 +187,7 @@ export function createPlanResearchTool(
             enabledEngines: settings.enabledEngines,
             profileNames: profileResolver.listNames(),
             reportStyle: settings.reportStyle,
+            runId,
           });
         } catch (err) {
           logger.event("prefilter_plan_retry_failed", { error: err instanceof Error ? err.message : String(err) });
