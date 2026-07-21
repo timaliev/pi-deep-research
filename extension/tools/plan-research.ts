@@ -13,6 +13,7 @@ import type { SessionState } from "../session-state.js";
 import type { SearchProviderCredentials, SettingsContext } from "../settings-context.js";
 import { callPiJson } from "../subprocess-runner.js";
 import { validateAndSavePlan } from "../validate-and-save.js";
+import { writeSettingsLog } from "../settings-reporter.js";
 
 /** Replace LLM-written estimatedCost with tool-computed values (ADR-0027). */
 function injectEstimatedCost(planJson: string): string {
@@ -81,6 +82,7 @@ export function createPlanResearchTool(
       mkdirSync(logsDir, { recursive: true });
       const logger = new JsonlLogger(runId, join(logsDir, `${runId}-prefilter.log`));
       logger.event("prefilter_started", { topic });
+      writeSettingsLog(settings, logsDir, { trigger: "run_start", runId });
 
       const progress = (msg: string) => onUpdate({ content: [{ type: "text", text: msg }] });
       const isVerbose = settings.logLevel === "verbose";
