@@ -13,6 +13,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.31.0](https://github.com/timaliev/pi-deep-research/compare/v0.30.4..v0.31.0) - 2026-07-21
+
+### Features
+
+- **(logging)** add verbose logging to research state machine - ([e3b52e0](https://github.com/timaliev/pi-deep-research/commit/e3b52e0d4219725fb0e4b4ba9783635fef138b2c)) - Tim Aliev
+
+### Bug Fixes
+
+- **(run-research)** strengthen auto-advance instruction in tool response - ([e5e1d91](https://github.com/timaliev/pi-deep-research/commit/e5e1d9106cd00297755d0f9e4ce2841a5a525216)) - Tim Aliev
+- **(runid)** pass prefilter runId to research state machine - ([8601ef3](https://github.com/timaliev/pi-deep-research/commit/8601ef38f7a1559dcd766ea17d38065e29e5b0ce)) - Tim Aliev
+- **(settings)** write settings log with runId on run_start in plan-research - ([b600d98](https://github.com/timaliev/pi-deep-research/commit/b600d98595a84b04f5dc18e1164e786d84e19a15)) - Tim Aliev
+- **(settings)** remove redundant timestamp from runId-prefixed settings filenames - ([347ca42](https://github.com/timaliev/pi-deep-research/commit/347ca424af00bddaad4f3d8655176bb2096a8e87)) - Tim Aliev
+- **(settings)** write session-settings only once per process - ([232aafe](https://github.com/timaliev/pi-deep-research/commit/232aafe38124dd29580c005f316613712016b290)) - Tim Aliev
+
+### Tests
+
+- **(runid)** add test for provided vs generated runId - ([58e6d59](https://github.com/timaliev/pi-deep-research/commit/58e6d593b12c5d71754e120f30daa36d3ebc4b4b)) - Tim Aliev
+
 ## [0.30.4](https://github.com/timaliev/pi-deep-research/compare/v0.30.3..v0.30.4) - 2026-07-21
 
 ### Bug Fixes
