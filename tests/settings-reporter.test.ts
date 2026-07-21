@@ -143,6 +143,17 @@ describe("SettingsReporter — buildSettingsTable", () => {
     assert.ok(table.includes("CWD"));
     assert.ok(table.includes(process.version), "must include Node.js version");
     assert.ok(table.includes(process.platform), "must include platform");
+    assert.ok(table.includes(process.arch), "must include architecture");
+  });
+
+  it("System section includes OS release and hostname", async () => {
+    const { SettingsContext } = await import("../extension/settings-context.js");
+    const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
+    const { buildSettingsTable } = await import("../extension/settings-reporter.js");
+    const { hostname } = await import("node:os");
+
+    const table = buildSettingsTable(ctx);
+    assert.ok(table.includes(hostname()), "must include hostname");
   });
 });
 

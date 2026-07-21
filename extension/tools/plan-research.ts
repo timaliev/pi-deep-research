@@ -98,6 +98,7 @@ export function createPlanResearchTool(
       // ── 2. Subprocess: introspection ────────────────────
       progress(`🔍 Researching: ${topic}`);
       logger.event("prefilter_introspection_start");
+      const introStart = Date.now();
 
       const modelSpec = settings.prefilterModel ?? (ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "");
       if (!modelSpec) {
@@ -116,23 +117,35 @@ export function createPlanResearchTool(
         llmTopics = await callPiJson(introPrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs, (chunk) => {
           if (settings.logLevel === "verbose") progress(`📖 ${chunk.slice(-80)}`);
         });
-        logger.event("prefilter_introspection_done", { length: llmTopics.length });
+        logger.event("prefilter_introspection_done", { length: llmTopics.length, durationMs: Date.now() - introStart });
         vlog("prefilter_introspection_result", { topics: llmTopics.substring(0, 500) });
         progress("📚 Introspection complete — merging with web results...");
       } catch (err) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Error during LLM introspection: ${err instanceof Error ? err.message : String(err)}`,
-            },
-          ],
-          details: { error: "introspection_failed" },
-        };
+        logger.event("prefilter_introspection_failed", { error: err instanceof Error ? err.message : String(err) });
+        // Retry once on failure
+        progress("⚠️ Introspection failed — retrying...");
+        try {
+          llmTopics = await callPiJson(introPrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs);
+          logger.event("prefilter_introspection_retry_done", {
+            length: llmTopics.length,
+            durationMs: Date.now() - introStart,
+          });
+        } catch {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error during LLM introspection: ${err instanceof Error ? err.message : String(err)}`,
+              },
+            ],
+            details: { error: "introspection_failed" },
+          };
+        }
       }
 
       // ── 3. Merge search ─────────────────────────────────
       progress("🌐 Searching web for relevant sources...");
+      const searchStart = Date.now();
       const searchQuery = buildSearchQuery(topic);
       vlog("prefilter_search_query", { query: searchQuery, engines, maxResults: 5 });
       let mergeResults: Awaited<ReturnType<typeof searchFn>> = [];
@@ -140,7 +153,10 @@ export function createPlanResearchTool(
         mergeResults = await searchFn(searchQuery, 5, engines, {
           credentials: searchCred,
         });
-        logger.event("prefilter_search_done", { resultCount: mergeResults.length });
+        logger.event("prefilter_search_done", {
+          resultCount: mergeResults.length,
+          durationMs: Date.now() - searchStart,
+        });
       } catch {
         // continue with empty results
       }
