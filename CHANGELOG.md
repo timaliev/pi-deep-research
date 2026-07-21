@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.30.1](https://github.com/timaliev/pi-deep-research/compare/v0.30.0..v0.30.1) - 2026-07-21
+
+### Bug Fixes
+
+- **(prefilter)** extract JSON from LLM output handling markdown fences - ([acb9c32](https://github.com/timaliev/pi-deep-research/commit/acb9c32c5e50c103cbf73223c8d936346b38b64b)) - Tim Aliev
+- **(prefilter)** strict JSON-only prompt + retry on parse failure - ([a52137b](https://github.com/timaliev/pi-deep-research/commit/a52137b55755745b4dc8595eae1afda6ad5b006c)) - Tim Aliev
+
 ## [0.30.0](https://github.com/timaliev/pi-deep-research/compare/v0.29.1..v0.30.0) - 2026-07-21
 
 ### Features
