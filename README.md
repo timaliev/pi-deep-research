@@ -341,9 +341,9 @@ All settings can be configured via environment variables. Env vars take priority
 | `DEEP_RESEARCH_ENABLED_ENGINES` | `duckduckgo,searxng` | Comma-separated list of allowed search engines |
 | `DEEP_RESEARCH_PREFILTER_MODEL` | (active model) | Model to use for prefilter LLM steps (provider/id). Falls back to active session model if unset |
 | `DEEP_RESEARCH_PREFILTER_TIMEOUT_MS` | `120000` | Timeout in ms for each prefilter subprocess call |
-| `DEEP_RESEARCH_LOG_LEVEL` | `normal` | Log verbosity: `off`, `normal`, or `verbose` |
 | `DEEP_RESEARCH_PREFILTER_SCRAPE_COUNT` | `3` | Number of pages to scrape for prefilter plan creation |
 | `DEEP_RESEARCH_PREFILTER_SCRAPE_CHARS` | `2000` | Max characters per scraped page for prefilter |
+| `DEEP_RESEARCH_LOG_LEVEL` | `normal` | Log verbosity: `off`, `normal`, or `verbose` |
 
 #### Search Engine API Keys
 
@@ -463,6 +463,42 @@ Always available — no configuration required. The agent responds with a ` ```m
 Enable `deepResearch.mindMap: true` in settings.json or set `DEEP_RESEARCH_MIND_MAP=true`. After each research run, the agent receives key findings and generates a Mermaid mind map appended to the report as `## Mind Map`.
 
 ## Architecture
+
+### Prefilter: Subprocess LLM Pipeline
+
+`plan_research({ topic })` spawns a `pi` subprocess for LLM steps instead of using Pi's injection-based agent interaction. This eliminates turn-splitting confusion and guarantees structured output.
+
+```
+plan_research({ topic })
+  │
+  ├─ 1. Resolve engines/profile from settings (no LLM)
+  │
+  ├─ 2. Subprocess: pi --mode json --no-session --no-extensions
+  │      Prompt: buildIntrospectionPrompt(topic)
+  │      → LLM proposes topics from internal knowledge
+  │      Retries once on failure
+  │
+  ├─ 3. Web search (sync) + scrape top N pages
+  │      Configurable via prefilterScrapeCount/Chars
+  │
+  ├─ 4. Subprocess: pi --mode json --no-session --no-extensions
+  │      Prompt: buildMergePrompt(topic, topics, results, scraped)
+  │      Includes actual settings (engines, profile, reportStyle)
+  │      Requires "Output ONLY valid JSON" with schema template
+  │      → LLM produces Research Plan JSON
+  │      Retries with stricter prompt on JSON parse failure
+  │
+  ├─ 5. Tool computes estimatedCost (breadth × depth × questions)
+  │      validateAndSavePlan() — JSON extraction + validation + artifact
+  │
+  └─ 6. TUI confirmation dialog
+```
+
+The subprocess runs `pi` with `--no-extensions` to prevent the deep-research extension from loading inside the subprocess. It uses `--mode json` for structured JSONL output and `--no-session` for ephemeral execution. The parent process captures stdout via JSONL parsing, extracts the final assistant text, and handles validation.
+
+Different models can be used for prefilter vs research via the `prefilterModel` setting. Prefilter only needs structured JSON output — fast non-reasoning models (haiku, flash) work well. The research run uses the active Pi session model.
+
+### Research Run
 
 ```
 user says "research topic X"
