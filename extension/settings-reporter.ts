@@ -72,8 +72,13 @@ export function appendSettingsSection(report: string, ctx: SettingsContext): str
   return `${report}\n## Settings\n\n${table}\n`;
 }
 
-/** In-memory tracker for last settings log write. Prevents duplicate logs within the same process. */
-let lastLogMinute = "";
+/** In-memory tracker: write session_start log only once per process. */
+let sessionStartWritten = false;
+
+/** Reset session_start dedup flag (for tests). */
+export function _resetSessionStartFlag(): void {
+  sessionStartWritten = false;
+}
 
 /** Write settings JSON log to disk. Deduplicated — only one log per timestamp-minute per process. */
 export function writeSettingsLog(
@@ -81,10 +86,12 @@ export function writeSettingsLog(
   logDir: string,
   opts: { trigger: "session_start" | "run_start"; runId?: string },
 ): void {
+  if (opts.trigger === "session_start") {
+    if (sessionStartWritten) return;
+    sessionStartWritten = true;
+  }
+
   const now = new Date();
-  const minute = `${now.toISOString().slice(0, 16)}`;
-  if (opts.trigger === "session_start" && minute === lastLogMinute) return;
-  lastLogMinute = minute;
 
   const json = buildSettingsJson(ctx);
   const timestamp = now.toISOString().replace(/[:.]/g, "-");
