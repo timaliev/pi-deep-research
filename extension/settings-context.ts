@@ -240,12 +240,12 @@ export class SettingsContext implements SettingsContextData {
       homeDir,
     );
 
-    // ─── prefilterTimeoutMs (optional — defaults to 120000) ─
+    // ─── prefilterTimeoutMs (optional — defaults to 300000) ─
     [this.prefilterTimeoutMs, this.prefilterTimeoutMsSource] = resolveNumber(
       ENV.prefilterTimeoutMs,
       localDr.prefilterTimeoutMs,
       globalDr.prefilterTimeoutMs,
-      120_000,
+      300_000,
       localPath,
       globalPath,
       homeDir,
@@ -430,16 +430,17 @@ export class SettingsContext implements SettingsContextData {
       },
     ];
 
-    // Credentials with masked values
+    // Credentials with masked values (except public SearXNG URL)
     const credEnvMap = SearchProviderCredentials.ENV_MAP;
+    const publicKeys = new Set(["searxng.url"]);
     for (const engine of Object.keys(credEnvMap)) {
       for (const key of Object.keys(credEnvMap[engine])) {
         const src = this.credentialSources[engine]?.[key] ?? sourceDefault();
-        entries.push({
-          key: `${engine}.${key}`,
-          value: "****",
-          source: src,
-        });
+        const fullKey = `${engine}.${key}`;
+        const value = publicKeys.has(fullKey)
+          ? (this.credentials.get(engine as "searxng", key as "url") ?? "")
+          : "****";
+        entries.push({ key: fullKey, value, source: src });
       }
     }
 

@@ -13,6 +13,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.32.0](https://github.com/timaliev/pi-deep-research/compare/v0.31.0..v0.32.0) - 2026-07-21
+
+### Features
+
+- **(run-research)** add warning about injection-based flow on research start - ([d5c4d02](https://github.com/timaliev/pi-deep-research/commit/d5c4d021e34ee957fb361a13b266730aab79fdcc)) - Tim Aliev
+- system stats enhancement + introspection retry + stage timing - ([5e67b78](https://github.com/timaliev/pi-deep-research/commit/5e67b78208e4829dbe0f67b760b7bde6489abfe6)) - Tim Aliev
+
+### Bug Fixes
+
+- **(prefilter)** add durationMs to all stages + verbose timing progress - ([7e5e33b](https://github.com/timaliev/pi-deep-research/commit/7e5e33ba80effcbd5c65eda1e1a7ad7c97507d30)) - Tim Aliev
+- **(prefilter)** add verbose progress with timing for search and plan creation - ([7709e91](https://github.com/timaliev/pi-deep-research/commit/7709e9121c51e8dd0f85f598e6d8f8460150d0a1)) - Tim Aliev
+- **(prefilter)** increase default timeout to 5min + helpful timeout error message - ([8016d3e](https://github.com/timaliev/pi-deep-research/commit/8016d3e588eeccae64da2e567887385f895f64ee)) - Tim Aliev
+- **(settings)** show SearXNG URL in settings table instead of masking - ([c56fefe](https://github.com/timaliev/pi-deep-research/commit/c56fefe3651e8f37c867fb6469d93f61bb7bb054)) - Tim Aliev
+
+### Documentation
+
+- subprocess architecture section, updated ADR-0028, TODO cleanup - ([fb97b38](https://github.com/timaliev/pi-deep-research/commit/fb97b38f7a1873e4488a856d2a5d38053da5be80)) - Tim Aliev
+- elaborate on prefilterModel, timeoutMs, scrape settings in README - ([14334c8](https://github.com/timaliev/pi-deep-research/commit/14334c8d18ac386e41cbbfecd935d4fcf54d32e7)) - Tim Aliev
+
 ## [0.31.0](https://github.com/timaliev/pi-deep-research/compare/v0.30.4..v0.31.0) - 2026-07-21
 
 ### Features

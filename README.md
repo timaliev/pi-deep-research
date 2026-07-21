@@ -188,7 +188,7 @@ Model to use for prefilter LLM steps (introspection + plan creation). Format: `p
 |---------|------|---------|
 | `DEEP_RESEARCH_PREFILTER_MODEL` | `string` | (active model) |
 
-Also configure timeout via `prefilterTimeoutMs` (default 120000 = 2min):
+Also configure timeout via `prefilterTimeoutMs` (default 300000 = 5min):
 
 ```json
 "prefilterTimeoutMs": 180000
@@ -196,7 +196,7 @@ Also configure timeout via `prefilterTimeoutMs` (default 120000 = 2min):
 
 | Env var | Type | Default |
 |---------|------|---------|
-| `DEEP_RESEARCH_PREFILTER_TIMEOUT_MS` | `number` | `120000` |
+| `DEEP_RESEARCH_PREFILTER_TIMEOUT_MS` | `number` | `300000` |
 
 #### `logLevel`
 
@@ -340,10 +340,10 @@ All settings can be configured via environment variables. Env vars take priority
 | `DEEP_RESEARCH_SETTINGS_IN_REPORT` | `false` | Append settings section to report (`true`) |
 | `DEEP_RESEARCH_ENABLED_ENGINES` | `duckduckgo,searxng` | Comma-separated list of allowed search engines |
 | `DEEP_RESEARCH_PREFILTER_MODEL` | (active model) | Model to use for prefilter LLM steps (provider/id). Falls back to active session model if unset |
-| `DEEP_RESEARCH_PREFILTER_TIMEOUT_MS` | `120000` | Timeout in ms for each prefilter subprocess call |
-| `DEEP_RESEARCH_LOG_LEVEL` | `normal` | Log verbosity: `off`, `normal`, or `verbose` |
+| `DEEP_RESEARCH_PREFILTER_TIMEOUT_MS` | `300000` | Timeout in ms for each prefilter subprocess call |
 | `DEEP_RESEARCH_PREFILTER_SCRAPE_COUNT` | `3` | Number of pages to scrape for prefilter plan creation |
 | `DEEP_RESEARCH_PREFILTER_SCRAPE_CHARS` | `2000` | Max characters per scraped page for prefilter |
+| `DEEP_RESEARCH_LOG_LEVEL` | `normal` | Log verbosity: `off`, `normal`, or `verbose` |
 
 #### Search Engine API Keys
 
@@ -463,6 +463,52 @@ Always available — no configuration required. The agent responds with a ` ```m
 Enable `deepResearch.mindMap: true` in settings.json or set `DEEP_RESEARCH_MIND_MAP=true`. After each research run, the agent receives key findings and generates a Mermaid mind map appended to the report as `## Mind Map`.
 
 ## Architecture
+
+### Prefilter: Subprocess LLM Pipeline
+
+`plan_research({ topic })` spawns a `pi` subprocess for LLM steps instead of using Pi's injection-based agent interaction. This eliminates turn-splitting confusion and guarantees structured output.
+
+```
+plan_research({ topic })
+  │
+  ├─ 1. Resolve engines/profile from settings (no LLM)
+  │
+  ├─ 2. Subprocess: pi --mode json --no-session --no-extensions
+  │      Prompt: buildIntrospectionPrompt(topic)
+  │      → LLM proposes topics from internal knowledge
+  │      Retries once on failure
+  │
+  ├─ 3. Web search (sync) + scrape top N pages
+  │      Configurable via prefilterScrapeCount/Chars
+  │
+  ├─ 4. Subprocess: pi --mode json --no-session --no-extensions
+  │      Prompt: buildMergePrompt(topic, topics, results, scraped)
+  │      Includes actual settings (engines, profile, reportStyle)
+  │      Requires "Output ONLY valid JSON" with schema template
+  │      → LLM produces Research Plan JSON
+  │      Retries with stricter prompt on JSON parse failure
+  │
+  ├─ 5. Tool computes estimatedCost (breadth × depth × questions)
+  │      validateAndSavePlan() — JSON extraction + validation + artifact
+  │
+  └─ 6. TUI confirmation dialog
+```
+
+The subprocess runs `pi` with `--no-extensions` to prevent the deep-research extension from loading inside the subprocess. It uses `--mode json` for structured JSONL output and `--no-session` for ephemeral execution. The parent process captures stdout via JSONL parsing, extracts the final assistant text, and handles validation.
+
+Different models can be used for prefilter vs research via the `prefilterModel` setting. Prefilter only needs structured JSON output — fast non-reasoning models (haiku, flash) work well. The research run uses the active Pi session model.
+
+If `prefilterModel` is not set, the active Pi session model is used. This works but may be slower and more expensive than necessary. Configure a fast model to reduce prefilter time from ~5 minutes to ~30 seconds.
+
+If the subprocess times out (model too slow or overloaded), increase `prefilterTimeoutMs` (default 300000 = 5 minutes). The subprocess runs with a hard timeout — if exceeded, the tool retries once then returns an error.
+
+#### Prefilter scrape settings
+
+`prefilterScrapeCount` (default 3) controls how many web pages are fetched in full for the LLM to read during plan creation. Higher values give the LLM more context for better research questions but slow down the pipeline.
+
+`prefilterScrapeChars` (default 2000) controls how many characters of each scraped page are included. Increase for more detailed context, decrease for speed. The LLM sees both search result snippets AND full page content — this dual context produces higher-quality plans than snippets alone.
+
+### Research Run
 
 ```
 user says "research topic X"

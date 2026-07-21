@@ -9,7 +9,7 @@ export function callPiJson(
   model: string,
   cwd: string,
   signal?: AbortSignal,
-  timeoutMs = 120_000,
+  timeoutMs = 300_000,
   onChunk?: (text: string) => void,
 ): Promise<string> {
   return new Promise((resolve, reject) => {

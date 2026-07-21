@@ -15,7 +15,15 @@ import { callPiJson } from "../subprocess-runner.js";
 import { validateAndSavePlan } from "../validate-and-save.js";
 import { writeSettingsLog } from "../settings-reporter.js";
 
-/** Replace LLM-written estimatedCost with tool-computed values (ADR-0027). */
+/** Build a helpful error message for subprocess failures. */
+function timeoutHelp(err: unknown, settings: SettingsContext): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  const help =
+    msg.toLowerCase().includes("timeout") || msg.toLowerCase().includes("timed")
+      ? `\n\n💡 This was a timeout (current limit: ${settings.prefilterTimeoutMs}ms). Try:\n- Set DEEP_RESEARCH_PREFILTER_TIMEOUT_MS=600000 for 10min limit\n- Set prefilterModel to a fast non-reasoning model (e.g. "anthropic/claude-haiku-4-5") in settings.json\n- See docs: https://github.com/timaliev/pi-deep-research#prefiltermodel`
+      : "";
+  return msg + help;
+}
 function injectEstimatedCost(planJson: string): string {
   try {
     const plan = JSON.parse(planJson);
@@ -98,6 +106,7 @@ export function createPlanResearchTool(
       // ── 2. Subprocess: introspection ────────────────────
       progress(`🔍 Researching: ${topic}`);
       logger.event("prefilter_introspection_start");
+      const introStart = Date.now();
 
       const modelSpec = settings.prefilterModel ?? (ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "");
       if (!modelSpec) {
@@ -116,23 +125,36 @@ export function createPlanResearchTool(
         llmTopics = await callPiJson(introPrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs, (chunk) => {
           if (settings.logLevel === "verbose") progress(`📖 ${chunk.slice(-80)}`);
         });
-        logger.event("prefilter_introspection_done", { length: llmTopics.length });
+        logger.event("prefilter_introspection_done", { length: llmTopics.length, durationMs: Date.now() - introStart });
         vlog("prefilter_introspection_result", { topics: llmTopics.substring(0, 500) });
-        progress("📚 Introspection complete — merging with web results...");
+        const introSecs = ((Date.now() - introStart) / 1000).toFixed(1);
+        progress(`📚 Introspection complete (${introSecs}s) — merging with web results...`);
       } catch (err) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Error during LLM introspection: ${err instanceof Error ? err.message : String(err)}`,
-            },
-          ],
-          details: { error: "introspection_failed" },
-        };
+        logger.event("prefilter_introspection_failed", { error: err instanceof Error ? err.message : String(err) });
+        // Retry once on failure
+        progress("⚠️ Introspection failed — retrying...");
+        try {
+          llmTopics = await callPiJson(introPrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs);
+          logger.event("prefilter_introspection_retry_done", {
+            length: llmTopics.length,
+            durationMs: Date.now() - introStart,
+          });
+        } catch {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error during LLM introspection: ${timeoutHelp(err, settings)}`,
+              },
+            ],
+            details: { error: "introspection_failed" },
+          };
+        }
       }
 
       // ── 3. Merge search ─────────────────────────────────
       progress("🌐 Searching web for relevant sources...");
+      const searchStart = Date.now();
       const searchQuery = buildSearchQuery(topic);
       vlog("prefilter_search_query", { query: searchQuery, engines, maxResults: 5 });
       let mergeResults: Awaited<ReturnType<typeof searchFn>> = [];
@@ -140,7 +162,12 @@ export function createPlanResearchTool(
         mergeResults = await searchFn(searchQuery, 5, engines, {
           credentials: searchCred,
         });
-        logger.event("prefilter_search_done", { resultCount: mergeResults.length });
+        logger.event("prefilter_search_done", {
+          resultCount: mergeResults.length,
+          durationMs: Date.now() - searchStart,
+        });
+        const searchSecs = ((Date.now() - searchStart) / 1000).toFixed(1);
+        if (isVerbose) progress(`🌐 Search done (${searchSecs}s, ${mergeResults.length} results)`);
       } catch {
         // continue with empty results
       }
@@ -160,6 +187,7 @@ export function createPlanResearchTool(
       // ── 4. Subprocess: plan creation ────────────────────
       progress("📝 Creating research plan...");
       logger.event("prefilter_plan_creation_start");
+      const planStart = Date.now();
       const mergePrompt = buildMergePrompt(
         topic,
         llmTopics,
@@ -174,18 +202,17 @@ export function createPlanResearchTool(
         planJson = await callPiJson(mergePrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs, (chunk) => {
           if (settings.logLevel === "verbose") progress(`📝 ${chunk.slice(-80)}`);
         });
-        logger.event("prefilter_plan_creation_done", { length: planJson.length });
+        logger.event("prefilter_plan_creation_done", { length: planJson.length, durationMs: Date.now() - planStart });
         vlog("prefilter_plan_raw", { planJson });
 
         // Inject computed estimatedCost (ADR-0027 — tool computes, not LLM)
         planJson = injectEstimatedCost(planJson);
 
-        progress("✅ Plan created — validating...");
+        const planSecs = ((Date.now() - planStart) / 1000).toFixed(1);
+        progress(`✅ Plan created (${planSecs}s) — validating...`);
       } catch (err) {
         return {
-          content: [
-            { type: "text", text: `Error during plan creation: ${err instanceof Error ? err.message : String(err)}` },
-          ],
+          content: [{ type: "text", text: `Error during plan creation: ${timeoutHelp(err, settings)}` }],
           details: { error: "plan_creation_failed" },
         };
       }
