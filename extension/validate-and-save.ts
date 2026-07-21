@@ -5,6 +5,39 @@
 import type { PrefilterArtifact, ResearchPlan } from "../prefilter.js";
 import type { SearchEngine } from "../search/web-search.js";
 
+/** Extract JSON from LLM output — handles markdown fences and bare JSON. */
+function extractJson(text: string): string | null {
+  if (!text) return null;
+
+  // Try markdown code fence: ```json ... ```
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence?.[1]?.trim()) return fence[1].trim();
+
+  // Try bare JSON — must start with {
+  const trimmed = text.trim();
+  if (trimmed.startsWith("{")) {
+    try {
+      JSON.parse(trimmed);
+      return trimmed;
+    } catch {
+      /* not bare JSON */
+    }
+  }
+
+  // Try to find JSON object anywhere in text
+  const objMatch = text.match(/\{[\s\S]*\}/);
+  if (objMatch) {
+    try {
+      JSON.parse(objMatch[0]);
+      return objMatch[0];
+    } catch {
+      /* fall through */
+    }
+  }
+
+  return null;
+}
+
 export interface SavePlanInput {
   planJson: string;
   topic: string;
@@ -31,10 +64,14 @@ export type SavePlanResult = SavePlanOk | SavePlanError;
 
 /** Parse and validate a plan JSON, apply engine rules, save artifact. */
 export async function validateAndSavePlan(input: SavePlanInput): Promise<SavePlanResult> {
-  // 1. Parse JSON
+  // 1. Extract + parse JSON from LLM output
+  const json = extractJson(input.planJson);
+  if (!json)
+    return { ok: false, error: "Failed to find valid JSON in plan output. Ensure response contains JSON plan." };
+
   let plan: unknown;
   try {
-    plan = JSON.parse(input.planJson);
+    plan = JSON.parse(json);
   } catch {
     return { ok: false, error: "Failed to parse plan JSON. Ensure valid JSON syntax." };
   }
