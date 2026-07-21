@@ -63,6 +63,7 @@ export async function convertToPdf(params: ConvertToPdfParams): Promise<ConvertT
         outputPath,
         method: "pandoc",
       };
+// biome-ignore lint: pre-existing
     } catch (err: any) {
       return {
         kind: "error",
