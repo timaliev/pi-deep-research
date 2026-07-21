@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **(lint)** resolve all biome lint diagnostics for CI release pipeline - ([7f5c9a8](https://github.com/timaliev/pi-deep-research/commit/7f5c9a844525a2f2aac0272275a3ec72ef959969)) - Tim Aliev
 - **(lint)** resolve biome errors, 11 files auto-fixed - ([71ad015](https://github.com/timaliev/pi-deep-research/commit/71ad015e83e497cd06160ffedbeb7a37e45b9922)) - Tim Aliev
 
+### Miscellaneous Chores
+
+- trigger release workflow - ([10050f3](https://github.com/timaliev/pi-deep-research/commit/10050f3ebceac3610eefe3b294d5cdf58a055857)) - Tim Aliev
+
 ## [0.29.1](https://github.com/timaliev/pi-deep-research/compare/v0.29.0..v0.29.1) - 2026-07-20
 
 ### Bug Fixes
