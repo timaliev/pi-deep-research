@@ -207,4 +207,15 @@ describe("validateAndSavePlan", () => {
     assert.ok(!result.ok);
     assert.ok((result as { error: string }).error.includes("JSON"));
   });
+
+  it("uses provided runId instead of generating new one", async () => {
+    const { validateAndSavePlan } = await import("../extension/validate-and-save.js");
+    const plan = makePlan();
+    const input = makeInput(plan, { artifactsDir: tmpDir });
+    (input as Record<string, unknown>).runId = "test-run-id-123";
+    const result = await validateAndSavePlan(input as Parameters<typeof validateAndSavePlan>[0]);
+    assert.ok(result.ok);
+    if (!result.ok) return;
+    assert.ok(result.planArtifactPath.includes("test-run-id-123"), "artifact path must use provided runId");
+  });
 });

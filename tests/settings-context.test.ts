@@ -12,6 +12,8 @@ const ENV_KEYS = {
   prefilterModel: "DEEP_RESEARCH_PREFILTER_MODEL",
   prefilterTimeoutMs: "DEEP_RESEARCH_PREFILTER_TIMEOUT_MS",
   logLevel: "DEEP_RESEARCH_LOG_LEVEL",
+  prefilterScrapeCount: "DEEP_RESEARCH_PREFILTER_SCRAPE_COUNT",
+  prefilterScrapeChars: "DEEP_RESEARCH_PREFILTER_SCRAPE_CHARS",
 };
 
 // We'll test against the real implementation
@@ -376,5 +378,18 @@ describe("SettingsContext — unified settings cascade", () => {
     const { SettingsContext } = await import("../extension/settings-context.js");
     const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
     assert.equal(ctx.logLevel, "off");
+  });
+
+  // --- prefilterScrapeCount ---
+  it("prefilterScrapeCount defaults to 3", async () => {
+    const { SettingsContext } = await import("../extension/settings-context.js");
+    const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
+    assert.equal(ctx.prefilterScrapeCount, 3);
+  });
+
+  it("prefilterScrapeChars defaults to 2000", async () => {
+    const { SettingsContext } = await import("../extension/settings-context.js");
+    const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
+    assert.equal(ctx.prefilterScrapeChars, 2000);
   });
 });

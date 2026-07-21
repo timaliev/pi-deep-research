@@ -23,6 +23,8 @@ const ENV = {
   prefilterModel: "DEEP_RESEARCH_PREFILTER_MODEL",
   prefilterTimeoutMs: "DEEP_RESEARCH_PREFILTER_TIMEOUT_MS",
   logLevel: "DEEP_RESEARCH_LOG_LEVEL",
+  prefilterScrapeCount: "DEEP_RESEARCH_PREFILTER_SCRAPE_COUNT",
+  prefilterScrapeChars: "DEEP_RESEARCH_PREFILTER_SCRAPE_CHARS",
 } as const;
 
 // ─── Built-in defaults ─────────────────────────────────────────
@@ -33,6 +35,8 @@ const BUILTIN = {
   enabledEngines: ALL_ENGINES.filter((name) => ENGINE_META[name].free),
   settingsReport: { onSessionStart: false, onRunStart: false, inReport: false },
   logLevel: "normal" as "off" | "normal" | "verbose",
+  prefilterScrapeCount: 3,
+  prefilterScrapeChars: 2000,
 };
 
 // ─── Provenance helpers ────────────────────────────────────────
@@ -82,6 +86,8 @@ export interface SettingsContextData {
   prefilterModel: string | undefined;
   prefilterTimeoutMs: number;
   logLevel: "off" | "normal" | "verbose";
+  prefilterScrapeCount: number;
+  prefilterScrapeChars: number;
 }
 
 export interface InitParams {
@@ -106,6 +112,8 @@ export class SettingsContext implements SettingsContextData {
   prefilterModel: string | undefined;
   prefilterTimeoutMs!: number;
   logLevel!: "off" | "normal" | "verbose";
+  prefilterScrapeCount!: number;
+  prefilterScrapeChars!: number;
 
   // ─── Provenance fields (parallel to value fields) ─────────
   reportsDirSource!: SourceTag;
@@ -121,6 +129,8 @@ export class SettingsContext implements SettingsContextData {
   prefilterModelSource!: SourceTag;
   prefilterTimeoutMsSource!: SourceTag;
   logLevelSource!: SourceTag;
+  prefilterScrapeCountSource!: SourceTag;
+  prefilterScrapeCharsSource!: SourceTag;
   credentialSources!: Record<string, Record<string, SourceTag>>;
 
   private homeAgentDir: string;
@@ -251,6 +261,28 @@ export class SettingsContext implements SettingsContextData {
       globalPath,
       homeDir,
     ) as ["off" | "normal" | "verbose", SourceTag];
+
+    // ─── prefilterScrapeCount ────────────────────────────
+    [this.prefilterScrapeCount, this.prefilterScrapeCountSource] = resolveNumber(
+      ENV.prefilterScrapeCount,
+      localDr.prefilterScrapeCount,
+      globalDr.prefilterScrapeCount,
+      BUILTIN.prefilterScrapeCount,
+      localPath,
+      globalPath,
+      homeDir,
+    );
+
+    // ─── prefilterScrapeChars ────────────────────────────
+    [this.prefilterScrapeChars, this.prefilterScrapeCharsSource] = resolveNumber(
+      ENV.prefilterScrapeChars,
+      localDr.prefilterScrapeChars,
+      globalDr.prefilterScrapeChars,
+      BUILTIN.prefilterScrapeChars,
+      localPath,
+      globalPath,
+      homeDir,
+    );
 
     // ─── settingsReport group ──────────────────────────────
     const localSr = localDr.settingsReport as Record<string, unknown> | undefined;
@@ -386,6 +418,16 @@ export class SettingsContext implements SettingsContextData {
       { key: "prefilterModel", value: this.prefilterModel ?? "(active model)", source: this.prefilterModelSource },
       { key: "prefilterTimeoutMs", value: String(this.prefilterTimeoutMs), source: this.prefilterTimeoutMsSource },
       { key: "logLevel", value: this.logLevel, source: this.logLevelSource },
+      {
+        key: "prefilterScrapeCount",
+        value: String(this.prefilterScrapeCount),
+        source: this.prefilterScrapeCountSource,
+      },
+      {
+        key: "prefilterScrapeChars",
+        value: String(this.prefilterScrapeChars),
+        source: this.prefilterScrapeCharsSource,
+      },
     ];
 
     // Credentials with masked values
