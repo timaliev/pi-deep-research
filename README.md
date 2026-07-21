@@ -129,6 +129,8 @@ Add a `deepResearch` key to `<cwd>/.pi/settings.json` (project-local) or `~/.pi/
     },
     "defaultProfile": "deep",
     "prefilterModel": "anthropic/claude-haiku-4-5",
+    "prefilterTimeoutMs": 180000,
+    "logLevel": "verbose",
     "artifactsDir": "./deep-research/artifacts",
     "reportsDir": "./deep-research/reports"
   }
@@ -195,6 +197,38 @@ Also configure timeout via `prefilterTimeoutMs` (default 120000 = 2min):
 | Env var | Type | Default |
 |---------|------|---------|
 | `DEEP_RESEARCH_PREFILTER_TIMEOUT_MS` | `number` | `120000` |
+
+#### `logLevel`
+
+Controls log detail for prefilter and research run logs.
+
+```json
+"logLevel": "verbose"
+```
+
+| Value | Effect |
+|-------|--------|
+| `off` | Error-only |
+| `normal` | Phase transitions, counts, timing (default) |
+| `verbose` | Full detail: prompts, model, queries, results, subprocess output |
+
+| Env var | Type | Default |
+|---------|------|---------|
+| `DEEP_RESEARCH_LOG_LEVEL` | `string` | `normal` |
+
+#### `prefilterScrapeCount` / `prefilterScrapeChars`
+
+Control how much web content is fed to the LLM for research plan creation.
+
+```json
+"prefilterScrapeCount": 3,
+"prefilterScrapeChars": 2000
+```
+
+| Setting | Env var | Default |
+|---------|---------|---------|
+| `prefilterScrapeCount` | `DEEP_RESEARCH_PREFILTER_SCRAPE_COUNT` | `3` |
+| `prefilterScrapeChars` | `DEEP_RESEARCH_PREFILTER_SCRAPE_CHARS` | `2000` |
 
 #### `reportStyle`
 
@@ -307,6 +341,9 @@ All settings can be configured via environment variables. Env vars take priority
 | `DEEP_RESEARCH_ENABLED_ENGINES` | `duckduckgo,searxng` | Comma-separated list of allowed search engines |
 | `DEEP_RESEARCH_PREFILTER_MODEL` | (active model) | Model to use for prefilter LLM steps (provider/id). Falls back to active session model if unset |
 | `DEEP_RESEARCH_PREFILTER_TIMEOUT_MS` | `120000` | Timeout in ms for each prefilter subprocess call |
+| `DEEP_RESEARCH_LOG_LEVEL` | `normal` | Log verbosity: `off`, `normal`, or `verbose` |
+| `DEEP_RESEARCH_PREFILTER_SCRAPE_COUNT` | `3` | Number of pages to scrape for prefilter plan creation |
+| `DEEP_RESEARCH_PREFILTER_SCRAPE_CHARS` | `2000` | Max characters per scraped page for prefilter |
 
 #### Search Engine API Keys
 
