@@ -110,12 +110,20 @@ export function buildMergePrompt(
   topic: string,
   llmTopics: string,
   searchResults: import("../search/web-search.js").WebSearchResult[],
+  scrapedContent?: import("../scraper.js").ScrapedPage[],
 ): string {
   let prompt = `## Merge & Plan
 
 Topic: ${topic}\n\n### LLM Knowledge Topics\n${llmTopics}\n\n### Web Search Results\n`;
   for (const r of searchResults) {
     prompt += `- [${r.title}](${r.url}): ${r.snippet}\n`;
+  }
+  if (scrapedContent && scrapedContent.length > 0) {
+    prompt += `\n### Scraped Content\n\n`;
+    for (const page of scrapedContent) {
+      const excerpt = page.content.length > 2000 ? page.content.substring(0, 2000) + "..." : page.content;
+      prompt += `**${page.title}** (${page.url})\n\n${excerpt}\n\n---\n`;
+    }
   }
   prompt += `\n### Instructions\n\n1. Merge topics from both sources\n2. Tag each topic with source: "web", "internal", or "both"\n3. Rate importance and question validity\n4. Flag contradictions between internal knowledge and web sources\n5. Flag debatable facts that need validation\n6. Produce final Research Plan JSON with questionMetadata\n\n**Output ONLY valid JSON. No markdown fences, no explanation, no other text — just the JSON object.**`;
   return prompt;

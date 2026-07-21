@@ -4,6 +4,7 @@
 
 - DONE: add PrefilterManager.next() unified entry point (ADR-0027). Removed estimate_research_cost tool. Updated SKILL.md Phase 3.
 - TODO: make all prefilter errors self-recovering (ADR-0027 refinement) — design documented, implementation pending
+- TODO: enhance System stats in settings report — add Pi version, OS details (macOS/linux kernel version), CPU arch details, shell, terminal type, locale. See `settings-reporter.ts:getSystemInfo()`.
 
 ## Remaining (ADR-0013: MCP/local sources)
 

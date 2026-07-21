@@ -47,6 +47,8 @@ export interface SavePlanInput {
   enabledEngines: string[];
   profileNames: string[];
   reportStyle: string;
+  /** Pre-generated runId from plan_research (shared across prefilter + research run). */
+  runId?: string;
 }
 
 export interface SavePlanOk {
@@ -94,7 +96,7 @@ export async function validateAndSavePlan(input: SavePlanInput): Promise<SavePla
 
   // 4. Generate runId and save artifact
   const { generateRunId } = await import("./ids.js");
-  const runId = generateRunId();
+  const runId = input.runId ?? generateRunId();
   const fs = await import("node:fs/promises");
   const path = await import("node:path");
 

@@ -13,6 +13,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.30.3](https://github.com/timaliev/pi-deep-research/compare/v0.30.2..v0.30.3) - 2026-07-21
+
+### Bug Fixes
+
+- **(prefilter)** scrape top 2 search results for plan creation - ([6f2e3a7](https://github.com/timaliev/pi-deep-research/commit/6f2e3a7a8437c66beedb401fb2022c3055ec5b16)) - Tim Aliev
+- **(prefilter)** unified runId + configurable scrapes + full debug output - ([538b6d6](https://github.com/timaliev/pi-deep-research/commit/538b6d6f1cb42a75e4592cdc7b9d93f16e19fdee)) - Tim Aliev
+- **(subprocess)** disable extensions in pi subprocess via --no-extensions - ([6284ed2](https://github.com/timaliev/pi-deep-research/commit/6284ed23b7810004191c2d4cd43f9fb1ee91d5f5)) - Tim Aliev
+
+### Documentation
+
+- **(todo)** add System stats enhancement item - ([4e46404](https://github.com/timaliev/pi-deep-research/commit/4e46404f818571d7e2357741122dc236a22690c0)) - Tim Aliev
+
 ## [0.30.2](https://github.com/timaliev/pi-deep-research/compare/v0.30.1..v0.30.2) - 2026-07-21
 
 ### Bug Fixes
