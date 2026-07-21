@@ -498,6 +498,16 @@ The subprocess runs `pi` with `--no-extensions` to prevent the deep-research ext
 
 Different models can be used for prefilter vs research via the `prefilterModel` setting. Prefilter only needs structured JSON output — fast non-reasoning models (haiku, flash) work well. The research run uses the active Pi session model.
 
+If `prefilterModel` is not set, the active Pi session model is used. This works but may be slower and more expensive than necessary. Configure a fast model to reduce prefilter time from ~2 minutes to ~30 seconds.
+
+If the subprocess times out (model too slow or overloaded), increase `prefilterTimeoutMs` (default 120000 = 2 minutes). The subprocess runs with a hard timeout — if exceeded, the tool retries once then returns an error.
+
+#### Prefilter scrape settings
+
+`prefilterScrapeCount` (default 3) controls how many web pages are fetched in full for the LLM to read during plan creation. Higher values give the LLM more context for better research questions but slow down the pipeline.
+
+`prefilterScrapeChars` (default 2000) controls how many characters of each scraped page are included. Increase for more detailed context, decrease for speed. The LLM sees both search result snippets AND full page content — this dual context produces higher-quality plans than snippets alone.
+
 ### Research Run
 
 ```
