@@ -117,6 +117,6 @@ Topic: ${topic}\n\n### LLM Knowledge Topics\n${llmTopics}\n\n### Web Search Resu
   for (const r of searchResults) {
     prompt += `- [${r.title}](${r.url}): ${r.snippet}\n`;
   }
-  prompt += `\n### Instructions\n\n1. Merge topics from both sources\n2. Tag each topic with source: "web", "internal", or "both"\n3. Rate importance and question validity\n4. Flag contradictions between internal knowledge and web sources\n5. Flag debatable facts that need validation\n6. Produce final Research Plan JSON with questionMetadata`;
+  prompt += `\n### Instructions\n\n1. Merge topics from both sources\n2. Tag each topic with source: "web", "internal", or "both"\n3. Rate importance and question validity\n4. Flag contradictions between internal knowledge and web sources\n5. Flag debatable facts that need validation\n6. Produce final Research Plan JSON with questionMetadata\n\n**Output ONLY valid JSON. No markdown fences, no explanation, no other text — just the JSON object.**`;
   return prompt;
 }

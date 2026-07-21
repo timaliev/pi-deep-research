@@ -42,3 +42,16 @@ describe("buildParamsPrompt engine availability", () => {
     );
   });
 });
+
+describe("buildMergePrompt JSON-only instruction", () => {
+  it("has strict JSON-only output instruction", () => {
+    const src = readFileSync(PROMPTS_PATH, "utf-8");
+    // Find buildMergePrompt function body
+    const mergeStart = src.indexOf("export function buildMergePrompt");
+    const mergeBody = src.slice(mergeStart, mergeStart + 1200);
+    assert.ok(
+      mergeBody.includes("Output ONLY") || mergeBody.includes("just the JSON"),
+      "buildMergePrompt must require JSON-only output",
+    );
+  });
+});
