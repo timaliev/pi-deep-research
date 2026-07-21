@@ -55,6 +55,14 @@ export function createRunResearchTool(
         }
       }
 
+      // First call — warn user about injection-based flow
+      if (params.plan_artifact_path) {
+        pi.sendUserMessage(
+          "## Research Started 🔬\n\nResearch runs via injection-based state machine. Each phase injects a prompt for the agent to process. If the process appears to stop, just type **continue** to advance to the next phase.",
+          { deliverAs: "steer" },
+        );
+      }
+
       const result = await orchestrator.handle({
         planArtifactPath: params.plan_artifact_path,
         entries: [...entries] as any[],
