@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.32.1](https://github.com/timaliev/pi-deep-research/compare/v0.32.0..v0.32.1) - 2026-07-21
+
+### Bug Fixes
+
+- **(state-machine)** add durationMs to all phase_changed events - ([ecfab74](https://github.com/timaliev/pi-deep-research/commit/ecfab740b87616b431d4a93d8350174a4109b989)) - Tim Aliev
+- 7 diagnosis fixes - ([c866fe1](https://github.com/timaliev/pi-deep-research/commit/c866fe1332a45fc90b984c3cde6332d11a111466)) - Tim Aliev
+
 ## [0.32.0](https://github.com/timaliev/pi-deep-research/compare/v0.31.0..v0.32.0) - 2026-07-21
 
 ### Features
