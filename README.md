@@ -188,7 +188,7 @@ Model to use for prefilter LLM steps (introspection + plan creation). Format: `p
 |---------|------|---------|
 | `DEEP_RESEARCH_PREFILTER_MODEL` | `string` | (active model) |
 
-Also configure timeout via `prefilterTimeoutMs` (default 120000 = 2min):
+Also configure timeout via `prefilterTimeoutMs` (default 300000 = 5min):
 
 ```json
 "prefilterTimeoutMs": 180000
@@ -196,7 +196,7 @@ Also configure timeout via `prefilterTimeoutMs` (default 120000 = 2min):
 
 | Env var | Type | Default |
 |---------|------|---------|
-| `DEEP_RESEARCH_PREFILTER_TIMEOUT_MS` | `number` | `120000` |
+| `DEEP_RESEARCH_PREFILTER_TIMEOUT_MS` | `number` | `300000` |
 
 #### `logLevel`
 
@@ -340,7 +340,7 @@ All settings can be configured via environment variables. Env vars take priority
 | `DEEP_RESEARCH_SETTINGS_IN_REPORT` | `false` | Append settings section to report (`true`) |
 | `DEEP_RESEARCH_ENABLED_ENGINES` | `duckduckgo,searxng` | Comma-separated list of allowed search engines |
 | `DEEP_RESEARCH_PREFILTER_MODEL` | (active model) | Model to use for prefilter LLM steps (provider/id). Falls back to active session model if unset |
-| `DEEP_RESEARCH_PREFILTER_TIMEOUT_MS` | `120000` | Timeout in ms for each prefilter subprocess call |
+| `DEEP_RESEARCH_PREFILTER_TIMEOUT_MS` | `300000` | Timeout in ms for each prefilter subprocess call |
 | `DEEP_RESEARCH_PREFILTER_SCRAPE_COUNT` | `3` | Number of pages to scrape for prefilter plan creation |
 | `DEEP_RESEARCH_PREFILTER_SCRAPE_CHARS` | `2000` | Max characters per scraped page for prefilter |
 | `DEEP_RESEARCH_LOG_LEVEL` | `normal` | Log verbosity: `off`, `normal`, or `verbose` |
@@ -498,9 +498,9 @@ The subprocess runs `pi` with `--no-extensions` to prevent the deep-research ext
 
 Different models can be used for prefilter vs research via the `prefilterModel` setting. Prefilter only needs structured JSON output — fast non-reasoning models (haiku, flash) work well. The research run uses the active Pi session model.
 
-If `prefilterModel` is not set, the active Pi session model is used. This works but may be slower and more expensive than necessary. Configure a fast model to reduce prefilter time from ~2 minutes to ~30 seconds.
+If `prefilterModel` is not set, the active Pi session model is used. This works but may be slower and more expensive than necessary. Configure a fast model to reduce prefilter time from ~5 minutes to ~30 seconds.
 
-If the subprocess times out (model too slow or overloaded), increase `prefilterTimeoutMs` (default 120000 = 2 minutes). The subprocess runs with a hard timeout — if exceeded, the tool retries once then returns an error.
+If the subprocess times out (model too slow or overloaded), increase `prefilterTimeoutMs` (default 300000 = 5 minutes). The subprocess runs with a hard timeout — if exceeded, the tool retries once then returns an error.
 
 #### Prefilter scrape settings
 

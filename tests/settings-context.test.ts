@@ -328,11 +328,11 @@ describe("SettingsContext — unified settings cascade", () => {
   });
 
   // ─── prefilterTimeoutMs ───────────────────────────────
-  it("prefilterTimeoutMs defaults to 120000", async () => {
+  it("prefilterTimeoutMs defaults to 300000", async () => {
     const { SettingsContext } = await import("../extension/settings-context.js");
     const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
 
-    assert.equal(ctx.prefilterTimeoutMs, 120_000);
+    assert.equal(ctx.prefilterTimeoutMs, 300_000);
     assert.ok(ctx.prefilterTimeoutMsSource.includes("default"), "source must be default");
   });
 

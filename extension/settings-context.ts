@@ -240,12 +240,12 @@ export class SettingsContext implements SettingsContextData {
       homeDir,
     );
 
-    // ─── prefilterTimeoutMs (optional — defaults to 120000) ─
+    // ─── prefilterTimeoutMs (optional — defaults to 300000) ─
     [this.prefilterTimeoutMs, this.prefilterTimeoutMsSource] = resolveNumber(
       ENV.prefilterTimeoutMs,
       localDr.prefilterTimeoutMs,
       globalDr.prefilterTimeoutMs,
-      120_000,
+      300_000,
       localPath,
       globalPath,
       homeDir,

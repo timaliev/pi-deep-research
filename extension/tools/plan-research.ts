@@ -15,7 +15,15 @@ import { callPiJson } from "../subprocess-runner.js";
 import { validateAndSavePlan } from "../validate-and-save.js";
 import { writeSettingsLog } from "../settings-reporter.js";
 
-/** Replace LLM-written estimatedCost with tool-computed values (ADR-0027). */
+/** Build a helpful error message for subprocess failures. */
+function timeoutHelp(err: unknown, settings: SettingsContext): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  const help =
+    msg.toLowerCase().includes("timeout") || msg.toLowerCase().includes("timed")
+      ? `\n\n💡 This was a timeout (current limit: ${settings.prefilterTimeoutMs}ms). Try:\n- Set DEEP_RESEARCH_PREFILTER_TIMEOUT_MS=600000 for 10min limit\n- Set prefilterModel to a fast non-reasoning model (e.g. "anthropic/claude-haiku-4-5") in settings.json\n- See docs: https://github.com/timaliev/pi-deep-research#prefiltermodel`
+      : "";
+  return msg + help;
+}
 function injectEstimatedCost(planJson: string): string {
   try {
     const plan = JSON.parse(planJson);
@@ -136,7 +144,7 @@ export function createPlanResearchTool(
             content: [
               {
                 type: "text",
-                text: `Error during LLM introspection: ${err instanceof Error ? err.message : String(err)}`,
+                text: `Error during LLM introspection: ${timeoutHelp(err, settings)}`,
               },
             ],
             details: { error: "introspection_failed" },
@@ -204,9 +212,7 @@ export function createPlanResearchTool(
         progress(`✅ Plan created (${planSecs}s) — validating...`);
       } catch (err) {
         return {
-          content: [
-            { type: "text", text: `Error during plan creation: ${err instanceof Error ? err.message : String(err)}` },
-          ],
+          content: [{ type: "text", text: `Error during plan creation: ${timeoutHelp(err, settings)}` }],
           details: { error: "plan_creation_failed" },
         };
       }
