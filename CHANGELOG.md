@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.30.2](https://github.com/timaliev/pi-deep-research/compare/v0.30.1..v0.30.2) - 2026-07-21
+
+### Bug Fixes
+
+- **(subprocess)** capture stderr in callPiJson error message - ([e2876e5](https://github.com/timaliev/pi-deep-research/commit/e2876e58a8060f7b6663a7b5e643005512fa1f23)) - Tim Aliev
+
 ## [0.30.1](https://github.com/timaliev/pi-deep-research/compare/v0.30.0..v0.30.1) - 2026-07-21
 
 ### Bug Fixes
