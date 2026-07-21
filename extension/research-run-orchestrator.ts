@@ -122,6 +122,7 @@ export class ResearchRunOrchestrator {
       searchCred: this.searchCred,
       logger,
       defaultReportStyle: this.settings?.reportStyle,
+      logLevel: this.settings?.logLevel,
     });
   }
 
@@ -165,7 +166,7 @@ export class ResearchRunOrchestrator {
 
     const raw = readFileSync(planArtifactPath, "utf-8");
     const artifact: PrefilterArtifact = JSON.parse(raw);
-    const snapshot = ResearchStateMachine.init(artifact.plan, this.profileResolver);
+    const snapshot = ResearchStateMachine.init(artifact.plan, this.profileResolver, artifact.runId);
 
     const deepResearchBase = join(dirname(planArtifactPath), "..");
     const artifactsDir = join(deepResearchBase, "artifacts");

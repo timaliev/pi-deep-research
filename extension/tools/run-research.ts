@@ -104,7 +104,7 @@ export function createRunResearchTool(
         content: [
           {
             type: "text",
-            text: `## Research In Progress\n\nPhase: ${result.snapshot.phase}\nDepth: ${result.snapshot.currentDepth}/${result.snapshot.totalDepth}\nSearch calls: ${result.snapshot.searchCalls}\nScrape calls: ${result.snapshot.scrapeCalls}\n\n${result.inject ? "I've sent you a prompt. Respond, then call run_research again." : "Call run_research again to continue."}`,
+            text: `## Research In Progress\n\nPhase: ${result.snapshot.phase}\nDepth: ${result.snapshot.currentDepth}/${result.snapshot.totalDepth}\nSearch calls: ${result.snapshot.searchCalls}\nScrape calls: ${result.snapshot.scrapeCalls}\n\n${result.inject ? "I've sent you a prompt. Process it, then IMMEDIATELY call run_research() to advance. Do NOT write text before calling." : "Call run_research() now to continue. Do NOT write text before calling."}`,
           },
         ],
         details: { phase: result.snapshot.phase, run_id: result.snapshot.runId },
