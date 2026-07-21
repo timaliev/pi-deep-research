@@ -86,6 +86,7 @@ export class ResearchStateMachine {
   private readonly artifactsDir?: string;
   private readonly searchCred?: SearchProviderCredentials;
   private style?: ReportStyle;
+  private phaseStartMs = 0;
 
   constructor(ctx: ResearchContext) {
     this.searchFn = ctx.searchFn;
@@ -127,6 +128,7 @@ export class ResearchStateMachine {
       snapshot.profile = this.profileResolver.resolve(plan.profile);
       snapshot.totalDepth = snapshot.profile.depth;
     }
+    this.phaseStartMs = Date.now();
     // Resolve report style once per run
     if (!this.style) {
       this.style = createReportStyle(plan.reportStyle ?? this.defaultReportStyle) ?? createReportStyle("narrative")!;

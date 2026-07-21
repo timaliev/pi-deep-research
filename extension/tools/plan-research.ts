@@ -90,8 +90,9 @@ export function createPlanResearchTool(
       mkdirSync(logsDir, { recursive: true });
       const logger = new JsonlLogger(runId, join(logsDir, `${runId}-prefilter.log`));
       logger.event("prefilter_started", { topic });
-      writeSettingsLog(settings, logsDir, { trigger: "run_start", runId });
+      writeSettingsLog(settings, settings.artifactsDir, { trigger: "run_start", runId });
 
+      const prefilterStart = Date.now();
       const progress = (msg: string) => onUpdate({ content: [{ type: "text", text: msg }] });
       const isVerbose = settings.logLevel === "verbose";
       const vlog = (type: string, data: Record<string, unknown>) => {
@@ -153,7 +154,7 @@ export function createPlanResearchTool(
       }
 
       // ── 3. Merge search ─────────────────────────────────
-      progress("🌐 Searching web for relevant sources...");
+      progress("🌐 Preliminary searching web for relevant sources...");
       const searchStart = Date.now();
       const searchQuery = buildSearchQuery(topic);
       vlog("prefilter_search_query", { query: searchQuery, engines, maxResults: 5 });
@@ -297,7 +298,7 @@ export function createPlanResearchTool(
         planPath,
       );
       if (dialogResult.cancelled) {
-        logger.event("prefilter_cancelled", { planPath });
+        logger.event("prefilter_cancelled", { planPath, totalDurationMs: Date.now() - prefilterStart });
         return {
           content: [
             { type: "text", text: "## Plan Cancelled ❌\n\nPlan discarded. Start a new research topic when ready." },

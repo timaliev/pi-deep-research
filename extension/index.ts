@@ -55,7 +55,7 @@ export default function (pi: ExtensionAPI) {
     // Always log settings on session start
     const logsDir = join(settings.artifactsDir, "..", "logs");
     mkdirSync(logsDir, { recursive: true });
-    writeSettingsLog(settings, logsDir, { trigger: "session_start" });
+    writeSettingsLog(settings, settings.artifactsDir, { trigger: "session_start" });
 
     // Inject settings table if onSessionStart is enabled
     if (settings.settingsReport.onSessionStart) {
