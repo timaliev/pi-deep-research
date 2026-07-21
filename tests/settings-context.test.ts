@@ -11,6 +11,7 @@ const ENV_KEYS = {
   defaultProfile: "DEEP_RESEARCH_DEFAULT_PROFILE",
   prefilterModel: "DEEP_RESEARCH_PREFILTER_MODEL",
   prefilterTimeoutMs: "DEEP_RESEARCH_PREFILTER_TIMEOUT_MS",
+  logLevel: "DEEP_RESEARCH_LOG_LEVEL",
 };
 
 // We'll test against the real implementation
@@ -354,5 +355,26 @@ describe("SettingsContext — unified settings cascade", () => {
 
     assert.equal(ctx.prefilterTimeoutMs, 90_000);
     assert.ok(ctx.prefilterTimeoutMsSource.includes("file"), "source must be file");
+  });
+
+  // ─── logLevel ──────────────────────────────────────────
+  it("logLevel defaults to normal", async () => {
+    const { SettingsContext } = await import("../extension/settings-context.js");
+    const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
+    assert.equal(ctx.logLevel, "normal");
+  });
+
+  it("logLevel resolves from env", async () => {
+    process.env.DEEP_RESEARCH_LOG_LEVEL = "verbose";
+    const { SettingsContext } = await import("../extension/settings-context.js");
+    const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
+    assert.equal(ctx.logLevel, "verbose");
+  });
+
+  it("logLevel resolves from settings.json", async () => {
+    writeFileSync(join(tmpCwd, ".pi", "settings.json"), JSON.stringify({ deepResearch: { logLevel: "off" } }));
+    const { SettingsContext } = await import("../extension/settings-context.js");
+    const ctx = SettingsContext.init({ cwd: tmpCwd, homeAgentDir: join(tmpHome, ".pi", "agent") });
+    assert.equal(ctx.logLevel, "off");
   });
 });
