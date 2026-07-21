@@ -242,7 +242,14 @@ describe("SettingsReporter — writeSettingsLog", () => {
 
     writeSettingsLog(ctx, tmpLogDir, { trigger: "run_start", runId: "20260710-test" });
     const files = readdirSync(tmpLogDir);
-    assert.ok(files.some((f) => f.startsWith("20260710-test-settings-") && f.endsWith(".json")));
+    const runFile = files.find((f) => f.startsWith("20260710-test-settings") && f.endsWith(".json"));
+    assert.ok(runFile, "must find runId-prefixed settings file");
+    // Verify runId is in the JSON content, not null
+    const raw = readFileSync(join(tmpLogDir, runFile!), "utf-8");
+    const json = JSON.parse(raw);
+    assert.equal(json.runId, "20260710-test", "runId must be in JSON content");
+    // Verify no timestamp in filename when runId present
+    assert.ok(!runFile!.includes("T"), "filename must not contain timestamp when runId present");
   });
 
   it("deduplicates session_start logs within same minute", async () => {

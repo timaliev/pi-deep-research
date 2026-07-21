@@ -89,7 +89,8 @@ export function writeSettingsLog(
   const json = buildSettingsJson(ctx);
   const timestamp = now.toISOString().replace(/[:.]/g, "-");
   const prefix = opts.trigger === "run_start" && opts.runId ? `${opts.runId}-settings` : `session-settings`;
-  const filename = `${prefix}-${timestamp}.json`;
+  // Don't append timestamp when runId is present — runId already contains the date
+  const filename = opts.trigger === "run_start" && opts.runId ? `${prefix}.json` : `${prefix}-${timestamp}.json`;
   const path = join(logDir, filename);
   writeFileSync(
     path,
