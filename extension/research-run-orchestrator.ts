@@ -122,6 +122,7 @@ export class ResearchRunOrchestrator {
       searchCred: this.searchCred,
       logger,
       defaultReportStyle: this.settings?.reportStyle,
+      logLevel: this.settings?.logLevel,
     });
   }
 
