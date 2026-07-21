@@ -133,6 +133,7 @@ export function createPlanResearchTool(
           if (settings.logLevel === "verbose") progress(`📝 ${chunk.slice(-80)}`);
         });
         logger.event("prefilter_plan_creation_done", { length: planJson.length });
+        vlog("prefilter_plan_raw", { planJson: planJson.substring(0, 2000) });
         progress("✅ Plan created — validating...");
       } catch (err) {
         return {
