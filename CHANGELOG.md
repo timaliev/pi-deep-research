@@ -13,6 +13,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.30.0](https://github.com/timaliev/pi-deep-research/compare/v0.29.1..v0.30.0) - 2026-07-21
+
+### Features
+
+- **(prefilter)** stream subprocess LLM output via onChunk callback - ([08c1c3c](https://github.com/timaliev/pi-deep-research/commit/08c1c3c5028977cd1fc728733874919d2478d11d)) - Tim Aliev
+- **(settings)** add logLevel setting (off|normal|verbose) for prefilter + research - ([7ca314f](https://github.com/timaliev/pi-deep-research/commit/7ca314f75c9e17b7fd6d09c376fc23281dde6833)) - Tim Aliev
+
+### Bug Fixes
+
+- **(lint)** suppress pre-existing biome error in export-pdf.ts - ([8e83ce5](https://github.com/timaliev/pi-deep-research/commit/8e83ce5084bdc198f5a62e6e11ebfa78c5e3e6de)) - Tim Aliev
+- **(lint)** resolve all biome lint diagnostics for CI release pipeline - ([7f5c9a8](https://github.com/timaliev/pi-deep-research/commit/7f5c9a844525a2f2aac0272275a3ec72ef959969)) - Tim Aliev
+- **(lint)** resolve biome errors, 11 files auto-fixed - ([71ad015](https://github.com/timaliev/pi-deep-research/commit/71ad015e83e497cd06160ffedbeb7a37e45b9922)) - Tim Aliev
+
 ## [0.29.1](https://github.com/timaliev/pi-deep-research/compare/v0.29.0..v0.29.1) - 2026-07-20
 
 ### Bug Fixes
