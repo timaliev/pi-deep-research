@@ -145,7 +145,7 @@ export function createPlanResearchTool(
       }
 
       // ── 5. Validate + save ─────────────────────────────
-      const saveResult = await validateAndSavePlan({
+      let saveResult = await validateAndSavePlan({
         planJson,
         topic,
         engines,
@@ -155,6 +155,30 @@ export function createPlanResearchTool(
         profileNames: profileResolver.listNames(),
         reportStyle: settings.reportStyle,
       });
+
+      // ── 5a. Retry on JSON parse failure ────────────────
+      if (!saveResult.ok && saveResult.error.includes("JSON")) {
+        logger.event("prefilter_plan_retry");
+        progress("⚠️ Plan JSON invalid — retrying with stricter prompt...");
+        const retryPrompt = `${mergePrompt}\n\nYour previous response was not valid JSON. Reply with ONLY the JSON object — no markdown, no explanation:\n\n{ "topic": "...", "goal": "...", ... }`;
+        try {
+          planJson = await callPiJson(retryPrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs);
+          logger.event("prefilter_plan_retry_done", { length: planJson.length });
+          vlog("prefilter_plan_retry_raw", { planJson: planJson.substring(0, 2000) });
+          saveResult = await validateAndSavePlan({
+            planJson,
+            topic,
+            engines,
+            profileName,
+            artifactsDir: settings.artifactsDir,
+            enabledEngines: settings.enabledEngines,
+            profileNames: profileResolver.listNames(),
+            reportStyle: settings.reportStyle,
+          });
+        } catch (err) {
+          logger.event("prefilter_plan_retry_failed", { error: err instanceof Error ? err.message : String(err) });
+        }
+      }
 
       if (!saveResult.ok) {
         logger.event("prefilter_validation_failed", { error: saveResult.error });

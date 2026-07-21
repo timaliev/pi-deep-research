@@ -68,3 +68,10 @@ describe("plan_research ADR-0028 subprocess prefilter", () => {
     assert.ok(!src.includes("confirm_research"), "must not reference confirm_research tool");
   });
 });
+
+it("retries plan creation on JSON parse failure", () => {
+  assert.ok(
+    src.includes("plan_retry") || src.includes("stricter prompt"),
+    "must retry plan creation on JSON parse failure",
+  );
+});
