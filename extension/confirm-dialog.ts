@@ -135,15 +135,15 @@ async function editEngines(
 
   // Toggle each engine
   for (const engine of available) {
-    const marker = selected.has(engine as any) ? "✅" : "⬜";
+    const marker = selected.has(engine as SearchEngine) ? "✅" : "⬜";
     const choice = await ctx.ui.select(`Include ${engine}?`, [
       `${marker} Keep ${engine}`,
       `${marker === "✅" ? "⬜" : "✅"} ${marker === "✅" ? "Remove" : "Add"} ${engine}`,
       `✓ Done editing engines`,
     ]);
     if (!choice || choice.startsWith("✓")) break;
-    if (choice.includes("Add")) selected.add(engine as any);
-    else if (choice.includes("Remove")) selected.delete(engine as any);
+    if (choice.includes("Add")) selected.add(engine as SearchEngine);
+    else if (choice.includes("Remove")) selected.delete(engine as SearchEngine);
   }
 
   return selected.size > 0 ? ([...selected] as typeof plan.engines) : [plan.engines[0]];

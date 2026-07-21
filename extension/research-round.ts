@@ -17,7 +17,7 @@ export interface ResearchRoundParams {
   artifactsDir?: string;
   runId: string;
   currentDepth: number;
-  searchCred?: any;
+  searchCred?: Record<string, unknown>;
 }
 
 export interface ResearchRoundResult {
@@ -112,8 +112,8 @@ export async function executeResearchRound(params: ResearchRoundParams): Promise
           });
           scrapeCalls++;
           return page;
-        } catch (err: any) {
-          logger?.event("scrape_failed", { url, error: err.message, depth: currentDepth });
+        } catch (err: unknown) {
+          logger?.event("scrape_failed", { url, error: err instanceof Error ? err.message : String(err), depth: currentDepth });
           return null;
         }
       }),
