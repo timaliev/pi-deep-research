@@ -54,4 +54,11 @@ describe("buildMergePrompt JSON-only instruction", () => {
       "buildMergePrompt must require JSON-only output",
     );
   });
+
+  it("accepts optional scrapedContent parameter", () => {
+    const src = readFileSync(PROMPTS_PATH, "utf-8");
+    const mergeStart = src.indexOf("export function buildMergePrompt");
+    const mergeFn = src.slice(mergeStart, mergeStart + 1000);
+    assert.ok(mergeFn.includes("scrapedContent"), "buildMergePrompt must accept optional scraped content");
+  });
 });

@@ -123,10 +123,21 @@ export function createPlanResearchTool(
         // continue with empty results
       }
 
+      // Scrape top results for full content
+      const scrapedContent: { url: string; title: string; content: string }[] = [];
+      for (const result of mergeResults.slice(0, 2)) {
+        try {
+          const page = await scraper.scrape(result.url);
+          scrapedContent.push(page);
+        } catch {
+          // skip failed scrapes
+        }
+      }
+
       // ── 4. Subprocess: plan creation ────────────────────
       progress("📝 Creating research plan...");
       logger.event("prefilter_plan_creation_start");
-      const mergePrompt = buildMergePrompt(topic, llmTopics, mergeResults);
+      const mergePrompt = buildMergePrompt(topic, llmTopics, mergeResults, scrapedContent);
       let planJson: string;
       try {
         planJson = await callPiJson(mergePrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs, (chunk) => {
