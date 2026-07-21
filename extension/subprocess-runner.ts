@@ -1,6 +1,6 @@
 /**
  * Spawn a pi subprocess in JSON mode, send a prompt, capture text output.
- * Pattern from official pi subagent extension.
+ * Pattern from official pi subagent extension. Supports streaming via onChunk.
  */
 import { spawn } from "node:child_process";
 
@@ -10,6 +10,7 @@ export function callPiJson(
   cwd: string,
   signal?: AbortSignal,
   timeoutMs = 120_000,
+  onChunk?: (text: string) => void,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const proc = spawn("pi", ["--mode", "json", "-p", "--no-session", "--model", model], {
@@ -43,6 +44,11 @@ export function callPiJson(
         if (!line.trim()) continue;
         try {
           const event = JSON.parse(line);
+          // Streaming: pass text deltas to callback in real-time
+          if (event.type === "text_delta" && event.delta && onChunk) {
+            onChunk(event.delta as string);
+          }
+          // Capture final text from message_end
           if (event.type === "message_end" && event.message?.role === "assistant") {
             for (const part of event.message.content ?? []) {
               if (part.type === "text") output += part.text;

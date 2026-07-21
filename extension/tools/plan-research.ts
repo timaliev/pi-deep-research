@@ -89,7 +89,9 @@ export function createPlanResearchTool(
       const introPrompt = buildIntrospectionPrompt(topic);
       let llmTopics = "";
       try {
-        llmTopics = await callPiJson(introPrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs);
+        llmTopics = await callPiJson(introPrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs, (chunk) => {
+          if (settings.logLevel === "verbose") progress(`📖 ${chunk.slice(-80)}`);
+        });
         logger.event("prefilter_introspection_done", { length: llmTopics.length });
         vlog("prefilter_introspection_result", { topics: llmTopics.substring(0, 500) });
         progress("📚 Introspection complete — merging with web results...");
@@ -125,7 +127,9 @@ export function createPlanResearchTool(
       const mergePrompt = buildMergePrompt(topic, llmTopics, mergeResults);
       let planJson: string;
       try {
-        planJson = await callPiJson(mergePrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs);
+        planJson = await callPiJson(mergePrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs, (chunk) => {
+          if (settings.logLevel === "verbose") progress(`📝 ${chunk.slice(-80)}`);
+        });
         logger.event("prefilter_plan_creation_done", { length: planJson.length });
         progress("✅ Plan created — validating...");
       } catch (err) {
