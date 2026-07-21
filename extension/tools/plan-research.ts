@@ -158,6 +158,8 @@ export function createPlanResearchTool(
           resultCount: mergeResults.length,
           durationMs: Date.now() - searchStart,
         });
+        const searchSecs = ((Date.now() - searchStart) / 1000).toFixed(1);
+        if (isVerbose) progress(`🌐 Search done (${searchSecs}s, ${mergeResults.length} results)`);
       } catch {
         // continue with empty results
       }
@@ -198,7 +200,8 @@ export function createPlanResearchTool(
         // Inject computed estimatedCost (ADR-0027 — tool computes, not LLM)
         planJson = injectEstimatedCost(planJson);
 
-        progress("✅ Plan created — validating...");
+        const planSecs = ((Date.now() - planStart) / 1000).toFixed(1);
+        progress(`✅ Plan created (${planSecs}s) — validating...`);
       } catch (err) {
         return {
           content: [
