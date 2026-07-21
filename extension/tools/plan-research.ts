@@ -63,6 +63,10 @@ export function createPlanResearchTool(
       logger.event("prefilter_started", { topic });
 
       const progress = (msg: string) => onUpdate({ content: [{ type: "text", text: msg }] });
+      const isVerbose = settings.logLevel === "verbose";
+      const vlog = (type: string, data: Record<string, unknown>) => {
+        if (isVerbose) logger.event(type, data);
+      };
 
       // ── 1. Resolve engines/profile from settings ────────
       const engines: SearchEngine[] =
@@ -72,6 +76,8 @@ export function createPlanResearchTool(
       // ── 2. Subprocess: introspection ────────────────────
       progress(`🔍 Researching: ${topic}`);
       logger.event("prefilter_introspection_start");
+      vlog("prefilter_model", { model: modelSpec, timeoutMs: settings.prefilterTimeoutMs });
+      vlog("prefilter_introspection_prompt", { length: introPrompt.length });
       const modelSpec = settings.prefilterModel ?? (ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "");
       if (!modelSpec) {
         return {
@@ -85,6 +91,7 @@ export function createPlanResearchTool(
       try {
         llmTopics = await callPiJson(introPrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs);
         logger.event("prefilter_introspection_done", { length: llmTopics.length });
+        vlog("prefilter_introspection_result", { topics: llmTopics.substring(0, 500) });
         progress("📚 Introspection complete — merging with web results...");
       } catch (err) {
         return {
@@ -101,6 +108,7 @@ export function createPlanResearchTool(
       // ── 3. Merge search ─────────────────────────────────
       progress("🌐 Searching web for relevant sources...");
       const searchQuery = buildSearchQuery(topic);
+      vlog("prefilter_search_query", { query: searchQuery, engines, maxResults: 5 });
       let mergeResults: Awaited<ReturnType<typeof searchFn>> = [];
       try {
         mergeResults = await searchFn(searchQuery, 5, engines, {
