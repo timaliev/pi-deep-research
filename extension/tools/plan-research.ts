@@ -1,9 +1,9 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { Type } from "typebox";
+import { confirmPlanDialog } from "../confirm-dialog.js";
 import { generateRunId } from "../ids.js";
 import { JsonlLogger } from "../logger.js";
-import { confirmPlanDialog } from "../confirm-dialog.js";
 import { buildIntrospectionPrompt, buildMergePrompt, buildSearchQuery } from "../prefilter-prompts.js";
 import type { ProfileResolver } from "../profile-resolver.js";
 import type { Scraper } from "../scraper.js";

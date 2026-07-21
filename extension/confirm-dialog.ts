@@ -2,8 +2,8 @@ import { unlinkSync } from "node:fs";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { ResearchPlan, ResearchPlanProfile } from "./prefilter.js";
 import type { ProfileResolver } from "./profile-resolver.js";
-import type { SettingsContext } from "./settings-context.js";
 import { CONFIRMATION_KEY } from "./session-state.js";
+import type { SettingsContext } from "./settings-context.js";
 
 export interface PlanDialogResult {
   /** User clicked Confirm. */

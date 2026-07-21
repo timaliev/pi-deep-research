@@ -1,8 +1,8 @@
-import { basename, join } from "node:path";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { basename, join } from "node:path";
 import { StringEnum } from "@earendil-works/pi-ai";
-import { Type } from "typebox";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { Type } from "typebox";
 import { convertToPdf } from "../export-pdf.js";
 import { buildMindMapPrompt } from "../mind-map-injector.js";
 import type { ProfileResolver } from "../profile-resolver.js";
@@ -10,10 +10,10 @@ import { resolveReportPath, writeReportFile } from "../report-assembly.js";
 import type { ResearchRunOrchestrator } from "../research-run-orchestrator.js";
 import type { Scraper, WebScraper } from "../scraper.js";
 import { ALL_ENGINES, type SearchEngine } from "../search/engines.js";
-import { multiEngineWebSearch } from "../search/web-search.js";
 import type { searchWeb } from "../search/web-search.js";
-import { REPORT_PATH_KEY } from "../session-state.js";
+import { multiEngineWebSearch } from "../search/web-search.js";
 import type { SessionState } from "../session-state.js";
+import { REPORT_PATH_KEY } from "../session-state.js";
 import type { SearchProviderCredentials, SettingsContext } from "../settings-context.js";
 import { createPlanResearchTool } from "./plan-research.js";
 import { createRunResearchTool } from "./run-research.js";
@@ -107,7 +107,13 @@ export function registerAllTools(pi: ExtensionAPI, deps: ToolDeps): void {
         }),
       ),
     }),
-    async execute(_toolCallId: string, params: Record<string, unknown>, _signal: unknown, _onUpdate: unknown, ctx: Record<string, unknown>) {
+    async execute(
+      _toolCallId: string,
+      params: Record<string, unknown>,
+      _signal: unknown,
+      _onUpdate: unknown,
+      ctx: Record<string, unknown>,
+    ) {
       mkdirSync(deps.settings.reportsDir, { recursive: true });
       let markdown: string;
       if (params.report_path && typeof params.report_path === "string" && existsSync(params.report_path)) {

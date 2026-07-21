@@ -1,8 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { ALL_ENGINES, ENGINE_META } from "./search/engines.js";
 import { DEFAULT_PRESETS, mergeProfiles } from "./profile-resolver.js";
+import { ALL_ENGINES, ENGINE_META } from "./search/engines.js";
 import { SearchProviderCredentials } from "./search-credentials.js";
 import type { ResearchProfile } from "./state-machine.js";
 

@@ -1,9 +1,9 @@
 // ── Type re-exports (canonical source: ./types.ts) ──────
 export type {
-  ResearchPlanProfile,
-  ResearchPlan,
   PrefilterArtifact,
+  PrefilterContext,
   PrefilterInput,
   PrefilterResult,
-  PrefilterContext,
+  ResearchPlan,
+  ResearchPlanProfile,
 } from "./types.js";

@@ -113,7 +113,11 @@ export async function executeResearchRound(params: ResearchRoundParams): Promise
           scrapeCalls++;
           return page;
         } catch (err: unknown) {
-          logger?.event("scrape_failed", { url, error: err instanceof Error ? err.message : String(err), depth: currentDepth });
+          logger?.event("scrape_failed", {
+            url,
+            error: err instanceof Error ? err.message : String(err),
+            depth: currentDepth,
+          });
           return null;
         }
       }),

@@ -6,9 +6,9 @@
  */
 
 import type { ScrapedPage } from "../scraper.js";
-import { ALL_ENGINES, ENGINE_META, type SearchEngine } from "./search/engines.js";
 import type { WebSearchResult } from "../search/web-search.js";
 import type { SearchProviderCredentials } from "../settings-context.js";
+import { ALL_ENGINES, ENGINE_META, type SearchEngine } from "./search/engines.js";
 
 /** Build the seed search query from a topic string. */
 export function buildSearchQuery(topic: string): string {
