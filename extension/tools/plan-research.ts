@@ -14,6 +14,26 @@ import type { SearchProviderCredentials, SettingsContext } from "../settings-con
 import { callPiJson } from "../subprocess-runner.js";
 import { validateAndSavePlan } from "../validate-and-save.js";
 
+/** Replace LLM-written estimatedCost with tool-computed values (ADR-0027). */
+function injectEstimatedCost(planJson: string): string {
+  try {
+    const plan = JSON.parse(planJson);
+    const questions = plan.researchQuestions?.length ?? 1;
+    const breadth = plan.profile?.breadth ?? 4;
+    const depth = plan.profile?.depth ?? 2;
+    const searches = breadth * depth * questions;
+    const scrapes = Math.ceil(searches * 1.5);
+    plan.estimatedCost = {
+      searchCalls: searches,
+      scrapeCalls: scrapes,
+      description: `~${searches} searches, ~${scrapes} scrapes`,
+    };
+    return JSON.stringify(plan);
+  } catch {
+    return planJson;
+  }
+}
+
 export function createPlanResearchTool(
   _pi: {
     sendUserMessage: (msg: string, opts?: { deliverAs: string }) => void;
@@ -138,7 +158,15 @@ export function createPlanResearchTool(
       // ── 4. Subprocess: plan creation ────────────────────
       progress("📝 Creating research plan...");
       logger.event("prefilter_plan_creation_start");
-      const mergePrompt = buildMergePrompt(topic, llmTopics, mergeResults, scrapedContent);
+      const mergePrompt = buildMergePrompt(
+        topic,
+        llmTopics,
+        mergeResults,
+        scrapedContent,
+        settings.enabledEngines,
+        profileName,
+        settings.reportStyle,
+      );
       let planJson: string;
       try {
         planJson = await callPiJson(mergePrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs, (chunk) => {
@@ -146,6 +174,10 @@ export function createPlanResearchTool(
         });
         logger.event("prefilter_plan_creation_done", { length: planJson.length });
         vlog("prefilter_plan_raw", { planJson });
+
+        // Inject computed estimatedCost (ADR-0027 — tool computes, not LLM)
+        planJson = injectEstimatedCost(planJson);
+
         progress("✅ Plan created — validating...");
       } catch (err) {
         return {
@@ -176,6 +208,7 @@ export function createPlanResearchTool(
         const retryPrompt = `${mergePrompt}\n\nYour previous response was not valid JSON. Reply with ONLY the JSON object — no markdown, no explanation:\n\n{ "topic": "...", "goal": "...", ... }`;
         try {
           planJson = await callPiJson(retryPrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs);
+          planJson = injectEstimatedCost(planJson);
           logger.event("prefilter_plan_retry_done", { length: planJson.length });
           vlog("prefilter_plan_retry_raw", { planJson });
           saveResult = await validateAndSavePlan({

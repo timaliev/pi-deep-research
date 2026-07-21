@@ -111,6 +111,9 @@ export function buildMergePrompt(
   llmTopics: string,
   searchResults: import("../search/web-search.js").WebSearchResult[],
   scrapedContent?: import("../scraper.js").ScrapedPage[],
+  engines?: string[],
+  profileName?: string,
+  reportStyle?: string,
 ): string {
   let prompt = `## Merge & Plan
 
@@ -125,6 +128,6 @@ Topic: ${topic}\n\n### LLM Knowledge Topics\n${llmTopics}\n\n### Web Search Resu
       prompt += `**${page.title}** (${page.url})\n\n${excerpt}\n\n---\n`;
     }
   }
-  prompt += `\n### Instructions\n\n1. Merge topics from both sources\n2. Tag each topic with source: "web", "internal", or "both"\n3. Rate importance and question validity\n4. Flag contradictions between internal knowledge and web sources\n5. Flag debatable facts that need validation\n6. Produce final Research Plan JSON with questionMetadata\n\n**Output ONLY valid JSON. No markdown fences, no explanation, no other text — just the JSON object.**`;
+  prompt += `\n### Instructions\n\n1. Merge topics from both sources\n2. Tag each topic with source: "web", "internal", or "both"\n3. Rate importance and question validity\n4. Flag contradictions between internal knowledge and web sources\n5. Flag debatable facts that need validation\n6. Produce final Research Plan JSON with questionMetadata\n\n### Required JSON structure\n\n{\n  "topic": "${topic}",\n  "goal": "one-sentence research goal",\n  "researchQuestions": ["Q1?", "Q2?"],\n  "engines": ${JSON.stringify(engines ?? ["duckduckgo"])},\n  "profile": { "name": "${profileName ?? "default"}" },\n  "reportStyle": "${reportStyle ?? "subtopics"}",\n  "scope": { "include": "what to cover", "exclude": "what to skip" },\n  "estimatedCost": { "searchCalls": 0, "scrapeCalls": 0, "description": "(computed automatically)" },\n  "questionMetadata": { "Q1?": { "source": "web", "confidence": "medium", "importance": "critical" } }\n}\n\n**Note: estimatedCost is computed automatically — use 0/0 as placeholders.**\n\n**Output ONLY valid JSON. No markdown fences, no explanation, no other text — just the JSON object.**`;
   return prompt;
 }

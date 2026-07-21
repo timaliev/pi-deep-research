@@ -48,7 +48,7 @@ describe("buildMergePrompt JSON-only instruction", () => {
     const src = readFileSync(PROMPTS_PATH, "utf-8");
     // Find buildMergePrompt function body
     const mergeStart = src.indexOf("export function buildMergePrompt");
-    const mergeBody = src.slice(mergeStart, mergeStart + 1200);
+    const mergeBody = src.slice(mergeStart, mergeStart + 2500);
     assert.ok(
       mergeBody.includes("Output ONLY") || mergeBody.includes("just the JSON"),
       "buildMergePrompt must require JSON-only output",
@@ -60,5 +60,13 @@ describe("buildMergePrompt JSON-only instruction", () => {
     const mergeStart = src.indexOf("export function buildMergePrompt");
     const mergeFn = src.slice(mergeStart, mergeStart + 1000);
     assert.ok(mergeFn.includes("scrapedContent"), "buildMergePrompt must accept optional scraped content");
+  });
+
+  it("includes JSON schema structure in instructions", () => {
+    const src = readFileSync(PROMPTS_PATH, "utf-8");
+    const mergeStart = src.indexOf("export function buildMergePrompt");
+    const mergeBody = src.slice(mergeStart, mergeStart + 2500);
+    assert.ok(mergeBody.includes('"topic"'), "must include topic field in schema");
+    assert.ok(mergeBody.includes('"researchQuestions"'), "must include researchQuestions in schema");
   });
 });

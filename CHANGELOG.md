@@ -13,6 +13,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.30.4](https://github.com/timaliev/pi-deep-research/compare/v0.30.3..v0.30.4) - 2026-07-21
+
+### Bug Fixes
+
+- **(prefilter)** add JSON schema to merge prompt instructions - ([a8f9199](https://github.com/timaliev/pi-deep-research/commit/a8f91992d6d9c309529a49c5c9df690a784c9205)) - Tim Aliev
+- **(prefilter)** use real settings in JSON schema + compute estimatedCost - ([ad7307e](https://github.com/timaliev/pi-deep-research/commit/ad7307ea9dbed039470aedcd7fbd559de2dca267)) - Tim Aliev
+
+### Documentation
+
+- document logLevel, prefilterScrapeCount/Chars settings; update ADR-0028 status - ([acd1dd5](https://github.com/timaliev/pi-deep-research/commit/acd1dd5a44aff8c94f3668ac401da7e61123bf29)) - Tim Aliev
+
 ## [0.30.3](https://github.com/timaliev/pi-deep-research/compare/v0.30.2..v0.30.3) - 2026-07-21
 
 ### Bug Fixes
