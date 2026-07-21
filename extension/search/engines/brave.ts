@@ -44,7 +44,7 @@ export function parseBraveResponse(body: string, maxResults: number): WebSearchR
   try {
     const data = JSON.parse(body);
     const web = data.web?.results ?? [];
-    return web.slice(0, maxResults).map((r: any) => ({
+    return web.slice(0, maxResults).map((r: Record<string, unknown>) => ({
       title: r.title ?? "",
       url: r.url ?? "",
       snippet: r.description ?? "",

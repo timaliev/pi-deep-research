@@ -1,11 +1,11 @@
 import { Type } from "typebox";
 import type { ResearchRunOrchestrator } from "../research-run-orchestrator.js";
-import { CONFIRMATION_KEY } from "../session-state.js";
 import type { SessionState } from "../session-state.js";
+import { CONFIRMATION_KEY } from "../session-state.js";
 import type { SettingsContext } from "../settings-context.js";
 
 export function createRunResearchTool(
-  pi: any,
+  pi: Record<string, unknown>,
   orchestrator: ResearchRunOrchestrator,
   settings: SettingsContext,
   session: SessionState,
@@ -18,7 +18,13 @@ export function createRunResearchTool(
     parameters: Type.Object({
       plan_artifact_path: Type.Optional(Type.String({ description: "Path to prefilter.json (first call only)" })),
     }),
-    async execute(_toolCallId: string, params: any, _signal: any, _onUpdate: any, ctx: any) {
+    async execute(
+      _toolCallId: string,
+      params: Record<string, unknown>,
+      _signal: unknown,
+      _onUpdate: unknown,
+      ctx: Record<string, unknown>,
+    ) {
       const entries = ctx.sessionManager.getEntries();
 
       // Confirmation gate — only for first call

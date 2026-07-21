@@ -2,10 +2,11 @@
  * Shared types for prefilter artifacts.
  * Extracted from prefilter.ts to separate types from implementation (ADR-0028 deepening).
  */
-import type { ScrapedPage, Scraper } from "./scraper.js";
-import type { SearchEngine, searchWeb as SearchWebFn, WebSearchResult } from "./search/web-search.js";
+
 import type { Logger } from "./logger.js";
 import type { ProfileResolver } from "./profile-resolver.js";
+import type { ScrapedPage, Scraper } from "./scraper.js";
+import type { SearchEngine, searchWeb as SearchWebFn, WebSearchResult } from "./search/web-search.js";
 import type { SearchProviderCredentials } from "./settings-context.js";
 
 export interface ResearchPlanProfile {

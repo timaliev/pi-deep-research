@@ -1,8 +1,8 @@
-import { basename, join } from "node:path";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { basename, join } from "node:path";
 import { StringEnum } from "@earendil-works/pi-ai";
-import { Type } from "typebox";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { Type } from "typebox";
 import { convertToPdf } from "../export-pdf.js";
 import { buildMindMapPrompt } from "../mind-map-injector.js";
 import type { ProfileResolver } from "../profile-resolver.js";
@@ -10,10 +10,10 @@ import { resolveReportPath, writeReportFile } from "../report-assembly.js";
 import type { ResearchRunOrchestrator } from "../research-run-orchestrator.js";
 import type { Scraper, WebScraper } from "../scraper.js";
 import { ALL_ENGINES, type SearchEngine } from "../search/engines.js";
-import { multiEngineWebSearch } from "../search/web-search.js";
 import type { searchWeb } from "../search/web-search.js";
-import { REPORT_PATH_KEY } from "../session-state.js";
+import { multiEngineWebSearch } from "../search/web-search.js";
 import type { SessionState } from "../session-state.js";
+import { REPORT_PATH_KEY } from "../session-state.js";
 import type { SearchProviderCredentials, SettingsContext } from "../settings-context.js";
 import { createPlanResearchTool } from "./plan-research.js";
 import { createRunResearchTool } from "./run-research.js";
@@ -55,7 +55,7 @@ export function registerAllTools(pi: ExtensionAPI, deps: ToolDeps): void {
         Type.Boolean({ description: "If true, show results per engine without deduplication (default: false)" }),
       ),
     }),
-    async execute(_toolCallId: string, params: any, signal: any, onUpdate: any) {
+    async execute(_toolCallId: string, params: Record<string, unknown>, signal: any, onUpdate: unknown) {
       const query = params.query as string;
       const maxResults = (params.max_results as number) ?? 5;
       const engines = (params.engines as SearchEngine[]) ?? ["duckduckgo"];
@@ -83,7 +83,7 @@ export function registerAllTools(pi: ExtensionAPI, deps: ToolDeps): void {
     description:
       "Fetch a URL and extract its readable text content. Returns title and cleaned text. Use to get full page content for research.",
     parameters: Type.Object({ url: Type.String({ description: "URL to scrape" }) }),
-    async execute(_toolCallId: string, params: any) {
+    async execute(_toolCallId: string, params: Record<string, unknown>) {
       const page = await (deps.scraper as WebScraper).scrape(params.url);
       return {
         content: [{ type: "text", text: `# ${page.title}\n\n${page.content.substring(0, 5000)}` }],
@@ -107,7 +107,13 @@ export function registerAllTools(pi: ExtensionAPI, deps: ToolDeps): void {
         }),
       ),
     }),
-    async execute(_toolCallId: string, params: any, _signal: any, _onUpdate: any, ctx: any) {
+    async execute(
+      _toolCallId: string,
+      params: Record<string, unknown>,
+      _signal: unknown,
+      _onUpdate: unknown,
+      ctx: Record<string, unknown>,
+    ) {
       mkdirSync(deps.settings.reportsDir, { recursive: true });
       let markdown: string;
       if (params.report_path && typeof params.report_path === "string" && existsSync(params.report_path)) {
@@ -148,7 +154,7 @@ export function registerAllTools(pi: ExtensionAPI, deps: ToolDeps): void {
       report_path: Type.String({ description: "Path to the markdown report file" }),
       output_path: Type.Optional(Type.String({ description: "Output PDF path (defaults to same name + .pdf)" })),
     }),
-    async execute(_toolCallId: string, params: any) {
+    async execute(_toolCallId: string, params: Record<string, unknown>) {
       const reportPath = params.report_path as string;
       const outputPath =
         (params.output_path as string | undefined) ??
@@ -190,7 +196,7 @@ export function registerAllTools(pi: ExtensionAPI, deps: ToolDeps): void {
       content: Type.String({ description: "Content to base the mind map on (findings, notes, report text)" }),
       save_path: Type.Optional(Type.String({ description: "Optional file path to save the mind map diagram" })),
     }),
-    async execute(_toolCallId: string, params: any) {
+    async execute(_toolCallId: string, params: Record<string, unknown>) {
       const savePath = (params.save_path as string | undefined) ?? undefined;
       const prompt = buildMindMapPrompt(
         params.topic as string,

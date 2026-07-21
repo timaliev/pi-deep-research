@@ -13,7 +13,7 @@ import { buildSettingsTable, writeSettingsLog } from "./settings-reporter.js";
 import { registerAllTools } from "./tools/deps.js";
 
 const baseDir = dirname(fileURLToPath(import.meta.url));
-const rootDir = join(baseDir, "..");
+const _rootDir = join(baseDir, "..");
 
 export default function (pi: ExtensionAPI) {
   const settings = SettingsContext.init({ cwd: process.cwd() });
@@ -48,7 +48,7 @@ export default function (pi: ExtensionAPI) {
   });
 
   // Release monitor + settings report + settings re-init on session start (ADR-0018, ADR-0020, ADR-0023)
-  pi.on("session_start", (_event: any, ctx: any) => {
+  pi.on("session_start", (_event: Record<string, unknown>, ctx: { cwd: string }) => {
     settings.reinit(ctx.cwd);
     checkForNewRelease(pi.sendUserMessage.bind(pi));
 

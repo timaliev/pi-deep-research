@@ -41,7 +41,7 @@ async function tavilyPostRequest(apiKey: string, query: string, maxResults: numb
             const data = JSON.parse(Buffer.concat(chunks).toString("utf-8"));
             const results = (data.results ?? []).slice(0, maxResults);
             resolve(
-              results.map((r: any) => ({
+              results.map((r: Record<string, unknown>) => ({
                 title: r.title ?? "",
                 url: r.url ?? "",
                 snippet: r.content ?? r.snippet ?? "",

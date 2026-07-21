@@ -1,9 +1,9 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { Type } from "typebox";
+import { confirmPlanDialog } from "../confirm-dialog.js";
 import { generateRunId } from "../ids.js";
 import { JsonlLogger } from "../logger.js";
-import { confirmPlanDialog } from "../confirm-dialog.js";
 import { buildIntrospectionPrompt, buildMergePrompt, buildSearchQuery } from "../prefilter-prompts.js";
 import type { ProfileResolver } from "../profile-resolver.js";
 import type { Scraper } from "../scraper.js";
@@ -76,8 +76,7 @@ export function createPlanResearchTool(
       // ── 2. Subprocess: introspection ────────────────────
       progress(`🔍 Researching: ${topic}`);
       logger.event("prefilter_introspection_start");
-      vlog("prefilter_model", { model: modelSpec, timeoutMs: settings.prefilterTimeoutMs });
-      vlog("prefilter_introspection_prompt", { length: introPrompt.length });
+
       const modelSpec = settings.prefilterModel ?? (ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "");
       if (!modelSpec) {
         return {
@@ -87,6 +86,9 @@ export function createPlanResearchTool(
       }
 
       const introPrompt = buildIntrospectionPrompt(topic);
+      vlog("prefilter_model", { model: modelSpec, timeoutMs: settings.prefilterTimeoutMs });
+      vlog("prefilter_introspection_prompt", { length: introPrompt.length });
+
       let llmTopics = "";
       try {
         llmTopics = await callPiJson(introPrompt, modelSpec, ctx.cwd, signal, settings.prefilterTimeoutMs, (chunk) => {
