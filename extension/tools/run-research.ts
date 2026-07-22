@@ -58,8 +58,8 @@ export function createRunResearchTool(
       // First call — warn user about injection-based flow
       if (params.plan_artifact_path) {
         ctx.ui.notify(
-          "Research Started 🔬\n\nResearch runs via injection-based state machine. Each phase injects a prompt for the agent to process. If the process appears to stop, just type **continue** to advance to the next phase.",
-          "info",
+          "Research Started 🔬\n\n⚠️Research runs via injection-based state machine. Each phase injects a prompt for the agent to process. If the process appears to stop, just type `continue` to advance to the next phase.",
+          "warning",
         );
       }
 

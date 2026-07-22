@@ -13,6 +13,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.32.3](https://github.com/timaliev/pi-deep-research/compare/v0.32.2..v0.32.3) - 2026-07-22
+
+### Bug Fixes
+
+- **(tools)** improve research start notification - ([8e09324](https://github.com/timaliev/pi-deep-research/commit/8e09324d80c69888343511fbf74b7613a7981bf4)) - Tim Aliev
+
+### Other
+
+- Revert "chore(release): bump version to 0.32.2"
+
+This reverts commit 62de4550af53ab6357b53b64807751763af05280. - ([20c82f8](https://github.com/timaliev/pi-deep-research/commit/20c82f831c676883197735e5e1a5bbcd27c606e7)) - Tim Aliev
+
 ## [0.32.2](https://github.com/timaliev/pi-deep-research/compare/v0.32.1..v0.32.2) - 2026-07-21
 
 ### Bug Fixes
