@@ -13,6 +13,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.32.2](https://github.com/timaliev/pi-deep-research/compare/v0.32.1..v0.32.2) - 2026-07-21
+
+### Bug Fixes
+
+- **(run-research)** send startup notification to ctx.ui.notify instead of pi.sendUserMessage - ([3258bb5](https://github.com/timaliev/pi-deep-research/commit/3258bb5b30cd5fe683833b3c15a3d546f1308df0)) - Tim Aliev
+
+### Other
+
+- Revert "chore(release): bump version to 0.32.2"
+
+This reverts commit 62de4550af53ab6357b53b64807751763af05280. - ([170680b](https://github.com/timaliev/pi-deep-research/commit/170680b0a7177cf3874e8c696b7a69c8ae6a1fb5)) - Tim Aliev
+
 ## [0.32.1](https://github.com/timaliev/pi-deep-research/compare/v0.32.0..v0.32.1) - 2026-07-21
 
 ### Bug Fixes
